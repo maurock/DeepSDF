@@ -1,0 +1,6 @@
+data/objects
+__pycache__
+results/objs_dict.npy
+results/samples_dict.npy
+results/runs/
+.DS_Store
