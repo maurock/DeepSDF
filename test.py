@@ -1,5 +1,4 @@
 import torch
-import numpy
 import results.runs as runs
 import os
 import model
@@ -14,13 +13,14 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def extract_mesh(data, sdf):
     sdf_inside = data[(sdf.view(-1)>-0.01) & (sdf.view(-1)<0.01)]
+    #sdf_inside = data[(sdf.view(-1)<0.01)]
     mesh = trimesh.voxel.ops.points_to_marching_cubes(sdf_inside.detach().cpu().numpy(), pitch=0.02)
     return mesh
 
 def main(args):
     run_dir = os.path.join(os.path.dirname(runs.__file__), args.run_folder)
     weights_path = os.path.join(run_dir, 'weights.pt')
-    sdf_model = model.SDFModel().double().to(device)
+    sdf_model = model.SDFModel().to(device)
     sdf_model.load_state_dict(torch.load(weights_path, map_location=torch.device(device)))
     sdf_model.eval()
     x = torch.arange(-1, 1, 0.02)
@@ -43,5 +43,4 @@ if __name__=='__main__':
         "--run_folder", type=str
     )
     args = parser.parse_args()
-
     main(args)
