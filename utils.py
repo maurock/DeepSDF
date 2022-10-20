@@ -4,6 +4,8 @@ from glob import glob
 import os
 import torch
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 def mesh_from_urdf(filepath):
     """
     Receives path to object index containing the .URDF and verts and faces (both np.array).
@@ -58,7 +60,7 @@ def mesh_to_pointcloud(verts, faces, n_samples):
     pointcloud = pointcloud.astype(np.float32)
     return pointcloud
 
-def clamp(x, delta=torch.tensor([[0.1]])):
+def clamp(x, delta=torch.tensor([[0.1]]).to(device)):
     """Clamp function introduced in the paper DeepSDF.
     This returns a value in range [-delta, delta]. If x is within this range, it returns x, else one of the extremes.
 
