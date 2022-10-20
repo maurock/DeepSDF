@@ -1,5 +1,5 @@
 data/objects
-data/objects.zip
+data/objects.tgz
 __pycache__
 results/objs_dict.npy
 results/samples_dict.npy
