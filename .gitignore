@@ -1,4 +1,5 @@
 data/objects
+data/objects.zip
 __pycache__
 results/objs_dict.npy
 results/samples_dict.npy

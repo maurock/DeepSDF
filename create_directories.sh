@@ -9,4 +9,5 @@ touch results/runs/__init__.py
 # Get objects data
 mkdir -p data/
 cd data/
-wget "https://uob-my.sharepoint.com/:f:/g/personal/ri21540_bristol_ac_uk/EtAq9fvsrDlJmaqWQITgT7cBHYgGW5M-YTq1XHta3xnsBA?e=lmDQfC" -O objects
+wget "https://uob-my.sharepoint.com/:u:/g/personal/ri21540_bristol_ac_uk/EWC1KJPvUIVOv14XcnhB7NsBxwq9lmeCe9uVHbGWK0zGZA?e=kfbiRm" -O objects.zip
+unzip objects.zip -d data/
