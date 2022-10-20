@@ -105,10 +105,10 @@ if __name__=='__main__':
         "--seed", type=int, default=42, help="Setting for the random seed."
     )
     parser.add_argument(
-        "--epochs", type=int, default=200, help="Number of epochs to use."
+        "--epochs", type=int, default=1000, help="Number of epochs to use."
     )
     parser.add_argument(
-        "--lr", type=float, default=0.001, help="Initial learning rate."
+        "--lr", type=float, default=0.0001, help="Initial learning rate."
     )
     parser.add_argument(
         "--batch_size", type=int, default=16, help="Size of the batch."
