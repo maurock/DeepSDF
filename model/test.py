@@ -1,7 +1,7 @@
 import torch
 import results.runs as runs
 import os
-import model
+import model.sdf_model as sdf_model
 import argparse
 import trimesh
 import numpy as np
@@ -20,16 +20,16 @@ def extract_mesh(data, sdf):
 def main(args):
     run_dir = os.path.join(os.path.dirname(runs.__file__), args.run_folder)
     weights_path = os.path.join(run_dir, 'weights.pt')
-    sdf_model = model.SDFModel().to(device)
-    sdf_model.load_state_dict(torch.load(weights_path, map_location=torch.device(device)))
-    sdf_model.eval()
+    model = sdf_model.SDFModel().to(device)
+    model.load_state_dict(torch.load(weights_path, map_location=torch.device(device)))
+    model.eval()
     x = torch.arange(-1, 1, 0.02)
     y = torch.arange(-1, 1, 0.02)
     z = torch.arange(-1, 1, 0.02)
     grid = torch.meshgrid(x, y, z)
     data = torch.vstack((grid[0].ravel(), grid[1].ravel(), grid[2].ravel())).transpose(1, 0).to(device)
     with torch.no_grad():
-        sdf = sdf_model(data)
+        sdf = model(data)
     mesh = extract_mesh(data, sdf)
     mesh_dict = dict()
     mesh_dict['verts'] = np.asarray(mesh.vertices)

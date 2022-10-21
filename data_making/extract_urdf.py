@@ -2,7 +2,7 @@ import os
 import data.objects as objects
 import results
 from glob import glob
-import utils
+import utils.utils as utils
 import numpy as np
 from copy import deepcopy
 """

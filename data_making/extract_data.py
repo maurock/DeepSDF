@@ -1,7 +1,7 @@
 import numpy as np
 import results 
 import os
-import utils
+import utils.utils as utils
 import argparse
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go

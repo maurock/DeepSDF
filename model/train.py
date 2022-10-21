@@ -1,13 +1,13 @@
 import torch.nn as nn
 import torch
-import model
+import model.sdf_model as sdf_model
 import torch.optim as optim
-import dataset
+import data_making.dataset as dataset
 from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 import argparse
 import results.runs as runs
-from utils import SDFLoss
+from utils.utils import SDFLoss
 import os
 from datetime import datetime
 import numpy as np
@@ -25,7 +25,7 @@ class Trainer():
         self.run_dir = os.path.join(self.runs_dir, self.timestamp_run)  # directory for this run
         if not os.path.exists(self.run_dir):
             os.makedirs(self.run_dir)
-        self.model = model.SDFModel().double().to(device)
+        self.model = sdf_model.SDFModel().double().to(device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.args.lr, weight_decay=0)
         # get data
         train_loader, val_loader = self.get_loaders()
