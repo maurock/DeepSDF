@@ -11,8 +11,11 @@ from utils.utils import SDFLoss
 import os
 from datetime import datetime
 import numpy as np
+import time
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+if device=="cuda:0":
+    print(torch.cuda.get_device_name(0))
 
 class Trainer():
     def __init__(self, args):
@@ -32,6 +35,7 @@ class Trainer():
         self.results = dict()
         self.results['train'] = []
         self.results['val'] = []
+        start = time.time()
         for epoch in range(self.args.epochs):
             print(f'============================ Epoch {epoch} ============================')
             self.epoch = epoch
@@ -42,7 +46,9 @@ class Trainer():
                 self.results['val'].append(avg_val_loss)
             np.save(os.path.join(self.run_dir, 'results.npy'), self.results)
             torch.save(self.model.state_dict(), os.path.join(self.run_dir, 'weights.pt'))
-    
+        end = time.time()
+        print(f'Time elapsed: {end - start} s')
+
     def get_loaders(self):
         data = dataset.SDFDataset()
         train_size = int(0.8 * len(data))

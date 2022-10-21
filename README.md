@@ -62,3 +62,4 @@ where:
 # TODO
 - [ ] Add multiple shapes
 - [ ] Experiment with NeRF positional embedding
+- [ ] SIREN instead of ReLU/Tanh?
