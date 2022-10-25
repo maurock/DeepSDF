@@ -21,12 +21,12 @@ class SDFDataset(Dataset):
         return
 
     def __len__(self):
-        return self.data['samples'].shape[0]
+        return self.data['samples_latent_code'].shape[0]
 
     def __getitem__(self, idx):
-        verts = self.data['samples'][idx, :]
+        latent_verts = self.data['samples_latent_code'][idx, :]
         sdf = self.data['sdf'][idx]
-        return verts, sdf
+        return latent_verts, sdf
 
 if __name__=='__main__':
     dataset = SDFDataset()
