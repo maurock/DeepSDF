@@ -23,7 +23,7 @@ class Trainer():
 
     def __call__(self):
         # directories
-        self.timestamp_run = datetime.now().strftime('%d_%m_%H%M')   # timestamp to use for logging data
+        self.timestamp_run = datetime.now().strftime('%d_%m_%H%M%S')   # timestamp to use for logging data
         self.runs_dir = os.path.dirname(runs.__file__)               # directory fo all runs
         self.run_dir = os.path.join(self.runs_dir, self.timestamp_run)  # directory for this run
         if not os.path.exists(self.run_dir):
@@ -117,7 +117,7 @@ if __name__=='__main__':
         "--lr", type=float, default=0.0001, help="Initial learning rate."
     )
     parser.add_argument(
-        "--batch_size", type=int, default=16, help="Size of the batch."
+        "--batch_size", type=int, default=1000, help="Size of the batch."
     )
     args = parser.parse_args()
     trainer = Trainer(args)
