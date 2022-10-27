@@ -72,7 +72,6 @@ class Trainer():
         total_loss = 0.0
         iterations = 0.0
         self.model.train()
-        loss = nn.MSELoss()
         for batch in train_loader:
             iterations += 1.0
             #batch_size = self.args.batch_size
@@ -80,7 +79,7 @@ class Trainer():
             x = batch[0]                 # (batch_size, 3)
             y = batch[1].view(-1, 1)     # (batch_size, 1)
             predictions = self.model(x)  # (batch_size, 1)
-            loss_value = loss(y, predictions)
+            loss_value = SDFLoss(y, predictions)
             loss_value.backward()
             self.optimizer.step()
             total_loss += loss_value.data.cpu().numpy()      
