@@ -125,6 +125,7 @@ class Trainer():
             loss_value.backward()       
             # set gradients of latent codes that were not in the batch to 0     
             unique_latent_indexes_batch = torch.unique(latent_codes_indexes_batch, dim=0).to(device)
+            print(unique_latent_indexes_batch)
             for i in range(0, self.latent_codes.shape[0]):
                 if i not in unique_latent_indexes_batch:
                     self.latent_codes.grad[i, :].data.zero_()              
@@ -143,7 +144,9 @@ class Trainer():
             # batch[0]: [class, x, y, z], shape: (batch_size, 4)
             # batch[1]: [sdf], shape: (batch size)
             iterations += 1.0            
-            x, y, _, latent_codes_batch = self.generate_xy(batch)
+            x, y, latent_codes_indexes_batch, latent_codes_batch = self.generate_xy(batch)
+            unique_latent_indexes_batch = torch.unique(latent_codes_indexes_batch, dim=0).to(device)
+            print(unique_latent_indexes_batch)
             predictions = self.model(x)  # (batch_size, 1)
             loss_value = SDFLoss_multishape(y, predictions, latent_codes_batch)          
             total_loss += loss_value.data.cpu().numpy()      

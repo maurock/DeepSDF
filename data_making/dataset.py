@@ -17,9 +17,11 @@ class SDFDataset(Dataset):
         self.data = dict()
         for obj_idx in list(samples_dict.keys()):  # samples_dict.keys() for all the objects
             for key in samples_dict[obj_idx].keys():   # keys are ['samples', 'sdf', 'latent_class', 'samples_latent_class']
-                value = samples_dict[obj_idx][key]
-                # convert value to np.array if not already
-                self.data[key] = torch.from_numpy(value).to(device)
+                value = torch.from_numpy(samples_dict[obj_idx][key]).to(device)
+                if key not in list(self.data.keys()):
+                    self.data[key] = value
+                else:
+                    self.data[key] = torch.vstack((self.data[key], value))
         return
 
     def __len__(self):
