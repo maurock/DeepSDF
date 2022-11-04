@@ -129,6 +129,7 @@ class Trainer():
                 if i not in unique_latent_indexes_batch:
                     self.latent_codes.grad[i, :].data.zero_()              
             self.optimizer_latent.step()
+            self.optimizer_model.step()
             total_loss += loss_value.data.cpu().numpy()      
         avg_train_loss = total_loss/iterations
         print(f'Training: loss {avg_train_loss}')
