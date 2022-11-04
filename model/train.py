@@ -125,7 +125,6 @@ class Trainer():
             loss_value.backward()       
             # set gradients of latent codes that were not in the batch to 0     
             unique_latent_indexes_batch = torch.unique(latent_codes_indexes_batch, dim=0).to(device)
-            print(unique_latent_indexes_batch)
             for i in range(0, self.latent_codes.shape[0]):
                 if i not in unique_latent_indexes_batch:
                     self.latent_codes.grad[i, :].data.zero_()              
