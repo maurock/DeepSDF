@@ -44,7 +44,8 @@ def load_save_objects(obj_dir):
         filepath_obj = os.path.join(obj_dir, obj_index)
         verts, faces = utils.mesh_from_urdf(filepath_obj)
         verts_norm = normalise_obj(verts)
-        objs_dict[obj_index]['verts'] = verts_norm
+        new_verts = utils.rotate_vertices(verts_norm)
+        objs_dict[obj_index]['verts'] = new_verts
         objs_dict[obj_index]['faces'] = faces
     return objs_dict  
 

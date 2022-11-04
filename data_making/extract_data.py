@@ -58,10 +58,11 @@ def sample(obj_dict, args):
     samples = np.vstack((samples_on_surface, samples_near_surface, samples_far_surface))
     return samples
 
-def generate_code(args):
+def generate_class(args):
+    """Each object belongs to a categorical class. Classes are converted to unique latent codes before training."""
     return np.random.normal(0, 2, size=(1, args.latent_size))
 
-def combine_sample_latent(samples, latent):
+def combine_sample_latent(samples, latent_class):
     """Combine each sample (x, y, z) with the latent code generated for this object.
     Args:
         samples: collected points, np.array of shape (N, 3)
@@ -69,8 +70,8 @@ def combine_sample_latent(samples, latent):
     Returns:
         combined hstacked latent code and samples, np.array of shape (N, args.latent_size + 3)
     """
-    latent_full = np.tile(latent, (samples.shape[0], 1))   # repeat the latent code N times for stacking
-    return np.hstack((latent_full, samples))
+    latent_class_full = np.tile(latent_class, (samples.shape[0], 1))   # repeat the latent code N times for stacking
+    return np.hstack((latent_class_full, samples))
 
 def _debug_plot(samples, dist=True):
     points = samples['samples']
@@ -93,12 +94,12 @@ def main(args):
         exit()
     objs_dict = np.load(os.path.join(os.path.dirname(results.__file__), 'objs_dict.npy'), allow_pickle=True).item()
     samples_dict = dict()
-    for obj_idx in list(objs_dict.keys())[1:2]:    # TODO: change here to collect data for multiple objects
+    for obj_idx in list(objs_dict.keys())[1:4]:
         samples_dict[obj_idx] = dict()
         samples_dict[obj_idx]['samples'] = sample(objs_dict[obj_idx], args)
         samples_dict[obj_idx]['sdf'] = compute_sdf(objs_dict[obj_idx]['verts'], objs_dict[obj_idx]['faces'], samples_dict[obj_idx]['samples'])
-        samples_dict[obj_idx]['latent_code'] = generate_code(args)
-        samples_dict[obj_idx]['samples_latent_code'] = combine_sample_latent(samples_dict[obj_idx]['samples'], samples_dict[obj_idx]['latent_code'])
+        samples_dict[obj_idx]['latent_class'] = np.array([obj_idx], dtype=np.int32)
+        samples_dict[obj_idx]['samples_latent_class'] = combine_sample_latent(samples_dict[obj_idx]['samples'], samples_dict[obj_idx]['latent_class'])
         _debug_plot(samples_dict[obj_idx])  
     np.save(os.path.join(os.path.dirname(results.__file__), 'samples_dict.npy'), samples_dict)
 
@@ -111,9 +112,6 @@ if __name__=='__main__':
     parser.add_argument(
         '--num_samples_far_surface', default=5000, type=int, help="Num samples far from the object surface"
     )    
-    parser.add_argument(
-        '--latent_size', default=128, type=int, help="Num samples far from the object surface"
-    )   
     args = parser.parse_args()
     main(args)
 

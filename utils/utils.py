@@ -3,6 +3,8 @@ import trimesh
 from glob import glob
 import os
 import torch
+from copy import deepcopy
+import pybullet as pb
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -73,6 +75,41 @@ def clamp(x, delta=torch.tensor([[0.1]]).to(device)):
     return minimum
 
 def SDFLoss(sdf, predictions):
-    """Loss function ontroducd in the paper DeepSDF"""
+    """L1 function introduced in the paper DeepSDF """
     return torch.abs(clamp(predictions) - clamp(sdf))
+
+def SDFLoss_multishape(sdf, prediction, latent_codes_batch, sigma=0.01):
+    """Loss function introduced in the paper DeepSDF for multiple shapes."""
+    l1 = torch.mean(torch.abs(sdf - prediction)) 
+    l2 = sigma * torch.sum(torch.pow(latent_codes_batch, 2))
+    loss = l1 + l2
+    return loss
+
+def rotate_vertices(vertices, rot=[np.pi / 2, 0, 0]):
+    """Rotate vertices by 90 deg around the x-axis. """
+    new_verts = deepcopy(vertices)
+    # Rotate object
+    rot_Q_obj = pb.getQuaternionFromEuler(rot)
+    rot_M_obj = np.array(pb.getMatrixFromQuaternion(rot_Q_obj)).reshape(3, 3)
+    new_verts = np.einsum('ij,kj->ik', rot_M_obj, new_verts).transpose(1, 0)
+    return new_verts
+
+def generate_latent_codes(latent_size, samples_dict):
+    """Generate a random latent codes for each shape form a Gaussian distribution
+    Returns:
+        - latent_codes: np.array, shape (num_shapes, latent_size)
+        - dict_latent_codes: key: obj_index, value: corresponding idx in the latent_codes array. 
+                                  e.g.  latent_codes = ([ [1, 2, 3], [7, 8, 9] ])
+                                        dict_latent_codes[345] = 0, the obj that has index 345 refers to 
+                                        the 0-th latent code.
+    """
+    latent_codes = torch.tensor([]).reshape(0, latent_size).to(device)
+    dict_latent_codes = dict()
+    for i, obj_idx in enumerate(list(samples_dict.keys())):
+        dict_latent_codes[obj_idx] = i
+        latent_code = torch.normal(0, 0.01, size = (1, latent_size), dtype=torch.float32).to(device)
+        latent_codes = torch.vstack((latent_codes, latent_code))
+    latent_codes.requires_grad_(True)
+    return latent_codes, dict_latent_codes
+
 
