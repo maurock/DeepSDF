@@ -145,7 +145,6 @@ class Trainer():
             iterations += 1.0            
             x, y, latent_codes_indexes_batch, latent_codes_batch = self.generate_xy(batch)
             unique_latent_indexes_batch = torch.unique(latent_codes_indexes_batch, dim=0).to(device)
-            print(unique_latent_indexes_batch)
             predictions = self.model(x)  # (batch_size, 1)
             loss_value = SDFLoss_multishape(y, predictions, latent_codes_batch)          
             total_loss += loss_value.data.cpu().numpy()      

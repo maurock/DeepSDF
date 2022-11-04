@@ -78,9 +78,9 @@ def SDFLoss(sdf, predictions):
     """L1 function introduced in the paper DeepSDF """
     return torch.abs(clamp(predictions) - clamp(sdf))
 
-def SDFLoss_multishape(sdf, prediction, latent_codes_batch, sigma=0.01):
+def SDFLoss_multishape(sdf, prediction, latent_codes_batch, sigma=0.5):
     """Loss function introduced in the paper DeepSDF for multiple shapes."""
-    l1 = torch.mean(torch.abs(sdf - prediction)) 
+    l1 = torch.sum(torch.abs(sdf - prediction)) 
     l2 = sigma * torch.sum(torch.pow(latent_codes_batch, 2))
     loss = l1 + l2
     return loss
