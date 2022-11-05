@@ -7,13 +7,15 @@ from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 import argparse
 import results.runs as runs
-from utils.utils import SDFLoss, SDFLoss_multishape
+from utils.utils import SDFLoss, SDFLoss_multishape, latent_to_tensorboard
 import os
 from datetime import datetime
 import numpy as np
 import time
 from utils import utils
 import results
+from torch.utils.tensorboard import SummaryWriter
+
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if device=="cuda:0":
@@ -30,6 +32,7 @@ class Trainer():
         self.run_dir = os.path.join(self.runs_dir, self.timestamp_run)  # directory for this run
         if not os.path.exists(self.run_dir):
             os.makedirs(self.run_dir)
+        self.writer = SummaryWriter(log_dir=self.run_dir)
 
         # calculate num objects in samples_dictionary, wich is the number of keys
         samples_dict_path = os.path.join(os.path.dirname(results.__file__), 'samples_dict.npy')
@@ -48,7 +51,9 @@ class Trainer():
             'train':  {'loss': [], 'latent_codes': []},
             'val':    {'loss': []}
         }
+        utils.model_graph_to_tensorboard(train_loader, self.model, self.writer, self.generate_xy)
 
+        self.running_steps = 0   # counter for latent codes tensorboard
         start = time.time()
         for epoch in range(self.args.epochs):
             print(f'============================ Epoch {epoch} ============================')
@@ -116,6 +121,7 @@ class Trainer():
             # batch[0]: [class, x, y, z], shape: (batch_size, 4)
             # batch[1]: [sdf], shape: (batch size)
             iterations += 1.0
+            self.running_steps += 1   # counter for latent codes tensorboard
             #batch_size = self.args.batch_size
             self.optimizer_model.zero_grad()
             self.optimizer_latent.zero_grad()
@@ -130,26 +136,29 @@ class Trainer():
                     self.latent_codes.grad[i, :].data.zero_()              
             self.optimizer_latent.step()
             self.optimizer_model.step()
-            total_loss += loss_value.data.cpu().numpy()      
+            total_loss += loss_value.data.cpu().numpy()  
+            utils.latent_to_tensorboard(self.writer, self.running_steps, self.latent_codes)
         avg_train_loss = total_loss/iterations
         print(f'Training: loss {avg_train_loss}')
+        self.writer.add_scalar('Training loss', avg_train_loss, self.epoch)
+        utils.weight_to_tensorboard(self.writer, self.epoch, self.model)
         return avg_train_loss
 
     def validate(self, val_loader):
         total_loss = 0.0
         iterations = 0.0
-        self.model.train()
+        self.model.eval()
         for batch in val_loader:
             # batch[0]: [class, x, y, z], shape: (batch_size, 4)
             # batch[1]: [sdf], shape: (batch size)
             iterations += 1.0            
-            x, y, latent_codes_indexes_batch, latent_codes_batch = self.generate_xy(batch)
-            unique_latent_indexes_batch = torch.unique(latent_codes_indexes_batch, dim=0).to(device)
+            x, y, _, latent_codes_batch = self.generate_xy(batch)
             predictions = self.model(x)  # (batch_size, 1)
             loss_value = SDFLoss_multishape(y, predictions, latent_codes_batch)          
             total_loss += loss_value.data.cpu().numpy()      
         avg_val_loss = total_loss/iterations
         print(f'Validation: loss {avg_val_loss}')
+        self.writer.add_scalar('Validation loss', avg_val_loss, self.epoch)
         return avg_val_loss
 
 if __name__=='__main__':
@@ -164,7 +173,7 @@ if __name__=='__main__':
         "--lr", type=float, default=0.0001, help="Initial learning rate."
     )
     parser.add_argument(
-        "--batch_size", type=int, default=1000, help="Size of the batch."
+        "--batch_size", type=int, default=500, help="Size of the batch."
     )
     parser.add_argument(
         "--latent_size", type=int, default=128, help="Size of the batch."

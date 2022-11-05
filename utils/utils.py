@@ -78,11 +78,12 @@ def SDFLoss(sdf, predictions):
     """L1 function introduced in the paper DeepSDF """
     return torch.abs(clamp(predictions) - clamp(sdf))
 
-def SDFLoss_multishape(sdf, prediction, latent_codes_batch, sigma=0.5):
+def SDFLoss_multishape(sdf, prediction, latent_codes_batch, sigma=0.01):
     """Loss function introduced in the paper DeepSDF for multiple shapes."""
-    l1 = torch.sum(torch.abs(sdf - prediction)) 
+    l1 = torch.sum(torch.abs(clamp(prediction) - clamp(sdf))) 
     l2 = sigma * torch.sum(torch.pow(latent_codes_batch, 2))
     loss = l1 + l2
+    print(f'Loss prediction: {l1:.3f}, Loss regulariser: {l2:.3f}')
     return loss
 
 def rotate_vertices(vertices, rot=[np.pi / 2, 0, 0]):
@@ -112,4 +113,26 @@ def generate_latent_codes(latent_size, samples_dict):
     latent_codes.requires_grad_(True)
     return latent_codes, dict_latent_codes
 
+def _weight_histograms_linear(writer, step, weights, name_layer):
+    # flatten weights for tensorboard
+    flattened_weights = weights.flatten()
+    tag = f"layer_{name_layer}"
+    writer.add_histogram(tag, flattened_weights, global_step=step)
 
+def weight_to_tensorboard(writer, step, model):
+    """visualize weights in tensorboard as histograms"""
+    # Iterate over all model layers
+    for name, param in model.named_parameters():
+        _weight_histograms_linear(writer, step, param.data, name)
+
+def latent_to_tensorboard(writer, step, latent_codes):
+    """visualize latent_codes in tensorboard as histograms"""
+    # Iterate over all model layers
+    for i, latent_code in enumerate(latent_codes):
+        tag = f"latent_code_{i}"
+        writer.add_histogram(tag, latent_code, global_step=step)
+
+def model_graph_to_tensorboard(train_loader, model, writer, generate_xy):
+    batch = next(iter(train_loader))
+    x, y, latent_codes_indexes_batch, latent_codes_batch = generate_xy(batch)
+    writer.add_graph(model, x)
