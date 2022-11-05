@@ -7,7 +7,7 @@ from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 import argparse
 import results.runs as runs
-from utils.utils import SDFLoss, SDFLoss_multishape, latent_to_tensorboard
+from utils.utils import SDFLoss_multishape, latent_to_tensorboard
 import os
 from datetime import datetime
 import numpy as np
@@ -127,7 +127,7 @@ class Trainer():
             self.optimizer_latent.zero_grad()
             x, y, latent_codes_indexes_batch, latent_codes_batch = self.generate_xy(batch)
             predictions = self.model(x)  # (batch_size, 1)
-            loss_value = SDFLoss_multishape(y, predictions, latent_codes_batch)
+            loss_value = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, latent_codes_batch, sigma=self.args.sigma_regulariser)
             loss_value.backward()       
             # set gradients of latent codes that were not in the batch to 0     
             unique_latent_indexes_batch = torch.unique(latent_codes_indexes_batch, dim=0).to(device)
@@ -137,11 +137,17 @@ class Trainer():
             self.optimizer_latent.step()
             self.optimizer_model.step()
             total_loss += loss_value.data.cpu().numpy()  
-            utils.latent_to_tensorboard(self.writer, self.running_steps, self.latent_codes)
+            
+            if self.args.latent_to_tensorboard:
+                utils.latent_to_tensorboard(self.writer, self.running_steps, self.latent_codes)
+
         avg_train_loss = total_loss/iterations
         print(f'Training: loss {avg_train_loss}')
         self.writer.add_scalar('Training loss', avg_train_loss, self.epoch)
-        utils.weight_to_tensorboard(self.writer, self.epoch, self.model)
+
+        if self.args.weights_to_tensorboard:
+            utils.weight_to_tensorboard(self.writer, self.epoch, self.model)
+
         return avg_train_loss
 
     def validate(self, val_loader):
@@ -164,19 +170,31 @@ class Trainer():
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--seed", type=int, default=42, help="Setting for the random seed."
+        "--seed", type=int, default=42, help="Setting for the random seed"
     )
     parser.add_argument(
-        "--epochs", type=int, default=1000, help="Number of epochs to use."
+        "--epochs", type=int, default=1000, help="Number of epochs to use"
     )
     parser.add_argument(
-        "--lr", type=float, default=0.0001, help="Initial learning rate."
+        "--lr", type=float, default=0.0001, help="Initial learning rate"
     )
     parser.add_argument(
-        "--batch_size", type=int, default=500, help="Size of the batch."
+        "--batch_size", type=int, default=500, help="Size of the batch"
     )
     parser.add_argument(
-        "--latent_size", type=int, default=128, help="Size of the batch."
+        "--latent_size", type=int, default=128, help="Size of the latent size"
+    )
+    parser.add_argument(
+        "--sigma_regulariser", type=float, default=0.01, help="Sigma value for the regulariser in the loss function"
+    )
+    parser.add_argument(
+        "--loss_multiplier", type=float, default=1, help="Loss multiplier"
+    )
+    parser.add_argument(
+        "--weights_to_tensorboard", default=False, action='store_true', help="Store model parameters for visualisation on tensorboard"
+    )
+    parser.add_argument(
+        "--latent_to_tensorboard", default=False, action='store_true', help="Store latent codes for visualisation on tensorboard"
     )
     args = parser.parse_args()
     trainer = Trainer(args)
