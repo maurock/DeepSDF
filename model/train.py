@@ -160,7 +160,7 @@ class Trainer():
             iterations += 1.0            
             x, y, _, latent_codes_batch = self.generate_xy(batch)
             predictions = self.model(x)  # (batch_size, 1)
-            loss_value = SDFLoss_multishape(y, predictions, latent_codes_batch, self.args.sigma_regulariser)          
+            loss_value = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, latent_codes_batch, self.args.sigma_regulariser)          
             total_loss += loss_value.data.cpu().numpy()      
         avg_val_loss = total_loss/iterations
         print(f'Validation: loss {avg_val_loss}')
