@@ -83,7 +83,7 @@ def SDFLoss_multishape(sdf, prediction, latent_codes_batch, sigma):
     l1 = torch.sum(torch.abs(clamp(prediction) - clamp(sdf))) 
     l2 = sigma * torch.sum(torch.pow(latent_codes_batch, 2))
     loss = l1 + l2
-    print(f'Loss prediction: {l1:.3f}, Loss regulariser: {l2:.3f}')
+    #print(f'Loss prediction: {l1:.3f}, Loss regulariser: {l2:.3f}')
     return loss
 
 def rotate_vertices(vertices, rot=[np.pi / 2, 0, 0]):
