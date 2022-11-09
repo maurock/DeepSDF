@@ -1,3 +1,4 @@
+from torch.functional import _return_counts
 import torch.nn as nn
 import torch
 import model.sdf_model as sdf_model
@@ -90,6 +91,17 @@ class Trainer():
             drop_last=True
             )
         return train_loader, val_loader
+
+    def get_latent_proportions(self, latent_codes_indexes_batch):
+        """
+        The gradient is averaged across the entire batch, but every latent code only appears in a fraction of this batch.
+        Therefore, the gradients wrt latent vectors are underestimated - because each latent vector only contributes
+        to a proportion of the average gradient computed across the entire batch size.
+        Solution: compute the proportion of samples per latent classes, and ajust the gradient accordingly.
+        """
+        unique_latent_indexes_batch, counts = latent_codes_indexes_batch.unique(return_counts=True)
+        return unique_latent_indexes_batch, counts 
+
    
     def generate_xy(self, batch):
         """
@@ -126,14 +138,18 @@ class Trainer():
             self.optimizer_model.zero_grad()
             self.optimizer_latent.zero_grad()
             x, y, latent_codes_indexes_batch, latent_codes_batch = self.generate_xy(batch)
+            unique_latent_indexes_batch, counts = self.get_latent_proportions(latent_codes_indexes_batch)
             predictions = self.model(x)  # (batch_size, 1)
             loss_value = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, latent_codes_batch, sigma=self.args.sigma_regulariser)
             loss_value.backward()       
             # set gradients of latent codes that were not in the batch to 0     
-            unique_latent_indexes_batch = torch.unique(latent_codes_indexes_batch, dim=0).to(device)
+            #unique_latent_indexes_batch = torch.unique(latent_codes_indexes_batch, dim=0).to(device)
             for i in range(0, self.latent_codes.shape[0]):
                 if i not in unique_latent_indexes_batch:
-                    self.latent_codes.grad[i, :].data.zero_()              
+                    self.latent_codes.grad[i, :].data.zero_()      
+                else:
+                    count = counts[unique_latent_indexes_batch == i]
+                    self.latent_codes.grad[i, :] = self.latent_codes.grad[i, :] * (self.args.batch_size / count)
             self.optimizer_latent.step()
             self.optimizer_model.step()
             total_loss += loss_value.data.cpu().numpy()  
