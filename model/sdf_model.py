@@ -37,7 +37,7 @@ class SDFModelMulti(torch.nn.Module):
         layers = []
         for _ in range(7):
             #layers.append(nn.Sequential(nn.utils.weight_norm(nn.Linear(input_dim, inner_dim)), nn.ReLU()))
-            layers.append(nn.Sequential(nn.Linear(input_dim, inner_dim)), nn.ReLU())
+            layers.append(nn.Sequential(nn.Linear(input_dim, inner_dim), nn.ReLU()))
             input_dim = inner_dim
         #layers.append(nn.Sequential(nn.utils.weight_norm(nn.Linear(input_dim, output_dim)), nn.Tanh()))
         layers.append(nn.Sequential(nn.Linear(input_dim, output_dim), nn.Tanh()))
