@@ -8,3 +8,5 @@ results/runs/
 deep_sdf.egg-info
 scripts/.ipynb_checkpoints
 .vscode
+*.out
+*.sh
