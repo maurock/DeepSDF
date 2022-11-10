@@ -62,7 +62,6 @@ class Trainer():
             avg_train_loss = self.train(train_loader)
             self.results['train']['loss'].append(avg_train_loss)
             self.results['train']['latent_codes'].append(self.latent_codes.detach().cpu().numpy())
-            self.latent_codes
             with torch.no_grad():
                 avg_val_loss = self.validate(val_loader)
                 self.results['val']['loss'].append(avg_val_loss)
