@@ -52,7 +52,7 @@ class Trainer():
             'train':  {'loss': [], 'latent_codes': []},
             'val':    {'loss': []}
         }
-        utils.model_graph_to_tensorboard(train_loader, self.model, self.writer, self.generate_xy)
+        #utils.model_graph_to_tensorboard(train_loader, self.model, self.writer, self.generate_xy)
 
         self.running_steps = 0   # counter for latent codes tensorboard
         start = time.time()
