@@ -46,6 +46,10 @@ class Trainer():
         self.latent_codes, self.dict_latent_codes = utils.generate_latent_codes(self.args.latent_size, samples_dict)
         self.optimizer_latent = optim.SGD([self.latent_codes], lr=self.args.lr, weight_decay=0)
 
+        if self.args.lr_scheduler:
+            self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.005, threshold_mode='abs')
+            self.scheduler_latent =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_latent, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.005, threshold_mode='abs')
+            
         # get data
         train_loader, val_loader = self.get_loaders()
         self.results = {
@@ -65,6 +69,13 @@ class Trainer():
             with torch.no_grad():
                 avg_val_loss = self.validate(val_loader)
                 self.results['val']['loss'].append(avg_val_loss)
+                if self.args.lr_scheduler:
+                    self.scheduler_model.step(avg_val_loss)
+                    self.scheduler_latent.step(avg_val_loss)
+                    for param_group in self.optimizer_model.param_groups:
+                        print(f"Learning rate (model): {param_group['lr']}")
+                    for param_group in self.optimizer_latent.param_groups:
+                        print(f"Learning rate (latent): {param_group['lr']}")
             
             np.save(os.path.join(self.run_dir, 'results.npy'), self.results)
             torch.save(self.model.state_dict(), os.path.join(self.run_dir, 'weights.pt'))
@@ -211,6 +222,15 @@ if __name__=='__main__':
     parser.add_argument(
         "--latent_to_tensorboard", default=False, action='store_true', help="Store latent codes for visualisation on tensorboard"
     )
+    parser.add_argument(
+        '--lr_multiplier', type=float, default=0.5, help="Multiplier for the learning rate scheduling"
+    )  
+    parser.add_argument(
+        '--patience', type=int, default=20, help="Patience for the learning rate scheduling"
+    )  
+    parser.add_argument(
+        '--lr_scheduler', default=False, action='store_true', help="Turn on lr_scheduler"
+    )  
     args = parser.parse_args()
     trainer = Trainer(args)
     trainer()
