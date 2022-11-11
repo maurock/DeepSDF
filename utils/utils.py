@@ -131,6 +131,9 @@ def latent_to_tensorboard(writer, step, latent_codes):
     for i, latent_code in enumerate(latent_codes):
         tag = f"latent_code_{i}"
         writer.add_histogram(tag, latent_code, global_step=step)
+    for i, latent_code_grad in enumerate(latent_codes.grad):
+        tag = f"grad_latent_code_{i}"
+        writer.add_histogram(tag, latent_code_grad, global_step=step)
 
 def model_graph_to_tensorboard(train_loader, model, writer, generate_xy):
     batch = next(iter(train_loader))
