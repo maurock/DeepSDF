@@ -40,7 +40,7 @@ class Trainer():
         samples_dict = np.load(samples_dict_path, allow_pickle=True).item()
 
         # instantiate model and optimisers
-        self.model = sdf_model.SDFModelMulti().double().to(device)
+        self.model = sdf_model.SDFModelMulti(self.args.hidden_layers).double().to(device)
         self.optimizer_model = optim.SGD(self.model.parameters(), lr=self.args.lr, weight_decay=0)
         # generate a unique random latent code for each shape
         self.latent_codes, self.dict_latent_codes = utils.generate_latent_codes(self.args.latent_size, samples_dict)
@@ -230,7 +230,10 @@ if __name__=='__main__':
     )  
     parser.add_argument(
         "--lr_scheduler", default=False, action='store_true', help="Turn on lr_scheduler"
-    )  
+    )
+    parser.add_argument(
+        "--hidden_layers",type=int, default=7, help="Num hidden layers"
+    )    
     args = parser.parse_args()
     trainer = Trainer(args)
     trainer()

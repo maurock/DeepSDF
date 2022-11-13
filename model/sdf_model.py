@@ -26,7 +26,7 @@ class SDFModel(torch.nn.Module):
         return sdf
 
 class SDFModelMulti(torch.nn.Module):
-    def __init__(self, input_dim=131, inner_dim=512, output_dim=1):
+    def __init__(self, hidden_layers, input_dim=131, inner_dim=512, output_dim=1):
         """
         SDF model for multiple shapes.
         Args:
@@ -35,9 +35,9 @@ class SDFModelMulti(torch.nn.Module):
         super(SDFModelMulti, self).__init__()
         # MLP
         layers = []
-        for _ in range(7):
+        for _ in range(hidden_layers):
             #layers.append(nn.Sequential(nn.utils.weight_norm(nn.Linear(input_dim, inner_dim)), nn.ReLU()))
-            layers.append(nn.Sequential(nn.Linear(input_dim, inner_dim), nn.Tanh()))
+            layers.append(nn.Sequential(nn.Linear(input_dim, inner_dim), nn.ReLU()))
             input_dim = inner_dim
         #layers.append(nn.Sequential(nn.utils.weight_norm(nn.Linear(input_dim, output_dim)), nn.Tanh()))
         layers.append(nn.Sequential(nn.Linear(input_dim, output_dim), nn.Tanh()))
