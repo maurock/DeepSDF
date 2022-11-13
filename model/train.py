@@ -223,13 +223,13 @@ if __name__=='__main__':
         "--latent_to_tensorboard", default=False, action='store_true', help="Store latent codes for visualisation on tensorboard"
     )
     parser.add_argument(
-        '--lr_multiplier', type=float, default=0.5, help="Multiplier for the learning rate scheduling"
+        "--lr_multiplier", type=float, default=0.5, help="Multiplier for the learning rate scheduling"
     )  
     parser.add_argument(
-        '--patience', type=int, default=20, help="Patience for the learning rate scheduling"
+        "--patience", type=int, default=20, help="Patience for the learning rate scheduling"
     )  
     parser.add_argument(
-        '--lr_scheduler', default=False, action='store_true', help="Turn on lr_scheduler"
+        "--lr_scheduler", default=False, action='store_true', help="Turn on lr_scheduler"
     )  
     args = parser.parse_args()
     trainer = Trainer(args)
