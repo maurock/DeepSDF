@@ -50,10 +50,10 @@ class Trainer():
 
         # instantiate model and optimisers
         self.model = sdf_model.SDFModelMulti(self.args.hidden_layers).double().to(device)
-        self.optimizer_model = optim.SGD(self.model.parameters(), lr=self.args.lr, weight_decay=0)
+        self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr, weight_decay=0)
         # generate a unique random latent code for each shape
         self.latent_codes, self.dict_latent_codes = utils.generate_latent_codes(self.args.latent_size, samples_dict)
-        self.optimizer_latent = optim.SGD([self.latent_codes], lr=self.args.lr, weight_decay=0)
+        self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr, weight_decay=0)
 
         if self.args.lr_scheduler:
             self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.005, threshold_mode='abs')
