@@ -236,11 +236,5 @@ if __name__=='__main__':
     )    
     args = parser.parse_args()
 
-    # args for debug
-    args.hidden_layers=3
-    args.lr_scheduler=True
-    args.sigma_regulariser=0.0
-    args.batch_size=32
-
     trainer = Trainer(args)
     trainer()
