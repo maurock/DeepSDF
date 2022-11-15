@@ -16,6 +16,7 @@ import time
 from utils import utils
 import results
 from torch.utils.tensorboard import SummaryWriter
+import json
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -33,7 +34,15 @@ class Trainer():
         self.run_dir = os.path.join(self.runs_dir, self.timestamp_run)  # directory for this run
         if not os.path.exists(self.run_dir):
             os.makedirs(self.run_dir)
+        
+        # Logging
         self.writer = SummaryWriter(log_dir=self.run_dir)
+        self.log_path = os.path.join(self.run_dir, 'settings.txt')
+        args_dict = vars(self.args)  # convert args to dict to write them as json
+        with open(self.log_path, mode='a') as log:
+            log.write('Settings:\n')
+            log.write(json.dumps(args_dict).replace(', ', ',\n'))
+            log.write('\n\n')
 
         # calculate num objects in samples_dictionary, wich is the number of keys
         samples_dict_path = os.path.join(os.path.dirname(results.__file__), 'samples_dict.npy')
