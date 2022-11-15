@@ -78,12 +78,12 @@ def SDFLoss(sdf, predictions):
     """L1 function introduced in the paper DeepSDF """
     return torch.abs(clamp(predictions) - clamp(sdf))
 
-def SDFLoss_multishape(sdf, prediction, latent_codes_batch, sigma):
+def SDFLoss_multishape(sdf, prediction, x_latent, sigma):
     """Loss function introduced in the paper DeepSDF for multiple shapes."""
-    l1 = torch.sum(torch.abs(clamp(prediction) - clamp(sdf))) 
-    l2 = sigma * torch.sum(torch.pow(latent_codes_batch, 2))
+    l1 = torch.sum(torch.abs(prediction - sdf)) 
+    l2 = sigma * torch.sum(torch.pow(x_latent, 2))
     loss = l1 + l2
-    #print(f'Loss prediction: {l1:.3f}, Loss regulariser: {l2:.3f}')
+    print(f'Loss prediction: {l1:.3f}, Loss regulariser: {l2:.3f}')
     return loss
 
 def rotate_vertices(vertices, rot=[np.pi / 2, 0, 0]):

@@ -112,7 +112,6 @@ class Trainer():
         unique_latent_indexes_batch, counts = latent_codes_indexes_batch.unique(return_counts=True)
         return unique_latent_indexes_batch, counts 
 
-   
     def generate_xy(self, batch):
         """
         Combine latent code and coordinates.
@@ -126,13 +125,14 @@ class Trainer():
         """
         latent_classes_batch = batch[0][:, 0].view(-1, 1)               # shape (batch_size, 1)
         coords = batch[0][:, 1:]                                  # shape (batch_size, 3)
+        # PROBABLY THE BUG IS HERE
         latent_codes_indexes_batch = torch.tensor(
                 [self.dict_latent_codes[str(int(latent_class))] for latent_class in latent_classes_batch],
                 dtype=torch.int64
             ).to(device)
         latent_codes_batch = self.latent_codes[latent_codes_indexes_batch]    # shape (batch_size, 128)
         x = torch.hstack((latent_codes_batch, coords))                  # shape (batch_size, 131)
-        y = batch[1].view(-1, 1)     # (batch_size, 1)
+        y = batch[1]     # (batch_size, 1)
         return x, y, latent_codes_indexes_batch, latent_codes_batch
     
     def train(self, train_loader):
@@ -150,7 +150,7 @@ class Trainer():
             x, y, latent_codes_indexes_batch, latent_codes_batch = self.generate_xy(batch)
             unique_latent_indexes_batch, counts = self.get_latent_proportions(latent_codes_indexes_batch)
             predictions = self.model(x)  # (batch_size, 1)
-            loss_value = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, latent_codes_batch, sigma=self.args.sigma_regulariser)
+            loss_value = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, x[:, :self.args.latent_size], sigma=self.args.sigma_regulariser)
             loss_value.backward()       
             # set gradients of latent codes that were not in the batch to 0     
             #unique_latent_indexes_batch = torch.unique(latent_codes_indexes_batch, dim=0).to(device)
@@ -235,5 +235,12 @@ if __name__=='__main__':
         "--hidden_layers",type=int, default=7, help="Num hidden layers"
     )    
     args = parser.parse_args()
+
+    # args for debug
+    args.hidden_layers=3
+    args.lr_scheduler=True
+    args.sigma_regulariser=0.0
+    args.batch_size=32
+
     trainer = Trainer(args)
     trainer()
