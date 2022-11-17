@@ -6,6 +6,8 @@ import argparse
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import trimesh
+from mesh_to_sdf import sample_sdf_near_surface
+
 """
 For each object, sample points and store their distance to the nearest triangle.
 Sampling follows the approach used in the DeepSDF paper.
@@ -13,6 +15,7 @@ Sampling follows the approach used in the DeepSDF paper.
 
 def compute_sdf(verts, faces, samples):
     mesh = trimesh.Trimesh(verts, faces)
+    trimesh.repair.fix_inversion(mesh)
     proximity = trimesh.proximity.ProximityQuery(mesh)
     sdfs = proximity.signed_distance(samples)
     return sdfs
@@ -58,10 +61,6 @@ def sample(obj_dict, args):
     samples = np.vstack((samples_on_surface, samples_near_surface, samples_far_surface))
     return samples
 
-def generate_class(args):
-    """Each object belongs to a categorical class. Classes are converted to unique latent codes before training."""
-    return np.random.normal(0, 2, size=(1, args.latent_size))
-
 def combine_sample_latent(samples, latent_class):
     """Combine each sample (x, y, z) with the latent code generated for this object.
     Args:
@@ -96,8 +95,17 @@ def main(args):
     samples_dict = dict()
     for obj_idx in list(objs_dict.keys())[1:4]:
         samples_dict[obj_idx] = dict()
-        samples_dict[obj_idx]['samples'] = sample(objs_dict[obj_idx], args)
-        samples_dict[obj_idx]['sdf'] = compute_sdf(objs_dict[obj_idx]['verts'], objs_dict[obj_idx]['faces'], samples_dict[obj_idx]['samples'])
+        if args.method == 'custom':
+            samples_dict[obj_idx]['samples'] = sample(objs_dict[obj_idx], args)
+            samples_dict[obj_idx]['sdf'] = compute_sdf(objs_dict[obj_idx]['verts'], objs_dict[obj_idx]['faces'], samples_dict[obj_idx]['samples'])
+        elif args.method == 'library':
+            mesh = trimesh.Trimesh(objs_dict[obj_idx]['verts'], objs_dict[obj_idx]['faces'])
+            points, sdf = sample_sdf_near_surface(mesh, number_of_points=args.num_samples_total, sign_method=args.sign_method)
+            samples_dict[obj_idx]['samples'] = points
+            samples_dict[obj_idx]['sdf'] = sdf
+        else: 
+            print('Choose a valid method')
+            exit()        
         samples_dict[obj_idx]['latent_class'] = np.array([obj_idx], dtype=np.int32)
         samples_dict[obj_idx]['samples_latent_class'] = combine_sample_latent(samples_dict[obj_idx]['samples'], samples_dict[obj_idx]['latent_class'])
         _debug_plot(samples_dict[obj_idx])  
@@ -107,11 +115,21 @@ def main(args):
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--num_samples_on_surface', default=5000, type=int, help="Num samples on object surface"
+        '--num_samples_on_surface', default=5000, type=int, help="Num samples on object surface, custom method"
     )  
     parser.add_argument(
-        '--num_samples_far_surface', default=5000, type=int, help="Num samples far from the object surface"
+        '--num_samples_far_surface', default=5000, type=int, help="Num samples far from the object surface, custom method"
     )    
+    parser.add_argument(
+        '--method', default='library', type=str, help="Choose between 'custom' or 'library'. 'Custom' samples and computes the SDF using" +
+                                                    "a custom method. 'library' uses the mesh_to_sdf library."
+    )
+    parser.add_argument(
+        '--num_samples_total', default=50000, type=int, help="Num of total samples, library method"
+    )
+    parser.add_argument(
+        '--sign_method', default='depth', type=str, help="Mode to determine the sign of the SDF, library method"
+    )
     args = parser.parse_args()
     main(args)
 

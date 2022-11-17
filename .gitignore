@@ -10,3 +10,4 @@ scripts/.ipynb_checkpoints
 .vscode
 *.out
 *.sh
+data/shapenet_obj
