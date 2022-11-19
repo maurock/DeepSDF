@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import trimesh
 from mesh_to_sdf import sample_sdf_near_surface
+from mesh_to_sdf.surface_point_cloud import *
 
 """
 For each object, sample points and store their distance to the nearest triangle.
@@ -101,6 +102,22 @@ def main(args):
         elif args.method == 'library':
             mesh = trimesh.Trimesh(objs_dict[obj_idx]['verts'], objs_dict[obj_idx]['faces'])
             points, sdf = sample_sdf_near_surface(mesh, number_of_points=args.num_samples_total, sign_method=args.sign_method)
+
+            # TODO: temporary solution. Sample points and only keep the
+            # negative ones to reduce the ratio positive/negative 
+            neg_idxs = np.where(sdf < 0)[0]
+            pos_idxs = np.where(sdf > 0)[0]
+            ratio = float(len(pos_idxs))/float(len(neg_idxs))
+            while ratio > 2:
+                try:
+                    points_temp, sdf_temp = sample_sdf_near_surface(mesh, number_of_points=args.num_samples_total, sign_method=args.sign_method)
+                    points = np.vstack((points, points_temp[sdf_temp<0]))
+                    sdf = np.hstack((sdf, sdf_temp[sdf_temp < 0]))
+                    neg_idxs = np.where(sdf < 0)[0]
+                    pos_idxs = np.where(sdf > 0)[0]
+                    ratio = float(len(pos_idxs))/float(len(neg_idxs))
+                except AttributeError:
+                    print('Attribute Error')
             samples_dict[obj_idx]['samples'] = points
             samples_dict[obj_idx]['sdf'] = sdf
         else: 
@@ -108,7 +125,7 @@ def main(args):
             exit()        
         samples_dict[obj_idx]['latent_class'] = np.array([obj_idx], dtype=np.int32)
         samples_dict[obj_idx]['samples_latent_class'] = combine_sample_latent(samples_dict[obj_idx]['samples'], samples_dict[obj_idx]['latent_class'])
-        _debug_plot(samples_dict[obj_idx])  
+        #_debug_plot(samples_dict[obj_idx])  
     np.save(os.path.join(os.path.dirname(results.__file__), 'samples_dict.npy'), samples_dict)
 
 
@@ -125,12 +142,10 @@ if __name__=='__main__':
                                                     "a custom method. 'library' uses the mesh_to_sdf library."
     )
     parser.add_argument(
-        '--num_samples_total', default=50000, type=int, help="Num of total samples, library method"
+        '--num_samples_total', default=5000, type=int, help="Num of total samples, library method"
     )
     parser.add_argument(
         '--sign_method', default='depth', type=str, help="Mode to determine the sign of the SDF, library method"
     )
     args = parser.parse_args()
     main(args)
-
-
