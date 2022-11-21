@@ -5,6 +5,8 @@ import os
 import torch
 from copy import deepcopy
 import pybullet as pb
+import meshplot as mp
+import skimage
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -139,3 +141,28 @@ def model_graph_to_tensorboard(train_loader, model, writer, generate_xy):
     batch = next(iter(train_loader))
     x, y, latent_codes_indexes_batch, latent_codes_batch = generate_xy(batch)
     writer.add_graph(model, x)
+
+def get_volume_coords(resolution = 50):
+    """Get threedimensional vector (M, N, P) accoridng to the desired resolutions."""
+    grid_values = torch.arange(-1, 1, float(1/resolution)).to(device) # 50 resolution -> 1/50 
+    grad_size_axis = grid_values.shape[0]
+    grid = torch.meshgrid(grid_values, grid_values, grid_values)
+    coords = torch.vstack((grid[0].ravel(), grid[1].ravel(), grid[2].ravel())).transpose(1, 0).to(device)
+    return coords, grad_size_axis
+
+def save_meshplot(vertices, faces, path):
+    mp.plot(vertices, faces, c=vertices[:, 2], filename=path)
+
+def predict_sdf(latent, coords, model):
+    coords = coords.clone().to(device)
+    latent_tile = torch.tile(latent, (coords.shape[0], 1))
+    coords_latent = torch.hstack((latent_tile, coords)).to(device)
+    model.eval()
+    with torch.no_grad():
+        sdf = model(coords_latent)
+    return sdf
+
+def extract_mesh(grad_size_axis, sdf):
+    grid_sdf = sdf.view(grad_size_axis, grad_size_axis, grad_size_axis).detach().numpy()
+    vertices, faces, normals, _ = skimage.measure.marching_cubes(grid_sdf, level=0.00)
+    return vertices, faces
