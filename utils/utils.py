@@ -163,6 +163,6 @@ def predict_sdf(latent, coords, model):
     return sdf
 
 def extract_mesh(grad_size_axis, sdf):
-    grid_sdf = sdf.view(grad_size_axis, grad_size_axis, grad_size_axis).detach().numpy()
+    grid_sdf = sdf.view(grad_size_axis, grad_size_axis, grad_size_axis).detach().cpu().numpy()
     vertices, faces, normals, _ = skimage.measure.marching_cubes(grid_sdf, level=0.00)
     return vertices, faces
