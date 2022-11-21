@@ -154,12 +154,5 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    args.folder='21_11_135444'
-    args.resolution=5
-    args.index_objs_dict=0
-    args.lr_scheduler=True
-    args.epochs=5
-    args.sigma_regulariser = 0
-
     main(args)
 
