@@ -109,15 +109,12 @@ def main(args):
             pos_idxs = np.where(sdf > 0)[0]
             ratio = float(len(pos_idxs))/float(len(neg_idxs))
             while ratio > 2:
-                try:
-                    points_temp, sdf_temp = sample_sdf_near_surface(mesh, number_of_points=args.num_samples_total, sign_method=args.sign_method)
-                    points = np.vstack((points, points_temp[sdf_temp<0]))
-                    sdf = np.hstack((sdf, sdf_temp[sdf_temp < 0]))
-                    neg_idxs = np.where(sdf < 0)[0]
-                    pos_idxs = np.where(sdf > 0)[0]
-                    ratio = float(len(pos_idxs))/float(len(neg_idxs))
-                except AttributeError:
-                    print('Attribute Error')
+                points_temp, sdf_temp = sample_sdf_near_surface(mesh, number_of_points=args.num_samples_total, sign_method=args.sign_method)
+                points = np.vstack((points, points_temp[sdf_temp<0]))
+                sdf = np.hstack((sdf, sdf_temp[sdf_temp < 0]))
+                neg_idxs = np.where(sdf < 0)[0]
+                pos_idxs = np.where(sdf > 0)[0]
+                ratio = float(len(pos_idxs))/float(len(neg_idxs))
             samples_dict[obj_idx]['samples'] = points
             samples_dict[obj_idx]['sdf'] = sdf
         else: 

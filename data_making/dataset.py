@@ -4,7 +4,6 @@ from torch.utils.data import Dataset
 import os
 import results
 from glob import glob
-from model.sdf_model import SDFModel
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

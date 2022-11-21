@@ -49,7 +49,7 @@ class Trainer():
         samples_dict = np.load(samples_dict_path, allow_pickle=True).item()
 
         # instantiate model and optimisers
-        self.model = sdf_model.SDFModelMulti(self.args.hidden_layers).double().to(device)
+        self.model = sdf_model.SDFModelMulti(self.args.num_layers, self.args.no_skip_connections).double().to(device)
         self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr, weight_decay=0)
         # generate a unique random latent code for each shape
         self.latent_codes, self.dict_latent_codes = utils.generate_latent_codes(self.args.latent_size, samples_dict)
@@ -241,8 +241,11 @@ if __name__=='__main__':
         "--lr_scheduler", default=False, action='store_true', help="Turn on lr_scheduler"
     )
     parser.add_argument(
-        "--hidden_layers",type=int, default=7, help="Num hidden layers"
+        "--num_layers", type=int, default=8, help="Num network layers"
     )    
+    parser.add_argument(
+        "--no_skip_connections", default=False, action='store_true', help="Do not skip connections"
+    )   
     args = parser.parse_args()
 
     trainer = Trainer(args)
