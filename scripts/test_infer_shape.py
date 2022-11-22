@@ -99,6 +99,8 @@ def main(args):
 
         if args.lr_scheduler:
             scheduler_latent.step(loss_value.item())
+            writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
+
 
     # Save mesh obtained with the latent code optimised at inference
     coords, grad_size_axis = utils.get_volume_coords(args.resolution)
