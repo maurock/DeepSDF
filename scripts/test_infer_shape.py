@@ -11,6 +11,8 @@ import utils.utils as utils
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 import json
+from mesh_to_sdf import sample_sdf_near_surface
+import trimesh
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -46,13 +48,20 @@ def get_data(args):
         random_obj = objs[np.random.randint(0, len(objs))]
 
     # mesh for random object
-    mesh = objs_dict[random_obj]
+    mesh_dict = objs_dict[random_obj]
 
-    # sample point cloud on random object
-    coords = utils.mesh_to_pointcloud(mesh['verts'], mesh['faces'], args.num_samples)
-    coords = torch.from_numpy(coords).to(device)
+    # # sample point cloud on random object
+    # coords = utils.mesh_to_pointcloud(mesh['verts'], mesh['faces'], args.num_samples)
+    # coords = torch.from_numpy(coords).to(device)
 
-    sdf_gt = torch.full(size=(coords.shape[0], 1), fill_value=0).to(device)
+    # sdf_gt = torch.full(size=(coords.shape[0], 1), fill_value=0).to(device)
+
+    mesh = trimesh.Trimesh(mesh_dict['verts'], mesh_dict['faces'])
+    coords_temp, sdf_temp = sample_sdf_near_surface(mesh, number_of_points=args.num_samples, sign_method='depth')
+    coords_array = coords_temp[(sdf_temp < 0.001) & (sdf_temp>-0.001)]
+    sdf_gt_array = sdf_temp[(sdf_temp < 0.001) & (sdf_temp>-0.001)]
+    coords = torch.from_numpy(coords_array).to(device)
+    sdf_gt = torch.from_numpy(sdf_gt_array).to(device)
 
     return coords, sdf_gt
 
@@ -115,7 +124,6 @@ def main(args):
         tag = f"grad_latent_code_0"
         writer.add_histogram(tag, latent_code.grad, global_step=epoch)
 
-
     # Extract mesh obtained with the latent code optimised at inference
     coords, grad_size_axis = utils.get_volume_coords(args.resolution)
 
@@ -169,8 +177,6 @@ if __name__ == '__main__':
         "--resolution", type=int, default=50, help="Folder that contains the network parameters"
     )
     args = parser.parse_args()
-
-    args.folder = '21_11_135444'
 
     main(args)
 
