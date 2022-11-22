@@ -15,8 +15,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def initialise_latent_code(latent_size, results_dict):
     """Initialise latent code as the average over all the obtained latent codes"""
     #latent_code = torch.mean(torch.from_numpy(results_dict['train']['latent_codes'][-1]), dim=0).view(1, -1).to(device)
+    #latent_code.requires_grad = True
     latent_code = torch.normal(0, 0.1, size = (1, latent_size), dtype=torch.float32, requires_grad=True).to(device)
-    latent_code.requires_grad = True
     return latent_code
 
 def get_data(args):
