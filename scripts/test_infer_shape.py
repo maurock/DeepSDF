@@ -9,6 +9,8 @@ import argparse
 from tqdm import tqdm 
 import utils.utils as utils
 from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
+import json
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -59,8 +61,14 @@ def main(args):
     folder = args.folder
 
     # Logging
-    test_path = os.path.join(os.path.dirname(results.__file__), 'runs', folder, 'test')
+    test_path = os.path.join(os.path.dirname(results.__file__), 'runs', folder, 'test', datetime.now().strftime('%d_%m_%H%M%S'))
     writer = SummaryWriter(log_dir=test_path)
+    log_path = os.path.join(test_path, 'settings.txt')
+    args_dict = vars(args)  # convert args to dict to write them as json
+    with open(log_path, mode='a') as log:
+        log.write('Settings:\n')
+        log.write(json.dumps(args_dict).replace(', ', ',\n'))
+        log.write('\n\n')
 
     model = sdf_model.SDFModelMulti(num_layers=8, no_skip_connections=False).to(device)
 
@@ -161,6 +169,8 @@ if __name__ == '__main__':
         "--resolution", type=int, default=50, help="Folder that contains the network parameters"
     )
     args = parser.parse_args()
+
+    args.folder = '21_11_135444'
 
     main(args)
 
