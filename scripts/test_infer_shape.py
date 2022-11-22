@@ -46,8 +46,7 @@ def get_data(args):
     mesh = objs_dict[random_obj]
 
     # sample point cloud on random object
-    num_samples = args.num_samples
-    coords = utils.mesh_to_pointcloud(mesh['verts'], mesh['faces'], num_samples)
+    coords = utils.mesh_to_pointcloud(mesh['verts'], mesh['faces'], args.num_samples)
     coords = torch.from_numpy(coords).to(device)
 
     sdf_gt = torch.full(size=(coords.shape[0], 1), fill_value=0).to(device)
@@ -82,7 +81,6 @@ def main(args):
                                                 patience=args.patience, 
                                                 threshold=0.005, threshold_mode='abs')
     
-
     # create dataset
     coords, sdf_gt = get_data(args)
 
@@ -97,12 +95,19 @@ def main(args):
         optim.step()
         writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
 
+        # step scheduler and store on tensorboard
         if args.lr_scheduler:
             scheduler_latent.step(loss_value.item())
             writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
 
+        # store latent codes and their gradient on tensorboard
+        tag = f"latent_code_0"
+        writer.add_histogram(tag, latent_code, global_step=epoch)
+        tag = f"grad_latent_code_0"
+        writer.add_histogram(tag, latent_code.grad, global_step=epoch)
 
-    # Save mesh obtained with the latent code optimised at inference
+
+    # Extract mesh obtained with the latent code optimised at inference
     coords, grad_size_axis = utils.get_volume_coords(args.resolution)
 
     sdf = utils.predict_sdf(latent_code, coords, model)
