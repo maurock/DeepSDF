@@ -39,8 +39,11 @@ def main(args):
         vertices, faces = utils.extract_mesh(grad_size_axis, sdf)
 
         # save mesh using meshplot
-        path = os.path.join(os.path.dirname(results.__file__), 'runs', folder, 'meshes_training', f'latent_{idx}.html')
-        utils.save_meshplot(vertices, faces, path)
+        mesh_dir = os.path.join(os.path.dirname(results.__file__), 'runs', folder, 'meshes_training')
+        if not os.path.exists(mesh_dir):
+            os.mkdir(mesh_dir)
+        mesh_path = os.path.join(mesh_dir, f'latent_{idx}.html')
+        utils.save_meshplot(vertices, faces, mesh_path)
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
