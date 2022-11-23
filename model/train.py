@@ -56,8 +56,8 @@ class Trainer():
         self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr, weight_decay=0)
 
         if self.args.lr_scheduler:
-            self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.005, threshold_mode='abs')
-            self.scheduler_latent =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_latent, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.005, threshold_mode='abs')
+            self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.005, threshold_mode='rel')
+            self.scheduler_latent =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_latent, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.005, threshold_mode='rel')
             
         # get data
         train_loader, val_loader = self.get_loaders()
@@ -85,6 +85,9 @@ class Trainer():
                         print(f"Learning rate (model): {param_group['lr']}")
                     for param_group in self.optimizer_latent.param_groups:
                         print(f"Learning rate (latent): {param_group['lr']}")
+                    self.writer.add_scalar('Learning rate (model)', self.scheduler_model._last_lr[0], epoch)
+                    self.writer.add_scalar('Learning rate (latent)', self.scheduler_latent._last_lr[0], epoch)
+
             
             np.save(os.path.join(self.run_dir, 'results.npy'), self.results)
             torch.save(self.model.state_dict(), os.path.join(self.run_dir, 'weights.pt'))
@@ -216,7 +219,7 @@ class Trainer():
         avg_val_loss = total_loss/iterations
         print(f'Validation: loss {avg_val_loss}')
         self.writer.add_scalar('Validation loss', avg_val_loss, self.epoch)
-        
+
         return avg_val_loss
 
 if __name__=='__main__':

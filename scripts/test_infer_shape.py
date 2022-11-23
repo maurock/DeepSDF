@@ -94,7 +94,7 @@ def main(args):
         scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 
                                                 factor=args.lr_multiplier, 
                                                 patience=args.patience, 
-                                                threshold=0.0005, threshold_mode='abs')
+                                                threshold=0.005, threshold_mode='rel')
     
     # create dataset
     coords, sdf_gt = get_data(args)
