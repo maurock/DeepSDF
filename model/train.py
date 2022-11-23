@@ -203,13 +203,20 @@ class Trainer():
             # batch[0]: [class, x, y, z], shape: (batch_size, 4)
             # batch[1]: [sdf], shape: (batch size)
             iterations += 1.0            
+
             x, y, _, latent_codes_batch = self.generate_xy(batch)
+
             predictions = self.model(x)  # (batch_size, 1)
+            if args.clamp:
+                predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+
             loss_value = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, latent_codes_batch, self.args.sigma_regulariser)          
-            total_loss += loss_value.data.cpu().numpy()      
+            total_loss += loss_value.data.cpu().numpy()   
+
         avg_val_loss = total_loss/iterations
         print(f'Validation: loss {avg_val_loss}')
         self.writer.add_scalar('Validation loss', avg_val_loss, self.epoch)
+        
         return avg_val_loss
 
 if __name__=='__main__':
