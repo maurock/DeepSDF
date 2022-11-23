@@ -124,6 +124,10 @@ def main(args):
         tag = f"grad_latent_code_0"
         writer.add_histogram(tag, latent_code.grad, global_step=epoch)
 
+    # Save optimised latent_code
+    latent_code_path = os.path.join(test_path, 'latent_code.pt')
+    torch.save(latent_code, latent_code_path)
+
     # Extract mesh obtained with the latent code optimised at inference
     coords, grad_size_axis = utils.get_volume_coords(args.resolution)
 

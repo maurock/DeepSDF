@@ -82,8 +82,8 @@ def SDFLoss(sdf, predictions):
 
 def SDFLoss_multishape(sdf, prediction, x_latent, sigma):
     """Loss function introduced in the paper DeepSDF for multiple shapes."""
-    l1 = torch.sum(torch.abs(prediction - sdf)) 
-    l2 = sigma * torch.sum(torch.pow(x_latent, 2))
+    l1 = torch.mean(torch.abs(prediction - sdf))
+    l2 = sigma * torch.mean(torch.pow(x_latent, 2))
     loss = l1 + l2
     #print(f'Loss prediction: {l1:.3f}, Loss regulariser: {l2:.3f}')
     return loss
