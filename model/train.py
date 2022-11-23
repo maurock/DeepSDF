@@ -142,6 +142,8 @@ class Trainer():
         latent_codes_batch = self.latent_codes[latent_codes_indexes_batch]    # shape (batch_size, 128)
         x = torch.hstack((latent_codes_batch, coords))                  # shape (batch_size, 131)
         y = batch[1]     # (batch_size, 1)
+        if args.clamp:
+            y = torch.clamp(y, -args.clamp_value, args.clamp_value)
         return x, y, latent_codes_indexes_batch, latent_codes_batch
     
     def train(self, train_loader):
@@ -153,14 +155,20 @@ class Trainer():
             # batch[1]: [sdf], shape: (batch size)
             iterations += 1.0
             self.running_steps += 1   # counter for latent codes tensorboard
-            #batch_size = self.args.batch_size
+
             self.optimizer_model.zero_grad()
             self.optimizer_latent.zero_grad()
+
             x, y, latent_codes_indexes_batch, latent_codes_batch = self.generate_xy(batch)
             unique_latent_indexes_batch, counts = self.get_latent_proportions(latent_codes_indexes_batch)
+
             predictions = self.model(x)  # (batch_size, 1)
+            if args.clamp:
+                predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+            
             loss_value = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, x[:, :self.args.latent_size], sigma=self.args.sigma_regulariser)
             loss_value.backward()       
+
             # set gradients of latent codes that were not in the batch to 0     
             #unique_latent_indexes_batch = torch.unique(latent_codes_indexes_batch, dim=0).to(device)
             for i in range(0, self.latent_codes.shape[0]):
@@ -169,6 +177,7 @@ class Trainer():
                 else:
                     count = counts[unique_latent_indexes_batch == i]
                     self.latent_codes.grad[i, :] = self.latent_codes.grad[i, :] * (self.args.batch_size / count)
+
             self.optimizer_latent.step()
             self.optimizer_model.step()
             total_loss += loss_value.data.cpu().numpy()  
@@ -189,6 +198,7 @@ class Trainer():
         total_loss = 0.0
         iterations = 0.0
         self.model.eval()
+
         for batch in val_loader:
             # batch[0]: [class, x, y, z], shape: (batch_size, 4)
             # batch[1]: [sdf], shape: (batch size)
@@ -246,7 +256,15 @@ if __name__=='__main__':
     parser.add_argument(
         "--no_skip_connections", default=False, action='store_true', help="Do not skip connections"
     )   
+    parser.add_argument(
+        "--clamp", default=False, action='store_true', help="Clip the network prediction"
+    )
+    parser.add_argument(
+        "--clamp_value", type=float, default=0.1, help="Clip the network prediction"
+    )
     args = parser.parse_args()
+
+    args.clamp = True
 
     trainer = Trainer(args)
     trainer()

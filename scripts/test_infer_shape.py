@@ -50,18 +50,15 @@ def get_data(args):
     # mesh for random object
     mesh_dict = objs_dict[random_obj]
 
-    # # sample point cloud on random object
-    # coords = utils.mesh_to_pointcloud(mesh['verts'], mesh['faces'], args.num_samples)
-    # coords = torch.from_numpy(coords).to(device)
-
-    # sdf_gt = torch.full(size=(coords.shape[0], 1), fill_value=0).to(device)
-
     mesh = trimesh.Trimesh(mesh_dict['verts'], mesh_dict['faces'])
     coords_temp, sdf_temp = sample_sdf_near_surface(mesh, number_of_points=args.num_samples, sign_method='depth')
     coords_array = coords_temp[(sdf_temp < 0.001) & (sdf_temp>-0.001)]
     sdf_gt_array = sdf_temp[(sdf_temp < 0.001) & (sdf_temp>-0.001)]
     coords = torch.from_numpy(coords_array).to(device)
     sdf_gt = torch.from_numpy(sdf_gt_array).to(device)
+
+    if args.clamp:
+        sdf_gt = torch.clamp(sdf_gt, -args.clamp_value, args.clamp_value)
 
     return coords, sdf_gt
 
@@ -106,11 +103,18 @@ def main(args):
     for epoch in tqdm(range(0, args.epochs)):
         latent_code_tile = torch.tile(latent_code, (coords.shape[0], 1))
         x = torch.hstack((latent_code_tile, coords))
+
         optim.zero_grad()
+
         predictions = model(x)
+
+        if args.clamp:
+            predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+
         loss_value = utils.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
         loss_value.backward()
         optim.step()
+
         writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
 
         # step scheduler and store on tensorboard
@@ -179,6 +183,12 @@ if __name__ == '__main__':
     )  
     parser.add_argument(
         "--resolution", type=int, default=50, help="Folder that contains the network parameters"
+    )
+    parser.add_argument(
+        "--clamp", default=False, action='store_true', help="Clip the network prediction"
+    )
+    parser.add_argument(
+        "--clamp_value", type=float, default=0.1, help="Clip the network prediction"
     )
     args = parser.parse_args()
 
