@@ -188,13 +188,13 @@ if __name__ == '__main__':
         "--index_objs_dict", type=int, default=-1, help="Index of the object in the dictionary. Set this higher than -1 to sample from a specific object"
     )  
     parser.add_argument(
-        "--resolution", type=int, default=50, help="Folder that contains the network parameters"
+        "--resolution", type=int, default=50, help="Resolution of the extracted mesh"
     )
     parser.add_argument(
         "--clamp", default=False, action='store_true', help="Clip the network prediction"
     )
     parser.add_argument(
-        "--clamp_value", type=float, default=0.1, help="Clip the network prediction"
+        "--clamp_value", type=float, default=0.1, help="Value of the clip"
     )
     args = parser.parse_args()
 
