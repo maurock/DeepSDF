@@ -99,6 +99,8 @@ def main(args):
     # create dataset
     coords, sdf_gt = get_data(args)
 
+    best_loss = 1000000
+
     # prediction
     for epoch in tqdm(range(0, args.epochs)):
         latent_code_tile = torch.tile(latent_code, (coords.shape[0], 1))
@@ -115,13 +117,17 @@ def main(args):
         loss_value.backward()
         optim.step()
 
-        writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
+        if loss_value.detach().cpu().item() < best_loss:
+            best_loss = loss_value.detach().cpu().item()
+            best_latent_code = latent_code.clone()
 
         # step scheduler and store on tensorboard
         if args.lr_scheduler:
             scheduler_latent.step(loss_value.item())
             writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
 
+        # logging
+        writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
         # store latent codes and their gradient on tensorboard
         tag = f"latent_code_0"
         writer.add_histogram(tag, latent_code, global_step=epoch)
@@ -130,12 +136,12 @@ def main(args):
 
     # Save optimised latent_code
     latent_code_path = os.path.join(test_path, 'latent_code.pt')
-    torch.save(latent_code, latent_code_path)
+    torch.save(best_latent_code, latent_code_path)
 
     # Extract mesh obtained with the latent code optimised at inference
     coords, grad_size_axis = utils.get_volume_coords(args.resolution)
 
-    sdf = utils.predict_sdf(latent_code, coords, model)
+    sdf = utils.predict_sdf(best_latent_code, coords, model)
     vertices, faces = utils.extract_mesh(grad_size_axis, sdf)
 
     # save mesh using meshplot
