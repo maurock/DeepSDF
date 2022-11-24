@@ -83,7 +83,7 @@ def SDFLoss(sdf, predictions):
 def SDFLoss_multishape(sdf, prediction, x_latent, sigma):
     """Loss function introduced in the paper DeepSDF for multiple shapes."""
     l1 = torch.mean(torch.abs(prediction - sdf))
-    l2 = sigma * torch.mean(torch.pow(x_latent, 2))
+    l2 = sigma**2 * torch.mean(torch.linalg.norm(x_latent, dim=1, ord=2, dtype=torch.float32))
     loss = l1 + l2
     #print(f'Loss prediction: {l1:.3f}, Loss regulariser: {l2:.3f}')
     return loss
@@ -110,7 +110,7 @@ def generate_latent_codes(latent_size, samples_dict):
     dict_latent_codes = dict()
     for i, obj_idx in enumerate(list(samples_dict.keys())):
         dict_latent_codes[obj_idx] = i
-        latent_code = torch.normal(0, 1, size = (1, latent_size), dtype=torch.float32).to(device)
+        latent_code = torch.normal(0, 0.01, size = (1, latent_size), dtype=torch.float32).to(device)
         latent_codes = torch.vstack((latent_codes, latent_code))
     latent_codes.requires_grad_(True)
     return latent_codes, dict_latent_codes

@@ -50,14 +50,14 @@ class Trainer():
 
         # instantiate model and optimisers
         self.model = sdf_model.SDFModelMulti(self.args.num_layers, self.args.no_skip_connections).double().to(device)
-        self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr, weight_decay=0)
+        self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model * self.args.batch_size, weight_decay=0)
         # generate a unique random latent code for each shape
         self.latent_codes, self.dict_latent_codes = utils.generate_latent_codes(self.args.latent_size, samples_dict)
-        self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr, weight_decay=0)
+        self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
 
         if self.args.lr_scheduler:
-            self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.005, threshold_mode='rel')
-            self.scheduler_latent =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_latent, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.005, threshold_mode='rel')
+            self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.0001, threshold_mode='rel')
+            self.scheduler_latent =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_latent, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.0001, threshold_mode='rel')
             
         # get data
         train_loader, val_loader = self.get_loaders()
@@ -231,7 +231,10 @@ if __name__=='__main__':
         "--epochs", type=int, default=1000, help="Number of epochs to use"
     )
     parser.add_argument(
-        "--lr", type=float, default=0.0001, help="Initial learning rate"
+        "--lr_model", type=float, default=0.00001, help="Initial learning rate (model)"
+    )
+    parser.add_argument(
+        "--lr_latent", type=float, default=0.001, help="Initial learning rate (latent vector)"
     )
     parser.add_argument(
         "--batch_size", type=int, default=500, help="Size of the batch"
