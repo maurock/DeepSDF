@@ -106,7 +106,7 @@ def generate_latent_codes(latent_size, samples_dict):
                                         dict_latent_codes[345] = 0, the obj that has index 345 refers to 
                                         the 0-th latent code.
     """
-    latent_codes = torch.tensor([]).reshape(0, latent_size).to(device)
+    latent_codes = torch.tensor([], dtype=torch.float32).reshape(0, latent_size).to(device)
     dict_latent_codes = dict()
     for i, obj_idx in enumerate(list(samples_dict.keys())):
         dict_latent_codes[obj_idx] = i
