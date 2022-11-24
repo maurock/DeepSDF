@@ -94,7 +94,7 @@ def main(args):
         exit()
     objs_dict = np.load(os.path.join(os.path.dirname(results.__file__), 'objs_dict.npy'), allow_pickle=True).item()
     samples_dict = dict()
-    for obj_idx in list(objs_dict.keys())[1:4]:
+    for obj_idx in list(objs_dict.keys())[1:30]:
         samples_dict[obj_idx] = dict()
         if args.method == 'custom':
             samples_dict[obj_idx]['samples'] = sample(objs_dict[obj_idx], args)
