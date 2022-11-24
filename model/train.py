@@ -49,7 +49,7 @@ class Trainer():
         samples_dict = np.load(samples_dict_path, allow_pickle=True).item()
 
         # instantiate model and optimisers
-        self.model = sdf_model.SDFModelMulti(self.args.num_layers, self.args.no_skip_connections).double().to(device)
+        self.model = sdf_model.SDFModelMulti(self.args.num_layers, self.args.no_skip_connections).float().to(device)
         self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model * self.args.batch_size, weight_decay=0)
         # generate a unique random latent code for each shape
         self.latent_codes, self.dict_latent_codes = utils.generate_latent_codes(self.args.latent_size, samples_dict)
@@ -84,9 +84,9 @@ class Trainer():
 
                 self.results['val']['loss'].append(avg_val_loss)
 
-                if avg_val_loss.detach().cpu().item() < best_loss:
-                    best_loss = avg_val_loss.detach().cpu().item()
-                    best_weights = self.model.state_dict().clone()
+                if avg_val_loss < best_loss:
+                    best_loss = np.copy(avg_val_loss)
+                    best_weights = self.model.state_dict()
                     best_latent_codes = self.latent_codes.detach().cpu().numpy()
 
                 if self.args.lr_scheduler:
@@ -241,7 +241,7 @@ if __name__=='__main__':
         "--seed", type=int, default=42, help="Setting for the random seed"
     )
     parser.add_argument(
-        "--epochs", type=int, default=1000, help="Number of epochs to use"
+        "--epochs", type=int, default=5, help="Number of epochs to use"
     )
     parser.add_argument(
         "--lr_model", type=float, default=0.00001, help="Initial learning rate (model)"
