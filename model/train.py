@@ -103,7 +103,7 @@ class Trainer():
             
             np.save(os.path.join(self.run_dir, 'results.npy'), self.results)
             torch.save(best_weights, os.path.join(self.run_dir, 'weights.pt'))
-            self.results['train']['best_latent_codes'].append(best_latent_codes)
+            self.results['train']['best_latent_codes'] = best_latent_codes
             
         end = time.time()
         print(f'Time elapsed: {end - start} s')

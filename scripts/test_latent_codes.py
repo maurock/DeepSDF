@@ -15,7 +15,7 @@ def get_latent_codes_training(results_dict):
     """Return a list containing the latent code tensors optimised at training time"""
     latent_codes_list = []
     for i in range(results_dict['train']['best_latent_codes'].shape[0]):
-        latent_codes_list.append(torch.from_numpy(results_dict['train']['best_latent_codes'][-1][i]).to(device))
+        latent_codes_list.append(torch.from_numpy(results_dict['train']['best_latent_codes'][i]).to(device))
     return latent_codes_list
 
 def main(args):
