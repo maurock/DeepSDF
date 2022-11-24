@@ -48,8 +48,5 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    args.latent_code_path = "/Users/ri21540/Documents/PhD/Code/DeepSDF/results/runs/23_11_161317/test/24_11_102014/latent_code.pt"
-    args.weights_path = "/Users/ri21540/Documents/PhD/Code/DeepSDF/results/runs/23_11_161317/weights.pt"
-
     main(args)
 
