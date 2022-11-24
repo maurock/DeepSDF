@@ -50,7 +50,7 @@ class Trainer():
 
         # instantiate model and optimisers
         self.model = sdf_model.SDFModelMulti(self.args.num_layers, self.args.no_skip_connections).float().to(device)
-        self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model * self.args.batch_size, weight_decay=0)
+        self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
         # generate a unique random latent code for each shape
         self.latent_codes, self.dict_latent_codes = utils.generate_latent_codes(self.args.latent_size, samples_dict)
         self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
@@ -241,7 +241,7 @@ if __name__=='__main__':
         "--seed", type=int, default=42, help="Setting for the random seed"
     )
     parser.add_argument(
-        "--epochs", type=int, default=5, help="Number of epochs to use"
+        "--epochs", type=int, default=500, help="Number of epochs to use"
     )
     parser.add_argument(
         "--lr_model", type=float, default=0.00001, help="Initial learning rate (model)"
