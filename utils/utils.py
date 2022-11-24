@@ -154,12 +154,16 @@ def save_meshplot(vertices, faces, path):
     mp.plot(vertices, faces, c=vertices[:, 2], filename=path)
 
 def predict_sdf(latent, coords, model):
+    sdf = torch.tensor([], dtype=torch.float32).view(0, 1)
     coords = coords.clone().to(device)
-    latent_tile = torch.tile(latent, (coords.shape[0], 1))
-    coords_latent = torch.hstack((latent_tile, coords)).to(device)
-    model.eval()
-    with torch.no_grad():
-        sdf = model(coords_latent)
+    coords_batches = torch.split(coords, 1000000)
+    for coords in coords_batches:
+        latent_tile = torch.tile(latent, (coords.shape[0], 1))
+        coords_latent = torch.hstack((latent_tile, coords)).to(device)
+        model.eval()
+        with torch.no_grad():
+            sdf_batch = model(coords_latent)
+        sdf = torch.vstack((sdf, sdf_batch))        
     return sdf
 
 def extract_mesh(grad_size_axis, sdf):
