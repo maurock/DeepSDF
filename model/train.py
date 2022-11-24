@@ -62,35 +62,48 @@ class Trainer():
         # get data
         train_loader, val_loader = self.get_loaders()
         self.results = {
-            'train':  {'loss': [], 'latent_codes': []},
+            'train':  {'loss': [], 'latent_codes': [], 'best_latent_codes' : []},
             'val':    {'loss': []}
         }
         #utils.model_graph_to_tensorboard(train_loader, self.model, self.writer, self.generate_xy)
 
         self.running_steps = 0   # counter for latent codes tensorboard
+        best_loss = 10000000000
         start = time.time()
         for epoch in range(self.args.epochs):
             print(f'============================ Epoch {epoch} ============================')
             self.epoch = epoch
+
             avg_train_loss = self.train(train_loader)
+
             self.results['train']['loss'].append(avg_train_loss)
             self.results['train']['latent_codes'].append(self.latent_codes.detach().cpu().numpy())
+
             with torch.no_grad():
                 avg_val_loss = self.validate(val_loader)
+
                 self.results['val']['loss'].append(avg_val_loss)
+
+                if avg_val_loss.detach().cpu().item() < best_loss:
+                    best_loss = avg_val_loss.detach().cpu().item()
+                    best_weights = self.model.state_dict().clone()
+                    best_latent_codes = self.latent_codes.detach().cpu().numpy()
+
                 if self.args.lr_scheduler:
                     self.scheduler_model.step(avg_val_loss)
                     self.scheduler_latent.step(avg_val_loss)
+
                     for param_group in self.optimizer_model.param_groups:
                         print(f"Learning rate (model): {param_group['lr']}")
                     for param_group in self.optimizer_latent.param_groups:
                         print(f"Learning rate (latent): {param_group['lr']}")
+
                     self.writer.add_scalar('Learning rate (model)', self.scheduler_model._last_lr[0], epoch)
                     self.writer.add_scalar('Learning rate (latent)', self.scheduler_latent._last_lr[0], epoch)
-
             
             np.save(os.path.join(self.run_dir, 'results.npy'), self.results)
-            torch.save(self.model.state_dict(), os.path.join(self.run_dir, 'weights.pt'))
+            torch.save(best_weights, os.path.join(self.run_dir, 'weights.pt'))
+            self.results['train']['best_latent_codes'].append(best_latent_codes)
             
         end = time.time()
         print(f'Time elapsed: {end - start} s')

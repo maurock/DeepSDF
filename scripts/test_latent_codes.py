@@ -14,8 +14,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def get_latent_codes_training(results_dict):
     """Return a list containing the latent code tensors optimised at training time"""
     latent_codes_list = []
-    for i in range(results_dict['train']['latent_codes'][-1].shape[0]):
-        latent_codes_list.append(torch.from_numpy(results_dict['train']['latent_codes'][-1][i]).to(device))
+    for i in range(results_dict['train']['best_latent_codes'].shape[0]):
+        latent_codes_list.append(torch.from_numpy(results_dict['train']['best_latent_codes'][-1][i]).to(device))
     return latent_codes_list
 
 def main(args):
