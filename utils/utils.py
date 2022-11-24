@@ -154,7 +154,7 @@ def save_meshplot(vertices, faces, path):
     mp.plot(vertices, faces, c=vertices[:, 2], filename=path)
 
 def predict_sdf(latent, coords, model):
-    sdf = torch.tensor([], dtype=torch.float32).view(0, 1)
+    sdf = torch.tensor([], dtype=torch.float32).view(0, 1).to(device)
     coords = coords.clone().to(device)
     coords_batches = torch.split(coords, 1000000)
     for coords in coords_batches:
