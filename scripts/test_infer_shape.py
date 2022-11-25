@@ -70,8 +70,8 @@ def get_data(args, test_path):
             centre = coords_array[idx_centre, :]
 
             # create a vixel and collect data inside it
-            upper_bound = centre + 0.05
-            lower_bound = centre - 0.05
+            upper_bound = centre + 0.06
+            lower_bound = centre - 0.06
             condition = [i.all() for i in ((coords_array <= upper_bound) & (coords_array >= lower_bound))]
             voxel_coords_all = np.vstack((voxel_coords_all, coords_array[condition, :]))
             voxel_sdf_all = np.hstack((voxel_sdf_all, sdf_gt_array[condition]))
