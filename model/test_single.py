@@ -11,7 +11,7 @@ import skimage.measure
 Test model
 """
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def extract_mesh(data, sdf_prediction):
     """Extract mesh using the marching cubes algorithm.

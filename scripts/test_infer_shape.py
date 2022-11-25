@@ -13,6 +13,7 @@ from datetime import datetime
 import json
 from mesh_to_sdf import sample_sdf_near_surface
 import trimesh
+import plotly.graph_objects as go
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -23,12 +24,13 @@ def initialise_latent_code(latent_size, results_dict):
     latent_code = torch.normal(0, 0.01, size = (1, latent_size), dtype=torch.float32, requires_grad=True, device=device)
     return latent_code
 
-def get_data(args):
+def get_data(args, test_path):
     """Return x and y. Sample N points from the desired object.
     
     Params:
         - idx_obj_dict: index of the object in the dictionary. e.g. 0, 1, 2.. the first, second, third object in objs_dict.
                        If None, a random object is selected.
+        - test_path: path where to save the touch point cloud
     
     Returns:
         - coords: points samples on the object
@@ -54,6 +56,30 @@ def get_data(args):
     coords_temp, sdf_temp = sample_sdf_near_surface(mesh, number_of_points=args.num_samples, sign_method='depth')
     coords_array = coords_temp[(sdf_temp < 0.001) & (sdf_temp>-0.001)]
     sdf_gt_array = sdf_temp[(sdf_temp < 0.001) & (sdf_temp>-0.001)]
+
+    # simulate touch point clouds
+    if args.tactile:
+        _coords_all = np.copy(coords_array)              # store for plotting
+
+        voxel_coords_all = np.array([], dtype=np.float32).reshape(0, 3)
+        voxel_sdf_all = np.array([], dtype=np.float32).reshape(0)
+
+        for _ in range(0, args.touches):
+            # sample the centre of a voxel
+            idx_centre = np.random.choice(np.arange(0, coords_array.shape[0]))
+            centre = coords_array[idx_centre, :]
+
+            # create a vixel and collect data inside it
+            upper_bound = centre + 0.05
+            lower_bound = centre - 0.05
+            condition = [i.all() for i in ((coords_array <= upper_bound) & (coords_array >= lower_bound))]
+            voxel_coords_all = np.vstack((voxel_coords_all, coords_array[condition, :]))
+            voxel_sdf_all = np.hstack((voxel_sdf_all, sdf_gt_array[condition]))
+            
+        coords_array = voxel_coords_all
+        sdf_gt_array = voxel_sdf_all       
+        _debug_plot(_coords_all, coords_array, test_path)
+
     coords = torch.from_numpy(coords_array).to(device)
     sdf_gt = torch.from_numpy(sdf_gt_array).to(device)
 
@@ -62,6 +88,14 @@ def get_data(args):
 
     return coords, sdf_gt
 
+def _debug_plot(_coords_all, coords_array, test_path):
+    fig = go.Figure(
+    [
+        go.Scatter3d(x=_coords_all[:, 0], y=_coords_all[:, 1],z=_coords_all[:, 2], mode='markers', marker=dict(size=2)),
+        go.Scatter3d(x=coords_array[:, 0], y=coords_array[:, 1],z=coords_array[:, 2], mode='markers', marker=dict(size=2))
+    ]
+    )
+    fig.write_html(os.path.join(test_path, "touches.html"))
 
 def main(args):
     folder = args.folder
@@ -97,7 +131,7 @@ def main(args):
                                                 threshold=0.0001, threshold_mode='rel')
     
     # create dataset
-    coords, sdf_gt = get_data(args)
+    coords, sdf_gt = get_data(args, test_path)
 
     best_loss = 1000000
 
@@ -195,6 +229,12 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         "--clamp_value", type=float, default=0.1, help="Value of the clip"
+    )
+    parser.add_argument(
+        "--tactile", default=False, action='store_true', help="Simulate point cloud from tactile images"
+    )
+    parser.add_argument(
+        "--touches", type=int, default=1, help="Value of the clip"
     )
     args = parser.parse_args()
 
