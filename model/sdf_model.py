@@ -4,7 +4,7 @@ import copy
 """
 Model based on the paper 'DeepSDF'
 """
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class SDFModel(torch.nn.Module):
     def __init__(self, input_dim=3, inner_dim=512, output_dim=1):

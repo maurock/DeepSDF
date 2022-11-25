@@ -9,7 +9,7 @@ import meshplot as mp
 import utils.utils as utils
 mp.offline()
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def get_latent_codes_training(results_dict):
     """Return a list containing the latent code tensors optimised at training time"""

@@ -8,7 +8,7 @@ import pybullet as pb
 import meshplot as mp
 import skimage
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def mesh_from_urdf(filepath):
     """

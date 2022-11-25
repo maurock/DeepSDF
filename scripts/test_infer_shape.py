@@ -14,7 +14,7 @@ import json
 from mesh_to_sdf import sample_sdf_near_surface
 import trimesh
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def initialise_latent_code(latent_size, results_dict):
     """Initialise latent code as the average over all the obtained latent codes"""

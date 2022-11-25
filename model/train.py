@@ -18,7 +18,7 @@ import results
 from torch.utils.tensorboard import SummaryWriter
 import json
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if device=="cuda:0":
     print(torch.cuda.get_device_name(0))
@@ -52,6 +52,7 @@ class Trainer():
         self.model = sdf_model.SDFModelMulti(self.args.num_layers, self.args.no_skip_connections).float().to(device)
         if self.args.pretrained:
             self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
+        self.model= nn.DataParallel(self.model)
         self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
         # generate a unique random latent code for each shape
         self.latent_codes, self.dict_latent_codes = utils.generate_latent_codes(self.args.latent_size, samples_dict)

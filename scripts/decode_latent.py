@@ -11,7 +11,7 @@ from datetime import datetime
 """Extract mesh from an already optimised latent code and network. 
 Store the mesh in the same folder where the latent code is located."""
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(args):
     latent_code_path = args.latent_code_path
