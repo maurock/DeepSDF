@@ -50,6 +50,8 @@ class Trainer():
 
         # instantiate model and optimisers
         self.model = sdf_model.SDFModelMulti(self.args.num_layers, self.args.no_skip_connections).float().to(device)
+        if self.args.pretrained:
+            self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
         self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
         # generate a unique random latent code for each shape
         self.latent_codes, self.dict_latent_codes = utils.generate_latent_codes(self.args.latent_size, samples_dict)
@@ -286,7 +288,13 @@ if __name__=='__main__':
         "--clamp", default=False, action='store_true', help="Clip the network prediction"
     )
     parser.add_argument(
-        "--clamp_value", type=float, default=0.1, help="Clip the network prediction"
+        "--clamp_value", type=float, default=0.1, help="Value for clipping"
+    )
+    parser.add_argument(
+        "--pretrained", default=False, action='store_true', help="Use pretrain weights"
+    )
+    parser.add_argument(
+        "--pretrain_weights", type=str, default='', help="Path to pretrain weights"
     )
     args = parser.parse_args()
 
