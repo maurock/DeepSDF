@@ -95,6 +95,12 @@ def _debug_plot(_coords_all, coords_array, test_path):
         go.Scatter3d(x=coords_array[:, 0], y=coords_array[:, 1],z=coords_array[:, 2], mode='markers', marker=dict(size=2))
     ]
     )
+    fig.write_html(os.path.join(test_path, "touches_gt.html"))
+    fig = go.Figure(
+    [
+        go.Scatter3d(x=coords_array[:, 0], y=coords_array[:, 1],z=coords_array[:, 2], mode='markers', marker=dict(size=2))
+    ]
+    )
     fig.write_html(os.path.join(test_path, "touches.html"))
 
 def main(args):
