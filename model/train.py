@@ -180,6 +180,7 @@ class Trainer():
     
     def train(self, gpu, train_loader):
         # MultiGPU
+        print(f'GPU: {gpu}')
         dist.init_process_group(                                   
             backend='nccl',                                         
             init_method='env://',                                   
