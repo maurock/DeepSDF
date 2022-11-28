@@ -124,7 +124,7 @@ class Trainer():
 
         train_sampler = torch.utils.data.distributed.DistributedSampler(
             train_data,
-            num_replicas=args.world_size,
+            num_replicas=args.gpus,
             rank=self.args.gpus
         )
 
@@ -189,9 +189,18 @@ class Trainer():
         # Wrap the model for MultiGPU
         self.model = nn.parallel.DistributedDataParallel(self.model, device_ids=[gpu])
         print('GPU: {gpu}\n')
+
         total_loss = 0.0
         iterations = 0.0
         self.model.train()
+
+        ################### DEBUG 
+        for batch in train_loader:
+            x, y, latent_codes_indexes_batch, latent_codes_batch = self.generate_xy(batch)
+            print(f'Size of the input: {x.shape}')
+            break
+        ##############################
+
         for batch in train_loader:
             # batch[0]: [class, x, y, z], shape: (batch_size, 4)
             # batch[1]: [sdf], shape: (batch size)
