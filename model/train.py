@@ -53,7 +53,6 @@ class Trainer():
         if self.args.pretrained:
             self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
         self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
-
         # generate a unique random latent code for each shape
         self.latent_codes, self.dict_latent_codes = utils.generate_latent_codes(self.args.latent_size, samples_dict)
         self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
@@ -76,7 +75,7 @@ class Trainer():
         for epoch in range(self.args.epochs):
             print(f'============================ Epoch {epoch} ============================')
             self.epoch = epoch
-            
+
             avg_train_loss = self.train(train_loader)
 
             self.results['train']['loss'].append(avg_train_loss)
@@ -116,7 +115,6 @@ class Trainer():
         train_size = int(0.8 * len(data))
         val_size = len(data) - train_size
         train_data, val_data = random_split(data, [train_size, val_size])
-
         train_loader = DataLoader(
                 train_data,
                 batch_size=self.args.batch_size,
@@ -166,11 +164,10 @@ class Trainer():
             y = torch.clamp(y, -args.clamp_value, args.clamp_value)
         return x, y, latent_codes_indexes_batch, latent_codes_batch
     
-    def train(self, gpu, train_loader):
+    def train(self, train_loader):
         total_loss = 0.0
         iterations = 0.0
         self.model.train()
-
         for batch in train_loader:
             # batch[0]: [class, x, y, z], shape: (batch_size, 4)
             # batch[1]: [sdf], shape: (batch size)
@@ -182,7 +179,7 @@ class Trainer():
 
             x, y, latent_codes_indexes_batch, latent_codes_batch = self.generate_xy(batch)
             unique_latent_indexes_batch, counts = self.get_latent_proportions(latent_codes_indexes_batch)
-            
+
             predictions = self.model(x)  # (batch_size, 1)
             if args.clamp:
                 predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
@@ -299,8 +296,7 @@ if __name__=='__main__':
     parser.add_argument(
         "--pretrain_weights", type=str, default='', help="Path to pretrain weights"
     )
-
-    args = parser.parse_args()                 
+    args = parser.parse_args()
 
     trainer = Trainer(args)
     trainer()
