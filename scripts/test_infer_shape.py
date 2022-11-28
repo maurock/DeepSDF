@@ -58,7 +58,7 @@ def get_data(args, test_path):
     sdf_gt_array = sdf_temp[(sdf_temp < 0.001) & (sdf_temp>-0.001)]
 
     # simulate touch point clouds
-    if args.tactile:
+    if args.touches > 0:
         _coords_all = np.copy(coords_array)              # store for plotting
 
         voxel_coords_all = np.array([], dtype=np.float32).reshape(0, 3)
@@ -155,16 +155,23 @@ def main(args):
 
         loss_value = utils.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
         loss_value.backward()
+        
+        #  add langevin noise (optional)
+        if args.langevin_noise > 0:
+            noise = torch.normal(0, args.langevin_noise, size = (1, args.latent_size), dtype=torch.float32, requires_grad=False, device=device)
+            latent_code.grad = latent_code.grad + noise
+
         optim.step()
 
         if loss_value.detach().cpu().item() < best_loss:
             best_loss = loss_value.detach().cpu().item()
             best_latent_code = latent_code.clone()
 
-        # step scheduler and store on tensorboard
+        # step scheduler and store on tensorboard (optional)
         if args.lr_scheduler:
             scheduler_latent.step(loss_value.item())
             writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
+
 
         # logging
         writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
@@ -237,10 +244,10 @@ if __name__ == '__main__':
         "--clamp_value", type=float, default=0.1, help="Value of the clip"
     )
     parser.add_argument(
-        "--tactile", default=False, action='store_true', help="Simulate point cloud from tactile images"
+        "--touches", type=int, default=0, help="Simulated touches if this value is higher than 0, otherwise sample uniformly on the surface."
     )
     parser.add_argument(
-        "--touches", type=int, default=1, help="Value of the clip"
+        "--langevin_noise", type=float, default=0, help="If this value is higher than 0, it adds noise to the latent space after every update."
     )
     args = parser.parse_args()
 
