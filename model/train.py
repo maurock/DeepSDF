@@ -17,8 +17,6 @@ from utils import utils
 import results
 from torch.utils.tensorboard import SummaryWriter
 import json
-import torch.multiprocessing as mp
-import torch.distributed as dist
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -79,10 +77,7 @@ class Trainer():
             print(f'============================ Epoch {epoch} ============================')
             self.epoch = epoch
             
-            if args.gpus > 1:
-                avg_train_loss = mp.spawn(train, nprocs=args.gpus, args=(train_loader,))  ############################ CHANGE THIS
-            else:
-                avg_train_loss = self.train(0, train_loader)
+            avg_train_loss = self.train(train_loader)
 
             self.results['train']['loss'].append(avg_train_loss)
             self.results['train']['latent_codes'].append(self.latent_codes.detach().cpu().numpy())
@@ -122,18 +117,11 @@ class Trainer():
         val_size = len(data) - train_size
         train_data, val_data = random_split(data, [train_size, val_size])
 
-        train_sampler = torch.utils.data.distributed.DistributedSampler(
-            train_data,
-            num_replicas=args.gpus,
-            rank=self.args.gpus
-        )
-
         train_loader = DataLoader(
                 train_data,
                 batch_size=self.args.batch_size,
-                shuffle=False,
-                drop_last=True,
-                sampler=train_sampler
+                shuffle=True,
+                drop_last=True
             )
         val_loader = DataLoader(
             val_data,
@@ -179,28 +167,9 @@ class Trainer():
         return x, y, latent_codes_indexes_batch, latent_codes_batch
     
     def train(self, gpu, train_loader):
-        # MultiGPU
-        print(f'GPU: {gpu}')
-        dist.init_process_group(                                   
-            backend='nccl',                                         
-            init_method='env://',                                   
-            world_size=self.args.gpus,                              
-            rank=gpu                                               
-        )
-        # Wrap the model for MultiGPU
-        self.model = nn.parallel.DistributedDataParallel(self.model, device_ids=[gpu])
-        print('GPU: {gpu}\n')
-
         total_loss = 0.0
         iterations = 0.0
         self.model.train()
-
-        ################### DEBUG 
-        for batch in train_loader:
-            x, y, latent_codes_indexes_batch, latent_codes_batch = self.generate_xy(batch)
-            print(f'Size of the input: {x.shape}')
-            break
-        ##############################
 
         for batch in train_loader:
             # batch[0]: [class, x, y, z], shape: (batch_size, 4)
@@ -330,15 +299,8 @@ if __name__=='__main__':
     parser.add_argument(
         "--pretrain_weights", type=str, default='', help="Path to pretrain weights"
     )
-    parser.add_argument(
-        "--gpus", type=int, default=1, help="Number of nodes to use, assuming each node uses a single gpu"
-    )
 
-    args = parser.parse_args()
-
-    # MultiGPU
-    os.environ['MASTER_ADDR'] = '10.57.23.164'              
-    os.environ['MASTER_PORT'] = '8888'                      
+    args = parser.parse_args()                 
 
     trainer = Trainer(args)
     trainer()
