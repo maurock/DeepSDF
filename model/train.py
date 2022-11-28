@@ -17,6 +17,8 @@ from utils import utils
 import results
 from torch.utils.tensorboard import SummaryWriter
 import json
+import torch.multiprocessing as mp
+import torch.distributed as dist
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -53,6 +55,7 @@ class Trainer():
         if self.args.pretrained:
             self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
         self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
+
         # generate a unique random latent code for each shape
         self.latent_codes, self.dict_latent_codes = utils.generate_latent_codes(self.args.latent_size, samples_dict)
         self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
@@ -75,8 +78,11 @@ class Trainer():
         for epoch in range(self.args.epochs):
             print(f'============================ Epoch {epoch} ============================')
             self.epoch = epoch
-
-            avg_train_loss = self.train(train_loader)
+            
+            if args.gpus > 1:
+                avg_train_loss = mp.spawn(train, nprocs=args.gpus, args=(train_loader,))  ############################ CHANGE THIS
+            else:
+                avg_train_loss = self.train(0, train_loader)
 
             self.results['train']['loss'].append(avg_train_loss)
             self.results['train']['latent_codes'].append(self.latent_codes.detach().cpu().numpy())
@@ -115,11 +121,19 @@ class Trainer():
         train_size = int(0.8 * len(data))
         val_size = len(data) - train_size
         train_data, val_data = random_split(data, [train_size, val_size])
+
+        train_sampler = torch.utils.data.distributed.DistributedSampler(
+            train_data,
+            num_replicas=args.world_size,
+            rank=self.args.gpus
+        )
+
         train_loader = DataLoader(
                 train_data,
                 batch_size=self.args.batch_size,
-                shuffle=True,
-                drop_last=True
+                shuffle=False,
+                drop_last=True,
+                sampler=train_sampler
             )
         val_loader = DataLoader(
             val_data,
@@ -164,7 +178,17 @@ class Trainer():
             y = torch.clamp(y, -args.clamp_value, args.clamp_value)
         return x, y, latent_codes_indexes_batch, latent_codes_batch
     
-    def train(self, train_loader):
+    def train(self, gpu, train_loader):
+        # MultiGPU
+        dist.init_process_group(                                   
+            backend='nccl',                                         
+            init_method='env://',                                   
+            world_size=self.args.gpus,                              
+            rank=gpu                                               
+        )
+        # Wrap the model for MultiGPU
+        self.model = nn.parallel.DistributedDataParallel(self.model, device_ids=[gpu])
+        print('GPU: {gpu}\n')
         total_loss = 0.0
         iterations = 0.0
         self.model.train()
@@ -179,7 +203,7 @@ class Trainer():
 
             x, y, latent_codes_indexes_batch, latent_codes_batch = self.generate_xy(batch)
             unique_latent_indexes_batch, counts = self.get_latent_proportions(latent_codes_indexes_batch)
-
+            
             predictions = self.model(x)  # (batch_size, 1)
             if args.clamp:
                 predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
@@ -296,7 +320,15 @@ if __name__=='__main__':
     parser.add_argument(
         "--pretrain_weights", type=str, default='', help="Path to pretrain weights"
     )
+    parser.add_argument(
+        "--gpus", type=int, default=1, help="Number of nodes to use, assuming each node uses a single gpu"
+    )
+
     args = parser.parse_args()
+
+    # MultiGPU
+    os.environ['MASTER_ADDR'] = '10.57.23.164'              
+    os.environ['MASTER_PORT'] = '8888'                      
 
     trainer = Trainer(args)
     trainer()
