@@ -24,7 +24,7 @@ def normalise_obj(verts):
     
 def load_save_objects(obj_dir):
     """
-    Extract objects (verts and faces) from the URDF files in the PartNet-Mobnility dataset.
+    Extract objects (verts and faces) from the URDF files in the PartNet-Mobility dataset.
     Store objects in dictionaries, where key=obj_idx and value=np.array[verts, faces]
 
     Args:

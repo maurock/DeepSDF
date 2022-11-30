@@ -128,7 +128,13 @@ def main(args):
 
     # Initialise latent code and optimiser
     latent_code = initialise_latent_code(args.latent_size, results_dict)
-    optim = torch.optim.Adam([latent_code], lr=args.lr)
+    if args.optimiser == 'Adam':
+        optim = torch.optim.Adam([latent_code], lr=args.lr)
+    elif args.optimiser == 'LBFGS':
+        optim = torch.optim.LBFGS([latent_code], lr=args.lr, max_iter=args.LBFGS_maxiter)
+    else:
+        print('Please choose valid optimiser: [Adam, LBFGS]')
+        exit()
 
     if args.lr_scheduler:
         scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 
@@ -146,22 +152,45 @@ def main(args):
         latent_code_tile = torch.tile(latent_code, (coords.shape[0], 1))
         x = torch.hstack((latent_code_tile, coords))
 
-        optim.zero_grad()
+        # Adam 
+        if args.optimiser == 'Adam':
 
-        predictions = model(x)
+            optim.zero_grad()
 
-        if args.clamp:
-            predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+            predictions = model(x)
 
-        loss_value = utils.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
-        loss_value.backward()
-        
-        #  add langevin noise (optional)
-        if args.langevin_noise > 0:
-            noise = torch.normal(0, args.langevin_noise, size = (1, args.latent_size), dtype=torch.float32, requires_grad=False, device=device)
-            latent_code.grad = latent_code.grad + noise
+            if args.clamp:
+                predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
 
-        optim.step()
+            loss_value = utils.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
+            loss_value.backward()
+            
+            #  add langevin noise (optional)
+            if args.langevin_noise > 0:
+                noise = torch.normal(0, args.langevin_noise, size = (1, args.latent_size), dtype=torch.float32, requires_grad=False, device=device)
+                latent_code.grad = latent_code.grad + noise
+
+            optim.step()
+
+        # LBFGS
+        else:
+
+            def closure():
+                optim.zero_grad()
+
+                predictions = model(x)
+
+                if args.clamp:
+                    predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+
+                loss_value = utils.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
+                loss_value.backward()
+
+                return loss_value
+
+            optim.step(closure)
+
+            loss_value = closure()
 
         if loss_value.detach().cpu().item() < best_loss:
             best_loss = loss_value.detach().cpu().item()
@@ -171,7 +200,6 @@ def main(args):
         if args.lr_scheduler:
             scheduler_latent.step(loss_value.item())
             writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
-
 
         # logging
         writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
@@ -249,7 +277,22 @@ if __name__ == '__main__':
     parser.add_argument(
         "--langevin_noise", type=float, default=0, help="If this value is higher than 0, it adds noise to the latent space after every update."
     )
+    parser.add_argument(
+        "--optimiser", type=str, default='Adam', help="Choose the optimiser out of [Adam, LBFGS]"
+    )
+    parser.add_argument(
+        "--LBFGS_maxiter", type=str, default='Adam', help="Choose the optimiser out of [Adam, LBFGS]"
+    )
     args = parser.parse_args()
+
+    args.folder = '25_11_084304'
+    args.epochs = 100
+    args.index_objs_dict = 1
+    args.lr = 1e-05
+    args.lr_multiplier = 0.9
+    args.patience = 100
+    args.lr_scheduler = True
+
 
     main(args)
 
