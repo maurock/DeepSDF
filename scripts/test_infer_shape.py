@@ -281,18 +281,9 @@ if __name__ == '__main__':
         "--optimiser", type=str, default='Adam', help="Choose the optimiser out of [Adam, LBFGS]"
     )
     parser.add_argument(
-        "--LBFGS_maxiter", type=str, default='Adam', help="Choose the optimiser out of [Adam, LBFGS]"
+        "--LBFGS_maxiter", type=str, default='Adam', help="Maximum interations for the LBFGS optimiser"
     )
     args = parser.parse_args()
-
-    args.folder = '25_11_084304'
-    args.epochs = 100
-    args.index_objs_dict = 1
-    args.lr = 1e-05
-    args.lr_multiplier = 0.9
-    args.patience = 100
-    args.lr_scheduler = True
-
 
     main(args)
 
