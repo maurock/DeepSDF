@@ -169,8 +169,7 @@ def main(args):
 
         # LBFGS
         else:
-            args.lr_scheduler = False
-
+            print('LBFGS ')
             def closure():
                 optim_lbfgs.zero_grad()
 
