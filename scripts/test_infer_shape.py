@@ -281,7 +281,7 @@ if __name__ == '__main__':
         "--optimiser", type=str, default='Adam', help="Choose the optimiser out of [Adam, LBFGS]"
     )
     parser.add_argument(
-        "--LBFGS_maxiter", type=str, default='Adam', help="Maximum interations for the LBFGS optimiser"
+        "--LBFGS_maxiter", type=str, default=20, help="Maximum interations for the LBFGS optimiser"
     )
     args = parser.parse_args()
 
