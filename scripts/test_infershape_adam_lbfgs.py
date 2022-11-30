@@ -148,7 +148,7 @@ def main(args):
         x = torch.hstack((latent_code_tile, coords))
 
         # Adam 
-        if scheduler_latent._last_lr[0] > args.lr * (args.lr_multiplier)**5:    # if less than 5 updates
+        if (epoch > 0) and (scheduler_latent._last_lr[0] > args.lr * (args.lr_multiplier)**5):    # if less than 5 updates
 
             optim_adam.zero_grad()
 
