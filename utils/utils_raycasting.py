@@ -1,7 +1,4 @@
 import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import open3d as o3d
 from pyrsistent import s
 from sklearn.utils import resample
 import trimesh
@@ -113,22 +110,6 @@ def get_contact_points(current_TCP_pos_vel_worldframe, pb, nx=5, ny=5, plot_star
     else:
         results = np.array(pb.rayTestBatch(raysFrom, raysTo), dtype=object)
 
-    #results = np.array(pb.rayTestBatch(raysFrom, raysTo), dtype=object)
-    # print(results)
-
-    # Plot Start and End of rays
-    if plot_start_end_rays:
-        color_From_array = np.full(shape=raysFrom.shape, fill_value=np.array([235, 52, 52])/255)      # color contact points
-        color_To_array = np.full(shape=raysTo.shape, fill_value=np.array([235, 52, 52])/255)
-
-        pb.addUserDebugPoints(  
-            pointPositions=raysFrom,
-            pointColorsRGB=color_From_array,
-            pointSize=1)
-        pb.addUserDebugPoints(  
-            pointPositions=raysTo,
-            pointColorsRGB=color_To_array,
-            pointSize=1)
     return results
 
 
@@ -161,7 +142,9 @@ def pointcloud_to_vertices_wrk(point_cloud, robot, args):
     """
     # compute k-means that will used as vertices
     print(f'Shape of full pointcloud: {point_cloud.shape}')
+
     verts_wrld = trimesh.points.k_means(point_cloud, 25)[0]
+
     tcp_pos_wrld, tcp_rpy_wrld, _, _, _ = robot.arm.get_current_TCP_pos_vel_worldframe()
 
     rot_Q = pb.getQuaternionFromEuler(tcp_rpy_wrld)
@@ -169,38 +152,11 @@ def pointcloud_to_vertices_wrk(point_cloud, robot, args):
     rot_M_inv = np.linalg.inv(rot_M)
     verts_wrk = rot_M_inv @ (verts_wrld - tcp_pos_wrld).transpose(1,0)
     verts_wrk = verts_wrk.transpose(1,0)
+
     print(f'Point cloud to vertices: {verts_wrk.shape}')
+
     if args.debug_show_mesh_wrk:
         trimesh.points.plot_points(verts_wrk)
-    mesh = pointcloud_to_mesh(verts_wrk, args) 
-    return mesh
-    
-    
-def pointcloud_to_mesh(point_cloud, args):
-    """
-    Method to transform point cloud into mesh using the Open3D ball pivoting technique. 
-    As seen here: https://stackoverflow.com/questions/56965268/how-do-i-convert-a-3d-point-cloud-ply-into-a-mesh-with-faces-and-vertices
 
-    Parameters:
-        point_cloud: np.array of 25 coordinates, obtained in pointcloud_to_vertices. They represent the vertices of the mesh.
-    Return:
-        mesh: open3d.geometry.TriangleMesh
-    """
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(point_cloud)
-    pcd.estimate_normals()
-
-    # estimate radius for rolling ball
-    distances = pcd.compute_nearest_neighbor_distance()
-    avg_dist = np.mean(distances)
-    radius = 1 * avg_dist   
-
-    mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
-            pcd,
-            o3d.utility.DoubleVector([radius, radius * 2]))
-    # to access vertices, np.array(mesh.vertices). Normals are computed by o3d, so they might be wrong.
-    if args.debug_show_mesh_wrld:
-        o3d.visualization.draw_geometries([mesh], mesh_show_wireframe=True, point_show_normal=True) 
-
-    return mesh
+    return verts_wrk
     

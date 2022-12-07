@@ -25,6 +25,15 @@ bash create_directories.sh
 ```
 This repository uses Python 3.8, PyTorch 1.9, skicit-image. Additional instructions to install the required packages will be added soon.
 
+The package `mesh_to_sdf` is used to collect data:
+```
+pip install -U git+https://github.com/maurock/mesh_to_sdf.git@fixed_scaling
+```
+Using a robot to reconstruct an object requires the branch `active_reconstruction` in Tactile-Gym 2.0:
+```
+pip install -U git+https://github.com/ac-93/tactile_gym.git@deepsdf
+```
+
 # Data making
 In this code, we used the URDF files from the [PartNet-Mobility Dataset](https://sapien.ucsd.edu/downloads).
 The folders that you download from the PartNet website (e.g. `3398`, `3517`) need to be stored in `data\objects`:

@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import pybullet as pb
-from utils import utils_shoot_rays
+from utils import utils_raycasting
 import os
 from scipy.spatial.transform import Rotation as R
 import sys
@@ -9,6 +9,7 @@ from cri_robot_arm import CRIRobotArm
 from utils import utils_mesh
 import results
 from contextlib import contextmanager
+import trimesh
 
 def sample_hemisphere(r):
     """
@@ -108,7 +109,7 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
         utils_mesh.debug_draw_vertices_on_pb(np.array(vertices_wrld))
         # show object vertices
         initial_orn = pb.getQuaternionFromEuler([np.pi / 2, 0, 0])   # WHY DO I NEED THIS ARBITRARY ORN INSTEAD OF OBJ ORN?
-        vertices_wrld = utils_shoot_rays.rotate_vector_by_quaternion(np.array(vertices_wrld), initial_orn) + initial_pos
+        vertices_wrld = utils_raycasting.rotate_vector_by_quaternion(np.array(vertices_wrld), initial_orn) + initial_pos
 
     # Get min and max world object coordinates. 
     min_coords = [ np.amin(vertices_wrld[:,0]), np.amin(vertices_wrld[:,1]), np.amin(vertices_wrld[:,2]) ]
@@ -155,24 +156,24 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
 
         # Show mesh obtained from pointcloud using Open3D.
         if args.debug_show_full_mesh:
-            utils_shoot_rays.pointcloud_to_mesh(robot.results_at_touch_wrld[:, 3], args)
+            utils_raycasting.pointcloud_to_mesh(robot.results_at_touch_wrld[:, 3], args)
 
         # If the robot touches the object, get mesh from pointcloud using Open3D, optionally visualise it. If not contact points, continue. 
         if robot.results_at_touch_wrld is None:
             continue
 
-        filtered_full_pointcloud = utils_shoot_rays.filter_point_cloud(robot.results_at_touch_wrld)
+        filtered_full_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld)
         if filtered_full_pointcloud.shape[0] < 26:
             print('Point cloud shape is too small')
             continue
 
         # Full pointcloud to 25 vertices. By default, vertices are converted to workframe.
-        mesh = utils_shoot_rays.pointcloud_to_vertices_wrk(filtered_full_pointcloud, robot, args)
-        if (np.asarray(mesh.vertices).shape[0] != 25) or (np.asarray(mesh.triangles).shape[0] == 0):
+        verts_wrk = utils_raycasting.pointcloud_to_vertices_wrk(filtered_full_pointcloud, robot, args)
+        if verts_wrk.shape[0] != 25:
             print('Mesh does not have 25 vertices or faces not found')
             continue
-        verts = np.asarray(mesh.vertices, dtype=np.float32).ravel()
-        data['verts'] = np.vstack((data['verts'], verts))
+        verts_ravel_wrk = np.asarray(verts_wrk, dtype=np.float32).ravel()
+        data['verts'] = np.vstack((data['verts'], verts_ravel_wrk))
 
         # Store world position of the TCP
         data['pos_wrld_list'] = np.vstack((data['pos_wrld_list'], robot.coords_at_touch_wrld))
@@ -183,7 +184,10 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
         tactile_imgs_norm = np.expand_dims(camera, 0) / 255     # normalize tactile images
         data['tactile_imgs'] = np.vstack((data['tactile_imgs'], tactile_imgs_norm))
 
-        pointcloud_wrk = mesh.sample_points_poisson_disk(num_points).points  #PointCloud obj wrk
+        # create mesh from verts_wrk
+        pc = trimesh.PointCloud(verts_wrk)
+        mesh = pc.convex_hull
+        pointcloud_wrk = trimesh.sample.sample_surface(mesh, num_points)[0]
         pointcloud_wrk = np.array(pointcloud_wrk, dtype=np.float32)[None, :, :] # higher dimension for stacking
         data['pointclouds'] = np.vstack((data['pointclouds'], pointcloud_wrk))
 
