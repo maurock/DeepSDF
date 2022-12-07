@@ -189,8 +189,4 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    args.show_gui = True
-    args.num_samples = 3
-    args.show_tactile = True
-
     main(args)
