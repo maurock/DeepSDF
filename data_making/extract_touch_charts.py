@@ -189,6 +189,4 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    args.show_gui=True
-
     main(args)
