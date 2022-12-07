@@ -6,7 +6,7 @@ import pkgutil
 import os
 from cri_robot_arm import CRIRobotArm
 from tactile_gym.assets import add_assets_path
-from object_reconstruction.utils.samples_utils import *
+from utils import utils_sample
 from utils import utils_deepsdf
 from utils import utils_mesh
 #from object_reconstruction.utils.mesh_utils import *
@@ -115,7 +115,7 @@ def main(args):
         # Load object
         stimulus_orn = p.getQuaternionFromEuler([0, 0, np.pi / 2])
 
-        with suppress_stdout():          # to suppress b3Warning
+        with utils_sample.suppress_stdout():          # to suppress b3Warning
             
             obj_initial_z = utils_mesh.get_mesh_z(obj_index, args.scale)
         
@@ -135,7 +135,7 @@ def main(args):
         robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
 
         #mesh_list, tactile_imgs, pointcloud_list, obj_index, rot_M_wrld_list, pos_wrld_list, pos_wrk_list  =
-        data = spherical_sampling(
+        data = utils_sample.spherical_sampling(
             robot=robot,
             obj_id=obj_id, 
             initial_pos=stimulus_pos,
@@ -188,5 +188,7 @@ if __name__=='__main__':
         "--scale", default=0.1, type=float, help="Scale of the object in simulation wrt the urdf object"
     )
     args = parser.parse_args()
+
+    args.show_gui=True
 
     main(args)
