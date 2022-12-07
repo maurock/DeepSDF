@@ -7,7 +7,8 @@ import os
 from cri_robot_arm import CRIRobotArm
 from tactile_gym.assets import add_assets_path
 from object_reconstruction.utils.samples_utils import *
-from utils import utils
+from utils import utils_deepsdf
+from utils import utils_mesh
 #from object_reconstruction.utils.mesh_utils import *
 #from object_reconstruction.utils.obj_utils import *
 #from object_reconstruction.touch.train import *
@@ -80,8 +81,22 @@ def main(args):
     list_objects.remove('__init__.py')
     list_objects.remove('__pycache__')
 
-    for idx, obj_index in enumerate(list_objects): 
+    # initialise dict with arrays to store. They'll be processed in samples_utils.save_touch_charts
+    data = {
+        "verts": np.array([]).reshape(0, 75), # verts of touch charts (25) flattened
+        "faces": np.array([]).reshape(0, 33, 3), # faces of touch charts
+        "tactile_imgs": np.array([], dtype=np.float32).reshape(0, 1, 256, 256),
+        "pointclouds": np.array([], dtype=np.float32).reshape(0, 2000, 3),   # fixed dimension touch chart pointcloud (workframe)
+        "rot_M_wrld_list": np.array([], dtype=np.float32).reshape(0, 3, 3),      # rotation matrix (work wrt worldframe)
+        "pos_wrld_list": np.array([]).reshape(0, 3) , # TCP pos (worldframe)
+        "pos_wrk_list": np.array([], dtype=np.float32).reshape(0, 3),   # TCP pos (worldframe)
+        "obj_index": np.array([], dtype=np.float32).reshape(0, 1),
+        "initial_pos": np.array([], dtype=np.float32).reshape(0, 3)
+    }
+
+    for idx, obj_index in enumerate(list_objects[1:3]): 
         print(f"Collecting data... Object index: {obj_index}     {idx+1}/{len(list_objects)} ")
+
         # Load robot
         robot = CRIRobotArm(
             pb,
@@ -99,36 +114,40 @@ def main(args):
 
         # Load object
         stimulus_orn = p.getQuaternionFromEuler([0, 0, np.pi / 2])
-        scale_obj = 0.1
+
         with suppress_stdout():          # to suppress b3Warning
-            obj_initial_z = mesh_utils.get_mesh_z(obj_index)
+            
+            obj_initial_z = utils_mesh.get_mesh_z(obj_index, args.scale)
+        
             stimulus_pos = [0.65, 0.0, obj_initial_z]
-            stimulus_id = pb.loadURDF(
+            
+            obj_id = pb.loadURDF(
                 #os.path.join('/Users/ri21540/Documents/PhD/Code/tactile_gym_sim2real_dev_Mauro/tactile_gym_sim2real/data_collection/sim/stimuli/edge_stimuli/square/square.urdf'),
-                os.path.join(os.path.dirname(objects.__file__), "{obj_index}/mobility.urdf"),
+                os.path.join(os.path.dirname(objects.__file__), f"{obj_index}/mobility.urdf"),
                 stimulus_pos,
                 stimulus_orn,
                 useFixedBase=True,
                 flags=pb.URDF_INITIALIZE_SAT_FEATURES,
-                globalScaling=scale_obj
+                globalScaling=args.scale
             )
-            print(f'PyBullet object ID: {stimulus_id}')
+            print(f'PyBullet object ID: {obj_id}')
 
         robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
 
-        mesh_list, tactile_imgs, pointcloud_list, obj_index, rot_M_wrld_list, pos_wrld_list, pos_wrk_list  = spherical_sampling(
+        #mesh_list, tactile_imgs, pointcloud_list, obj_index, rot_M_wrld_list, pos_wrld_list, pos_wrk_list  =
+        data = spherical_sampling(
             robot=robot,
-            obj_id=stimulus_id, 
+            obj_id=obj_id, 
             initial_pos=stimulus_pos,
             initial_orn=stimulus_orn,
-            scale=scale_obj,
             args=args,
             obj_index=obj_index,
             robot_config=robot_config,
+            data=data
         )
 
-        utils.save_touch_charts(mesh_list, tactile_imgs, pointcloud_list, rot_M_wrld_list, pos_wrld_list, pos_wrk_list, stimulus_pos, path)
-        pb.removeBody(stimulus_id)
+        #utils_mesh.save_touch_charts(mesh_list, tactile_imgs, pointcloud_list, rot_M_wrld_list, pos_wrld_list, pos_wrk_list, stimulus_pos, path)
+        pb.removeBody(obj_id)
         pb.removeBody(robot.robot_id)
         if args.show_gui:
             time.sleep(1)
@@ -165,6 +184,13 @@ if __name__=='__main__':
     parser.add_argument(
         "--debug_pointcloud_to_mesh", default=False, action='store_true', help="Store pointcloud and generated touch chart"
     )
+    parser.add_argument(
+        "--scale", default=0.1, type=float, help="Scale of the object in simulation wrt the urdf object"
+    )
     args = parser.parse_args()
+
+    args.show_gui = True
+    args.num_samples = 3
+    args.show_tactile = True
 
     main(args)

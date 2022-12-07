@@ -8,12 +8,13 @@ from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 import argparse
 import results.runs as runs
-from utils.utils import SDFLoss_multishape, latent_to_tensorboard
+from utils.utils_deepsdf import SDFLoss_multishape, latent_to_tensorboard
 import os
 from datetime import datetime
 import numpy as np
 import time
-from utils import utils
+from utils import utils_deepsdf
+from utils import mesh_deepsdf
 import results
 from torch.utils.tensorboard import SummaryWriter
 import json
@@ -54,7 +55,7 @@ class Trainer():
             self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
         self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
         # generate a unique random latent code for each shape
-        self.latent_codes, self.dict_latent_codes = utils.generate_latent_codes(self.args.latent_size, samples_dict)
+        self.latent_codes, self.dict_latent_codes = utils_deepsdf.generate_latent_codes(self.args.latent_size, samples_dict)
         self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
 
         if self.args.lr_scheduler:
@@ -201,14 +202,14 @@ class Trainer():
             total_loss += loss_value.data.cpu().numpy()  
 
             if self.args.latent_to_tensorboard:
-                utils.latent_to_tensorboard(self.writer, self.running_steps, self.latent_codes)
+                utils_deepsdf.latent_to_tensorboard(self.writer, self.running_steps, self.latent_codes)
 
         avg_train_loss = total_loss/iterations
         print(f'Training: loss {avg_train_loss}')
         self.writer.add_scalar('Training loss', avg_train_loss, self.epoch)
 
         if self.args.weights_to_tensorboard:
-            utils.weight_to_tensorboard(self.writer, self.epoch, self.model)
+            utils_deepsdf.weight_to_tensorboard(self.writer, self.epoch, self.model)
 
         return avg_train_loss
 

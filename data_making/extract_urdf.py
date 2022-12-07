@@ -2,7 +2,8 @@ import os
 import data.objects as objects
 import results
 from glob import glob
-import utils.utils as utils
+from utils import utils_deepsdf
+from utils import utils_mesh
 import numpy as np
 from copy import deepcopy
 """
@@ -36,15 +37,18 @@ def load_save_objects(obj_dir):
     # List all the objects in data/objects/
     list_objects = [filepath.split('/')[-1] for filepath in glob(os.path.join(obj_dir, '*'))]
     list_objects.remove('__init__.py')
+
     if '__pycache__' in list_objects:
         list_objects.remove('__pycache__')
     objs_dict = dict()
+    
     for obj_index in list_objects:
         objs_dict[obj_index] = dict()
         filepath_obj = os.path.join(obj_dir, obj_index)
-        verts, faces = utils.mesh_from_urdf(filepath_obj)
+        mesh = utils_mesh.mesh_from_urdf(filepath_obj)
+        verts, faces = np.array(mesh.vertices), np.array(mesh.faces)
         verts_norm = normalise_obj(verts)
-        new_verts = utils.rotate_vertices(verts_norm)
+        new_verts = utils_mesh.rotate_vertices(verts_norm)
         objs_dict[obj_index]['verts'] = new_verts
         objs_dict[obj_index]['faces'] = faces
     return objs_dict  

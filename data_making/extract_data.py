@@ -1,13 +1,14 @@
 import numpy as np
 import results 
 import os
-import utils.utils as utils
+from utils import utils_deepsdf, utils_mesh
 import argparse
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import trimesh
 from mesh_to_sdf import sample_sdf_near_surface
 from mesh_to_sdf.surface_point_cloud import *
+from tqdm import tqdm 
 
 """
 For each object, sample points and store their distance to the nearest triangle.
@@ -51,7 +52,7 @@ def sample_near_surface(samples_on_surface):
 def sample_on_surface(obj_dict, args):
     verts = obj_dict['verts']
     faces = obj_dict['faces']
-    samples = utils.mesh_to_pointcloud(verts, faces, args.num_samples_on_surface)
+    samples = utils_mesh.mesh_to_pointcloud(verts, faces, args.num_samples_on_surface)
     return samples
 
 def sample(obj_dict, args):
@@ -88,40 +89,60 @@ def _debug_plot(samples, dist=True):
     fig.show()
 
 def main(args):
+
     # load objs_dict from results/objs_dict.npy
     if not os.path.exists(os.path.join(os.path.dirname(results.__file__), 'objs_dict.npy')):
         print('Object dictionary does not exist. Please create it running extract_urdf.py')
         exit()
+
     objs_dict = np.load(os.path.join(os.path.dirname(results.__file__), 'objs_dict.npy'), allow_pickle=True).item()
+
     samples_dict = dict()
-    for obj_idx in list(objs_dict.keys())[1:30]:
+
+    for obj_idx in tqdm(list(objs_dict.keys())[1:30]):
+
         samples_dict[obj_idx] = dict()
+
         if args.method == 'custom':
             samples_dict[obj_idx]['samples'] = sample(objs_dict[obj_idx], args)
             samples_dict[obj_idx]['sdf'] = compute_sdf(objs_dict[obj_idx]['verts'], objs_dict[obj_idx]['faces'], samples_dict[obj_idx]['samples'])
+
         elif args.method == 'library':
+
             mesh = trimesh.Trimesh(objs_dict[obj_idx]['verts'], objs_dict[obj_idx]['faces'])
-            points, sdf = sample_sdf_near_surface(mesh, number_of_points=args.num_samples_total, sign_method=args.sign_method)
+
+            points, sdf = sample_sdf_near_surface(mesh, number_of_points=args.num_samples_total, sign_method=args.sign_method, auto_scaling=False, scale_ratio = 1.414)
 
             # TODO: temporary solution. Sample points and only keep the
             # negative ones to reduce the ratio positive/negative 
             neg_idxs = np.where(sdf < 0)[0]
             pos_idxs = np.where(sdf > 0)[0]
             ratio = float(len(pos_idxs))/float(len(neg_idxs))
+
             while ratio > 2:
-                points_temp, sdf_temp = sample_sdf_near_surface(mesh, number_of_points=args.num_samples_total, sign_method=args.sign_method)
+
+                points_temp, sdf_temp = sample_sdf_near_surface(mesh, number_of_points=args.num_samples_total, sign_method=args.sign_method, auto_scaling=False, scale_ratio = 1.414)
+
                 points = np.vstack((points, points_temp[sdf_temp<0]))
                 sdf = np.hstack((sdf, sdf_temp[sdf_temp < 0]))
+
                 neg_idxs = np.where(sdf < 0)[0]
                 pos_idxs = np.where(sdf > 0)[0]
                 ratio = float(len(pos_idxs))/float(len(neg_idxs))
+
+                print(f'ratio: {ratio}')
+
             samples_dict[obj_idx]['samples'] = points
             samples_dict[obj_idx]['sdf'] = sdf
+
         else: 
             print('Choose a valid method')
             exit()        
+
         samples_dict[obj_idx]['latent_class'] = np.array([obj_idx], dtype=np.int32)
+
         samples_dict[obj_idx]['samples_latent_class'] = combine_sample_latent(samples_dict[obj_idx]['samples'], samples_dict[obj_idx]['latent_class'])
+
         #_debug_plot(samples_dict[obj_idx])  
     np.save(os.path.join(os.path.dirname(results.__file__), 'samples_dict.npy'), samples_dict)
 

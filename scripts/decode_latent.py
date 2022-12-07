@@ -5,7 +5,7 @@ mp.offline()
 import model.sdf_model as sdf_model
 import argparse
 from tqdm import tqdm 
-import utils.utils as utils
+from utils import utils_deepsdf
 from datetime import datetime
 
 """Extract mesh from an already optimised latent code and network. 
@@ -21,15 +21,15 @@ def main(args):
     model.load_state_dict(torch.load(args.weights_path, map_location=device))
    
     # Extract mesh obtained with the latent code optimised at inference
-    coords, grad_size_axis = utils.get_volume_coords(args.resolution)
+    coords, grad_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
 
-    sdf = utils.predict_sdf(latent_code, coords, model)
-    vertices, faces = utils.extract_mesh(grad_size_axis, sdf)
+    sdf = utils_deepsdf.predict_sdf(latent_code, coords, model)
+    vertices, faces = utils_deepsdf.extract_mesh(grad_size_axis, sdf)
 
     # save mesh using meshplot
     output_path = os.path.dirname(latent_code_path)
     mesh_path = os.path.join(output_path, f"mesh_{datetime.now().strftime('%d_%m_%H%M%S')}.html")
-    utils.save_meshplot(vertices, faces, mesh_path)
+    utils_deepsdf.save_meshplot(vertices, faces, mesh_path)
 
 
 if __name__ == '__main__':

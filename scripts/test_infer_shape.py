@@ -7,7 +7,7 @@ mp.offline()
 import model.sdf_model as sdf_model
 import argparse
 from tqdm import tqdm 
-import utils.utils as utils
+from utils import utils_deepsdf
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 import json
@@ -69,7 +69,7 @@ def get_data(args, test_path):
             idx_centre = np.random.choice(np.arange(0, coords_array.shape[0]))
             centre = coords_array[idx_centre, :]
 
-            # create a vixel and collect data inside it
+            # create a voxel and collect data inside it
             upper_bound = centre + 0.06
             lower_bound = centre - 0.06
             condition = [i.all() for i in ((coords_array <= upper_bound) & (coords_array >= lower_bound))]
@@ -162,7 +162,7 @@ def main(args):
             if args.clamp:
                 predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
 
-            loss_value = utils.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
+            loss_value = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
             loss_value.backward()
             
             #  add langevin noise (optional)
@@ -183,7 +183,7 @@ def main(args):
                 if args.clamp:
                     predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
 
-                loss_value = utils.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
+                loss_value = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
                 loss_value.backward()
 
                 return loss_value
@@ -214,14 +214,14 @@ def main(args):
     torch.save(best_latent_code, latent_code_path)
 
     # Extract mesh obtained with the latent code optimised at inference
-    coords, grad_size_axis = utils.get_volume_coords(args.resolution)
+    coords, grad_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
 
-    sdf = utils.predict_sdf(best_latent_code, coords, model)
-    vertices, faces = utils.extract_mesh(grad_size_axis, sdf)
+    sdf = utils_deepsdf.predict_sdf(best_latent_code, coords, model)
+    vertices, faces = utils_deepsdf.extract_mesh(grad_size_axis, sdf)
 
     # save mesh using meshplot
     mesh_path = os.path.join(test_path, f'mesh.html')
-    utils.save_meshplot(vertices, faces, mesh_path)
+    utils_deepsdf.save_meshplot(vertices, faces, mesh_path)
 
 
 if __name__ == '__main__':

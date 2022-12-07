@@ -6,7 +6,7 @@ import meshplot as mp
 import model.sdf_model as sdf_model
 import argparse
 import meshplot as mp
-import utils.utils as utils
+from utils import utils_deepsdf
 mp.offline()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -32,18 +32,18 @@ def main(args):
 
     latent_codes_list = get_latent_codes_training(results_dict)
   
-    coords, grad_size_axis = utils.get_volume_coords(args.resolution)
+    coords, grad_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
 
     for idx, latent in enumerate(latent_codes_list):
-        sdf = utils.predict_sdf(latent, coords, model)
-        vertices, faces = utils.extract_mesh(grad_size_axis, sdf)
+        sdf = utils_deepsdf.predict_sdf(latent, coords, model)
+        vertices, faces = utils_deepsdf.extract_mesh(grad_size_axis, sdf)
 
         # save mesh using meshplot
         mesh_dir = os.path.join(os.path.dirname(results.__file__), 'runs', folder, 'meshes_training')
         if not os.path.exists(mesh_dir):
             os.mkdir(mesh_dir)
         mesh_path = os.path.join(mesh_dir, f'latent_{idx}.html')
-        utils.save_meshplot(vertices, faces, mesh_path)
+        utils_deepsdf.save_meshplot(vertices, faces, mesh_path)
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
