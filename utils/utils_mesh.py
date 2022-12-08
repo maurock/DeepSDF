@@ -5,8 +5,9 @@ import os
 from copy import deepcopy
 import pybullet as pb
 import data.objects as objects
+from data_making import extract_urdf
 
-def mesh_from_urdf(filepath):
+def urdf_to_mesh(filepath):
     """
     Receives path to object index containing the .URDF and verts and faces (both np.array).
     Directory tree:
@@ -46,19 +47,17 @@ def _as_mesh(scene_or_mesh):
     return mesh
 
 
-def mesh_to_pointcloud(verts, faces, n_samples):
+def mesh_to_pointcloud(mesh, n_samples):
     """
     This method samples n points on a mesh. The number of samples for each face is weighted by its size. 
 
     Params:
-        verts = vertices, np.array(n, 3)
-        faces = faces, np.array(m, 3)
+        mesh = trimesh.Trimesh()
         n_samples: number of total samples
     
     Returns:
         pointcloud
     """
-    mesh = trimesh.Trimesh(verts, faces)
     pointcloud, _ = trimesh.sample.sample_surface(mesh, n_samples)
     pointcloud = pointcloud.astype(np.float32)
     return pointcloud
@@ -129,7 +128,7 @@ def get_mesh_z(obj_index, scale):
     goes partially throught the ground.
     """
     filepath_obj = os.path.join(os.path.dirname(objects.__file__), obj_index)
-    mesh = mesh_from_urdf(filepath_obj)
+    mesh = urdf_to_mesh(filepath_obj)
     verts = mesh.vertices
     pointcloud_s = scale_pointcloud(np.array(verts), scale)
     pointcloud_s_r = rotate_pointcloud(pointcloud_s)
@@ -180,3 +179,53 @@ def debug_draw_vertices_on_pb(vertices_wrld, color=[235, 52, 52]):
         pointColorsRGB=color_From_array,
         pointSize=1
     )
+
+
+def translate_rotate_mesh(pos_wrld_list, rot_M_wrld_list, pointclouds_list, obj_initial_pos):
+    """
+    Given a pointcloud (workframe), the position of the TCP (worldframe), the rotation matrix (worldframe),
+    it returns the pointcloud in worldframe. It assumes a default position of the object.
+
+    Params:
+        pos_wrld_list: (m, 3)
+        rot_M_wrld_list: (m, 3, 3)
+        pointclouds_list: pointcloud in workframe (m, number_points, 3)
+
+    Returns:
+    """
+    a = rot_M_wrld_list @ pointclouds_list.transpose(0,2,1)
+    b = a.transpose(0,2,1)
+    c = pos_wrld_list[:, np.newaxis, :] + b
+    pointcloud_wrld = c - obj_initial_pos
+    return pointcloud_wrld
+
+
+def load_save_objects(obj_dir):
+    """
+    Extract objects (verts and faces) from the URDF files in the PartNet-Mobility dataset.
+    Store objects in dictionaries, where key=obj_idx and value=np.array[verts, faces]
+
+    Args:
+        obj_dir: directory containing the object folders
+    Returns:
+        dictionary of dictionaries, the first key is the object indexes, the second
+        key are 'verts' and 'faces', both stores as np.array
+    """
+    # List all the objects in data/objects/
+    list_objects = [filepath.split('/')[-1] for filepath in glob(os.path.join(obj_dir, '*'))]
+    list_objects.remove('__init__.py')
+
+    if '__pycache__' in list_objects:
+        list_objects.remove('__pycache__')
+    objs_dict = dict()
+    
+    for obj_index in list_objects:
+        objs_dict[obj_index] = dict()
+        filepath_obj = os.path.join(obj_dir, obj_index)
+        mesh = urdf_to_mesh(filepath_obj)
+        verts, faces = np.array(mesh.vertices), np.array(mesh.faces)
+        verts_norm = extract_urdf.normalise_obj(verts)
+        new_verts = rotate_vertices(verts_norm)
+        objs_dict[obj_index]['verts'] = new_verts
+        objs_dict[obj_index]['faces'] = faces
+    return objs_dict  

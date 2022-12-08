@@ -106,8 +106,6 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
     else:
         # worldframe coordinates. These do not take into account the initial obj position.
         num_vertices, vertices_wrld = pb.getMeshData(obj_id, 0)   
-        utils_mesh.debug_draw_vertices_on_pb(np.array(vertices_wrld))
-        # show object vertices
         initial_orn = pb.getQuaternionFromEuler([np.pi / 2, 0, 0])   # WHY DO I NEED THIS ARBITRARY ORN INSTEAD OF OBJ ORN?
         vertices_wrld = utils_raycasting.rotate_vector_by_quaternion(np.array(vertices_wrld), initial_orn) + initial_pos
 
@@ -119,12 +117,10 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
     ray_hemisphere = 1.5 * np.sqrt((max_coords[0] - initial_pos[0])**2 + (max_coords[1] - initial_pos[1])**2 + (max_coords[2] - initial_pos[2])**2)
       
     # Initialize lists for debug
-    debug_pointcloud_to_mesh = dict()    # debug pointcloud_to_mesh
-    debug_pointcloud_to_mesh[obj_index] = dict()
     debug_rotation = dict()
     debug_rotation[obj_index] = dict()
 
-    for iteration in range(args.num_samples):
+    for _ in range(args.num_samples):
 
         pb.removeBody(robot.robot_id)
         robot = CRIRobotArm(
@@ -153,10 +149,6 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
         #_debug_plot_sphere(ray_hemisphere, initial_pos)
         robot_sphere_wrld = np.array(initial_pos) + np.array(hemisphere_random_pos)
         robot = robot_touch_spherical(robot, robot_sphere_wrld, initial_pos, angles)
-
-        # Show mesh obtained from pointcloud using Open3D.
-        if args.debug_show_full_mesh:
-            utils_raycasting.pointcloud_to_mesh(robot.results_at_touch_wrld[:, 3], args)
 
         # If the robot touches the object, get mesh from pointcloud using Open3D, optionally visualise it. If not contact points, continue. 
         if robot.results_at_touch_wrld is None:

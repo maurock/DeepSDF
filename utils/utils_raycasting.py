@@ -132,7 +132,6 @@ def pointcloud_to_vertices_wrk(point_cloud, robot, args):
     """
     Method to reduce the point cloud obtained from pyBullet into 25 vertices.
     It receives filtered contact information and computes 25 k_means for the non-null contact points. 
-    These points represent vertices that are used by the function pointcloud_to_mesh(), which transforms these 25 vertices into a mesh. 
     Vertices are converted to workframe.
     
     Params:

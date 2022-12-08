@@ -9,13 +9,9 @@ from tactile_gym.assets import add_assets_path
 from utils import utils_sample
 from utils import utils_deepsdf
 from utils import utils_mesh
-#from object_reconstruction.utils.mesh_utils import *
-#from object_reconstruction.utils.obj_utils import *
-#from object_reconstruction.touch.train import *
 import argparse
 from glob import glob
 import data.objects as objects
-#import object_reconstruction.data.obj_pointcloud as obj_pointcloud
 
 def main(args):
     time_step = 1. / 960  # low for small objects
@@ -84,7 +80,6 @@ def main(args):
     # initialise dict with arrays to store. They'll be processed in samples_utils.save_touch_charts
     data = {
         "verts": np.array([]).reshape(0, 75), # verts of touch charts (25) flattened
-        "faces": np.array([]).reshape(0, 33, 3), # faces of touch charts
         "tactile_imgs": np.array([], dtype=np.float32).reshape(0, 1, 256, 256),
         "pointclouds": np.array([], dtype=np.float32).reshape(0, 2000, 3),   # fixed dimension touch chart pointcloud (workframe)
         "rot_M_wrld_list": np.array([], dtype=np.float32).reshape(0, 3, 3),      # rotation matrix (work wrt worldframe)
@@ -180,9 +175,6 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--render_scene", default=False, action='store_true', help="Render scene at touch"
-    )
-    parser.add_argument(
-        "--debug_pointcloud_to_mesh", default=False, action='store_true', help="Store pointcloud and generated touch chart"
     )
     parser.add_argument(
         "--scale", default=0.1, type=float, help="Scale of the object in simulation wrt the urdf object"

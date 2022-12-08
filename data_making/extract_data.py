@@ -52,7 +52,8 @@ def sample_near_surface(samples_on_surface):
 def sample_on_surface(obj_dict, args):
     verts = obj_dict['verts']
     faces = obj_dict['faces']
-    samples = utils_mesh.mesh_to_pointcloud(verts, faces, args.num_samples_on_surface)
+    mesh = trimesh.Trimesh(verts, faces)
+    samples = utils_mesh.mesh_to_pointcloud(mesh, args.num_samples_on_surface)
     return samples
 
 def sample(obj_dict, args):
