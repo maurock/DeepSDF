@@ -89,7 +89,7 @@ def main(args):
         "initial_pos": np.array([], dtype=np.float32).reshape(0, 3)
     }
 
-    for idx, obj_index in enumerate(list_objects[1:3]): 
+    for idx, obj_index in enumerate(list_objects[1:10]): 
         print(f"Collecting data... Object index: {obj_index}     {idx+1}/{len(list_objects)} ")
 
         # Load robot
