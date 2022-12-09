@@ -155,9 +155,14 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
             continue
 
         filtered_full_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld)
-        if filtered_full_pointcloud.shape[0] < 26:
+        if filtered_full_pointcloud.shape[0] < 500:
             print('Point cloud shape is too small')
             continue
+        random_indices = np.random.choice(filtered_full_pointcloud.shape[0], 500)
+        sampled_pointcloud = filtered_full_pointcloud[random_indices][None, :, :]
+        data['pointclouds'] = np.vstack((data['pointclouds'], sampled_pointcloud))
+
+
 
         # Full pointcloud to 25 vertices. By default, vertices are converted to workframe.
         verts_wrk = utils_raycasting.pointcloud_to_vertices_wrk(filtered_full_pointcloud, robot, args)
@@ -177,11 +182,11 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
         data['tactile_imgs'] = np.vstack((data['tactile_imgs'], tactile_imgs_norm))
 
         # create mesh from verts_wrk
-        mesh = utils_mesh.pointcloud_to_mesh(verts_wrk)
-        
-        pointcloud_wrk = trimesh.sample.sample_surface(mesh, num_points)[0]
-        pointcloud_wrk = np.array(pointcloud_wrk, dtype=np.float32)[None, :, :] # higher dimension for stacking
-        data['pointclouds'] = np.vstack((data['pointclouds'], pointcloud_wrk))
+        # mesh = utils_mesh.pointcloud_to_mesh(verts_wrk)
+
+        # pointcloud_wrk = trimesh.sample.sample_surface(mesh, num_points)[0]
+        # pointcloud_wrk = np.array(pointcloud_wrk, dtype=np.float32)[None, :, :] # higher dimension for stacking
+        # data['pointclouds'] = np.vstack((data['pointclouds'], pointcloud_wrk))
 
         # Store pose and rotation
         pos_wrk = robot.arm.get_current_TCP_pos_vel_workframe()[0]

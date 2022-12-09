@@ -6,7 +6,6 @@ from copy import deepcopy
 import pybullet as pb
 import data.objects as objects
 from data_making import extract_urdf
-import open3d as o3d
 
 def urdf_to_mesh(filepath):
     """
@@ -230,31 +229,3 @@ def load_save_objects(obj_dir):
         objs_dict[obj_index]['verts'] = new_verts
         objs_dict[obj_index]['faces'] = faces
     return objs_dict  
-
-
-def pointcloud_to_mesh(point_cloud):
-    """
-    Method to transform point cloud into mesh using the Open3D ball pivoting technique. 
-    As seen here: https://stackoverflow.com/questions/56965268/how-do-i-convert-a-3d-point-cloud-ply-into-a-mesh-with-faces-and-vertices
-
-    Parameters:
-        point_cloud: np.array of 25 coordinates, obtained in pointcloud_to_vertices. They represent the vertices of the mesh.
-    Return:
-        mesh: open3d.geometry.TriangleMesh
-    """
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(point_cloud)
-    pcd.estimate_normals()
-
-    # estimate radius for rolling ball
-    distances = pcd.compute_nearest_neighbor_distance()
-    avg_dist = np.mean(distances)
-    radius = 1 * avg_dist   
-
-    mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
-            pcd,
-            o3d.utility.DoubleVector([radius, radius * 2]))
-    # to access vertices, np.array(mesh.vertices). Normals are computed by o3d, so they might be wrong.
-
-    mesh = trimesh.Trimesh(np.asarray(mesh.vertices), np.asarray(mesh.triangles))
-    return mesh

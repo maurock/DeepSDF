@@ -69,8 +69,8 @@ def main(args):
         't_s_dynamics': {},
         'show_gui': args.show_gui,
         'show_tactile': args.show_tactile,
-        'nx': 40,
-        'ny': 40
+        'nx': 50,
+        'ny': 50
     }
     
     list_objects = [filepath.split('/')[-1] for filepath in glob(os.path.join(os.path.dirname(objects.__file__), '*'))]
@@ -81,7 +81,7 @@ def main(args):
     data = {
         "verts": np.array([]).reshape(0, 75), # verts of touch charts (25) flattened
         "tactile_imgs": np.array([], dtype=np.float32).reshape(0, 1, 256, 256),
-        "pointclouds": np.array([], dtype=np.float32).reshape(0, 2000, 3),   # fixed dimension touch chart pointcloud (workframe)
+        "pointclouds": np.array([], dtype=np.float32).reshape(0, 500, 3),   # fixed dimension touch chart pointcloud (workframe)
         "rot_M_wrld_list": np.array([], dtype=np.float32).reshape(0, 3, 3),      # rotation matrix (work wrt worldframe)
         "pos_wrld_list": np.array([]).reshape(0, 3) , # TCP pos (worldframe)
         "pos_wrk_list": np.array([], dtype=np.float32).reshape(0, 3),   # TCP pos (worldframe)
