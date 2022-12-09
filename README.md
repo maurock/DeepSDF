@@ -23,7 +23,7 @@ Create the required directories:
 ```
 bash create_directories.sh
 ```
-This repository uses Python 3.8, PyTorch 1.9, skicit-image. Additional instructions to install the required packages will be added soon.
+This repository uses Python 3.8, PyTorch 1.9, scikit-image. Additional instructions to install the required packages will be added soon.
 
 The package `mesh_to_sdf` is used to collect data:
 ```
@@ -33,6 +33,11 @@ Using a robot to reconstruct an object requires the branch `active_reconstructio
 ```
 pip install -U git+https://github.com/ac-93/tactile_gym.git@deepsdf
 ```
+Use conda to install open3d, as pip cannot find a matching distribution on Linux:
+```
+conda install -c open3d-admin open3d
+```
+
 
 # Data making
 In this code, we used the URDF files from the [PartNet-Mobility Dataset](https://sapien.ucsd.edu/downloads).

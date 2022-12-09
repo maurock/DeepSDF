@@ -11,3 +11,4 @@ scripts/.ipynb_checkpoints
 *.out
 *.sh
 data/shapenet_obj
+results/touch_charts_gt.npy

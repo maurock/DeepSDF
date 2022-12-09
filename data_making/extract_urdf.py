@@ -26,7 +26,7 @@ def normalise_obj(verts):
 
 def main():
     obj_dir = os.path.dirname(objects.__file__)
-    objs_dict = load_save_objects(obj_dir)
+    objs_dict = utils_mesh.load_save_objects(obj_dir)
     np.save(os.path.join(os.path.dirname(results.__file__), 'objs_dict.npy'), objs_dict)
 
 if __name__=='__main__':

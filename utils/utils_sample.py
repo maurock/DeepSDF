@@ -177,8 +177,8 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
         data['tactile_imgs'] = np.vstack((data['tactile_imgs'], tactile_imgs_norm))
 
         # create mesh from verts_wrk
-        pc = trimesh.PointCloud(verts_wrk)
-        mesh = pc.convex_hull
+        mesh = utils_mesh.pointcloud_to_mesh(verts_wrk)
+        
         pointcloud_wrk = trimesh.sample.sample_surface(mesh, num_points)[0]
         pointcloud_wrk = np.array(pointcloud_wrk, dtype=np.float32)[None, :, :] # higher dimension for stacking
         data['pointclouds'] = np.vstack((data['pointclouds'], pointcloud_wrk))
