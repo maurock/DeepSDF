@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import pybullet as pb
-from utils import utils_raycasting
+from utils import utils_raycasting, utils_mesh
 import os
 from scipy.spatial.transform import Rotation as R
 import sys
@@ -106,8 +106,8 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
     else:
         # worldframe coordinates. These do not take into account the initial obj position.
         num_vertices, vertices_wrld = pb.getMeshData(obj_id, 0)   
-        initial_orn = pb.getQuaternionFromEuler([np.pi / 2, 0, 0])   # WHY DO I NEED THIS ARBITRARY ORN INSTEAD OF OBJ ORN?
-        vertices_wrld = utils_raycasting.rotate_vector_by_quaternion(np.array(vertices_wrld), initial_orn) + initial_pos
+        initial_rpy = [np.pi / 2, 0, 0]   # WHY DO I NEED THIS ARBITRARY ORN INSTEAD OF OBJ ORN?
+        vertices_wrld = utils_mesh.rotate_pointcloud(np.array(vertices_wrld), initial_rpy) + initial_pos
 
     # Get min and max world object coordinates. 
     min_coords = [ np.amin(vertices_wrld[:,0]), np.amin(vertices_wrld[:,1]), np.amin(vertices_wrld[:,2]) ]
@@ -153,16 +153,21 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
         # If the robot touches the object, get mesh from pointcloud using Open3D, optionally visualise it. If not contact points, continue. 
         if robot.results_at_touch_wrld is None:
             continue
-
+        
+        # filter points with information about contact, make sure there are at least 500 valid ones
         filtered_full_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld)
         if filtered_full_pointcloud.shape[0] < 500:
             print('Point cloud shape is too small')
             continue
+        # sample 500 random points among the valid ones
         random_indices = np.random.choice(filtered_full_pointcloud.shape[0], 500)
-        sampled_pointcloud = filtered_full_pointcloud[random_indices][None, :, :]
-        data['pointclouds'] = np.vstack((data['pointclouds'], sampled_pointcloud))
-
-
+        sampled_pointcloud_wrld = filtered_full_pointcloud[random_indices]
+        # increase dimensionality for stacking
+        tcp_pos_wrld, tcp_rpy_wrld, _, _, _ = robot.arm.get_current_TCP_pos_vel_worldframe()
+        sampled_pointcloud_wrld = sampled_pointcloud_wrld - tcp_pos_wrld
+        sampled_pointcloud_wrk = utils_mesh.rotate_pointcloud_inverse(sampled_pointcloud_wrld, tcp_rpy_wrld)
+        sampled_pointcloud_wrk = sampled_pointcloud_wrk[None, :, :]
+        data['pointclouds'] = np.vstack((data['pointclouds'], sampled_pointcloud_wrk))
 
         # Full pointcloud to 25 vertices. By default, vertices are converted to workframe.
         verts_wrk = utils_raycasting.pointcloud_to_vertices_wrk(filtered_full_pointcloud, robot, args)

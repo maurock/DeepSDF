@@ -143,17 +143,32 @@ def scale_pointcloud(pointcloud, scale=0.1):
     return obj
 
 
-def rotate_pointcloud(pointcloud, rot=[np.pi / 2, 0, 0]):
+def rotate_pointcloud(pointcloud_A, rpy_BA=[np.pi / 2, 0, 0]):
     """
-    The default rotation reflects the rotation used for the object during data collection
+    The default rotation reflects the rotation used for the object during data collection.
+    This calculates P_b, where P_b = R_b/a * P_a.
+    R_b/a is rotation matrix of a wrt. b frame.
     """
-    obj = deepcopy(pointcloud)
     # Rotate object
-    rot_Q_obj = pb.getQuaternionFromEuler(rot)
-    rot_M_obj = np.array(pb.getMatrixFromQuaternion(rot_Q_obj)).reshape(3, 3)
-    obj = np.einsum('ij,kj->ik', rot_M_obj, obj).transpose(1, 0)
-    return obj
+    rot_Q = pb.getQuaternionFromEuler(rpy_BA)
+    rot_M = np.array(pb.getMatrixFromQuaternion(rot_Q)).reshape(3, 3)
+    pointcloud_B = np.einsum('ij,kj->ik', rot_M, pointcloud_A).transpose(1, 0)
+    
+    return pointcloud_B
 
+
+def rotate_pointcloud_inverse(pointcloud_A, rpy_BA):
+    """
+    Convert point cloud in frame A to point cloud in frame B with 
+    euler angles of A wrt B """
+    rot_Q = pb.getQuaternionFromEuler(rpy_BA)
+    rot_M = np.array(pb.getMatrixFromQuaternion(rot_Q)).reshape(3, 3)
+    rot_M_inv = np.linalg.inv(rot_M)
+    pointcloud_B = rot_M_inv @ pointcloud_A.transpose(1,0)
+    pointcloud_B = pointcloud_B.transpose(1,0)
+
+    return pointcloud_B
+    
 
 def get_ratio_urdf_deepsdf(mesh_urdf):
     """Get the ratio between the mesh in the URDF file and the processed DeepSDF mesh."""
@@ -225,7 +240,7 @@ def load_save_objects(obj_dir):
         mesh = urdf_to_mesh(filepath_obj)
         verts, faces = np.array(mesh.vertices), np.array(mesh.faces)
         verts_norm = extract_urdf.normalise_obj(verts)
-        new_verts = rotate_vertices(verts_norm)
+        new_verts = rotate_pointcloud(verts_norm)
         objs_dict[obj_index]['verts'] = new_verts
         objs_dict[obj_index]['faces'] = faces
     return objs_dict  
