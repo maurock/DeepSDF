@@ -1,8 +1,6 @@
 import os
 import data.objects as objects
 import results
-from glob import glob
-from utils import utils_deepsdf
 from utils import utils_mesh
 import numpy as np
 from copy import deepcopy

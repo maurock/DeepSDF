@@ -1,8 +1,5 @@
 import numpy as np
-from pyrsistent import s
-from sklearn.utils import resample
 import trimesh
-import pybullet as pb
 from utils import utils_mesh
 
 def rotate_vector_by_quaternion(v, q):

@@ -7,7 +7,6 @@ import os
 from cri_robot_arm import CRIRobotArm
 from tactile_gym.assets import add_assets_path
 from utils import utils_sample
-from utils import utils_deepsdf
 from utils import utils_mesh
 import argparse
 from glob import glob

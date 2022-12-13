@@ -1,20 +1,17 @@
-from torch.functional import _return_counts
-import torch.nn as nn
 import torch
-import model.sdf_model as sdf_model
+import model.model_sdf as sdf_model
 import torch.optim as optim
-import data_making.dataset as dataset
+import data_making.dataset_sdf as dataset
 from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 import argparse
 import results.runs as runs
-from utils.utils_deepsdf import SDFLoss_multishape, latent_to_tensorboard
+from utils.utils_deepsdf import SDFLoss_multishape
 import os
 from datetime import datetime
 import numpy as np
 import time
 from utils import utils_deepsdf
-from utils import mesh_deepsdf
 import results
 from torch.utils.tensorboard import SummaryWriter
 import json

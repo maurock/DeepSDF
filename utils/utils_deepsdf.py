@@ -1,10 +1,6 @@
 import numpy as np
 import trimesh
-from glob import glob
-import os
 import torch
-from copy import deepcopy
-import pybullet as pb
 import meshplot as mp
 import skimage
 from mesh_to_sdf.utils import scale_to_unit_sphere

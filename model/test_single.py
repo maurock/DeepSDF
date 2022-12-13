@@ -1,7 +1,7 @@
 import torch
 import results.runs as runs
 import os
-import model.sdf_model as sdf_model
+import model.model_sdf as sdf_model
 import argparse
 import trimesh
 import numpy as np

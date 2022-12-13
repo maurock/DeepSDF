@@ -3,7 +3,6 @@ import torch
 from torch.utils.data import Dataset
 import os
 import results
-from glob import glob
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
