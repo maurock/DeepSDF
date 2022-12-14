@@ -12,6 +12,8 @@ from pytorch3d.ops.sample_points_from_meshes import _rand_barycentric_coords
 from pytorch3d.loss import chamfer_distance as cuda_cd
 from pytorch3d.io.obj_io import load_obj
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 def urdf_to_mesh(filepath):
     """
     Receives path to object index containing the .URDF and verts and faces (both np.array).
@@ -312,6 +314,6 @@ def load_mesh_touch(obj):
     obj_info = load_obj(obj)
     verts = obj_info[0]
     faces = obj_info[1].verts_idx
-    verts = torch.FloatTensor(verts)
-    faces = torch.LongTensor(faces)
+    verts = torch.FloatTensor(verts).to(device)
+    faces = torch.LongTensor(faces).to(device)
     return verts, faces
