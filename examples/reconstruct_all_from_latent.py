@@ -3,7 +3,7 @@ import torch
 import results
 import os
 import meshplot as mp
-import model.sdf_model as sdf_model
+import model.model_sdf as sdf_model
 import argparse
 import meshplot as mp
 from utils import utils_deepsdf

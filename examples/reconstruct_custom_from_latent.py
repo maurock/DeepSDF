@@ -2,7 +2,7 @@ import torch
 import os
 import meshplot as mp
 mp.offline()
-import model.sdf_model as sdf_model
+import model.model_sdf as sdf_model
 import argparse
 from tqdm import tqdm 
 from utils import utils_deepsdf
