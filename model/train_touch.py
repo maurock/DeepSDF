@@ -41,6 +41,15 @@ class Trainer():
         self.fold = 0
 
     def __call__(self):
+        # Create folder to store files
+        self.log_train_dir = os.path.join(os.path.dirname(results.__file__), "runs_touch", f"{self.timestamp_run}")
+        if not os.path.exists(self.log_train_dir):
+            os.mkdir(self.log_train_dir)
+
+        # Create log. This will be populated with settings, losses, etc..
+        self.log_path = os.path.join(self.log_train_dir, "settings.txt")
+        self.writer = SummaryWriter(log_dir=self.log_train_dir)
+
         if self.args.log_info_train:         # log info train
             # Create folder to store files
             self.log_train_dir = os.path.join(os.path.dirname(results.__file__), "runs_touch", f"{self.timestamp_run}")
@@ -62,6 +71,9 @@ class Trainer():
 
         params = list(self.encoder.parameters())
         self.optimizer = optim.Adam(params, lr=self.args.lr, weight_decay=0)
+
+        if self.args.lr_scheduler:
+            self.scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.0001, threshold_mode='rel')
 
         # Cross validation
         if self.args.cross_validation:
@@ -89,22 +101,32 @@ class Trainer():
             for epoch in range(self.args.epochs):
                 print(f'============================ Epoch {epoch} ============================')
                 self.epoch = epoch
+
                 self.train(train_loader)
+
                 with torch.no_grad():
-                    self.validate(val_loader)
+                    val_loss = self.validate(val_loader)
+
+                if self.args.lr_scheduler:
+                    self.scheduler.step(val_loss)
+
+                    self.writer.add_scalar('Learning rate', self.scheduler._last_lr[0], epoch)
 
     def get_loaders_cv(self, full_dataset, train_ids, val_ids):
         # Sample elements randomly from a given list of ids, no replacement.
         train_subsampler = torch.utils.data.SubsetRandomSampler(train_ids)
         val_subsampler = torch.utils.data.SubsetRandomSampler(val_ids)
+
         if self.args.analyse_dataset:
             full_dataset._analyse_dataset()    # print info about dataset
+
         train_loader = DataLoader(
                 full_dataset,
                 batch_size=self.args.batch_size,
                 num_workers=1,
                 sampler=train_subsampler
             )
+
         val_loader = DataLoader(
             full_dataset,
             batch_size=self.args.batch_size,
@@ -206,14 +228,19 @@ class Trainer():
                 val_dict['pointcloud_gt'] = pointcloud_gt_list
                 np.save(self.debug_val_path, val_dict)
 
-        print(f'Validation: loss {total_loss/iterations}')
-        self.results[self.fold]['val'].append(total_loss/iterations)
-        self.writer.add_scalar('Validation loss', total_loss/iterations, self.epoch)
+        val_loss = total_loss/iterations
+
+        print(f'Validation: loss {val_loss}')
+        self.results[self.fold]['val'].append(val_loss)
+
+        self.writer.add_scalar('Validation loss', val_loss, self.epoch)
 
         np.save(os.path.join(self.log_train_dir, 'results_dict.npy'), self.results)
         if self.args.log_info_train:
             with open(self.log_path, mode='a') as log:
-                log.write(f'Epoch {self.epoch}, Val loss: {total_loss / iterations} \n')
+                log.write(f'Epoch {self.epoch}, Val loss: {val_loss} \n')
+        
+        return val_loss
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
@@ -268,6 +295,15 @@ if __name__=='__main__':
         default=3,
         help="Number of folds",
     )
+    parser.add_argument(
+        "--lr_scheduler", default=False, action='store_true', help="Turn on lr_scheduler"
+    )
+    parser.add_argument(
+        "--lr_multiplier", type=float, default=0.5, help="Multiplier for the learning rate scheduling"
+    )
+    parser.add_argument(
+        "--patience", type=int, default=20, help="Patience for the learning rate scheduling"
+    )    
     args = parser.parse_args()
 
     trainer = Trainer(args)
