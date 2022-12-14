@@ -17,6 +17,7 @@ from datetime import datetime
 import json
 from sklearn.model_selection import KFold
 from utils import utils_misc, utils_mesh 
+from torch.utils.tensorboard import SummaryWriter
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -35,6 +36,7 @@ class Trainer():
         # Path debug
         self.timestamp_run = datetime.now().strftime('%d_%m_%H%M')   # timestamp to use for logging data
         self.debug_val_path = os.path.join(os.path.dirname(results.__file__), 'touch_val_debug', f'val_dict_{self.timestamp_run}')
+
         self.results = dict()
         self.fold = 0
 
@@ -46,6 +48,7 @@ class Trainer():
                 os.mkdir(self.log_train_dir)
             # Create log. This will be populated with settings, losses, etc..
             self.log_path = os.path.join(self.log_train_dir, "settings.txt")
+            self.writer = SummaryWriter(log_dir=self.log_train_dir)
             args_dict = vars(self.args)  # convert args to dict to write them as json
             with open(self.log_path, mode='a') as log:
                 log.write('Settings:\n')
@@ -156,6 +159,7 @@ class Trainer():
             total_loss += loss.data.cpu().numpy()      
 
         print(f'Training: loss {total_loss/iterations}')
+        self.writer.add_scalar('Training loss', total_loss/iterations, self.epoch)
 
         self.results[self.fold]['train'].append(total_loss/iterations)
         np.save(os.path.join(self.log_train_dir, 'results_dict.npy'), self.results)
@@ -200,6 +204,8 @@ class Trainer():
 
         print(f'Validation: loss {total_loss/iterations}')
         self.results[self.fold]['val'].append(total_loss/iterations)
+        self.writer.add_scalar('Validation loss', total_loss/iterations, self.epoch)
+
         np.save(os.path.join(self.log_train_dir, 'results_dict.npy'), self.results)
         if self.args.log_info_train:
             with open(self.log_path, mode='a') as log:
