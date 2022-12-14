@@ -46,6 +46,7 @@ class Trainer():
             self.log_train_dir = os.path.join(os.path.dirname(results.__file__), "runs_touch", f"{self.timestamp_run}")
             if not os.path.exists(self.log_train_dir):
                 os.mkdir(self.log_train_dir)
+
             # Create log. This will be populated with settings, losses, etc..
             self.log_path = os.path.join(self.log_train_dir, "settings.txt")
             self.writer = SummaryWriter(log_dir=self.log_train_dir)
@@ -54,8 +55,13 @@ class Trainer():
                 log.write('Settings:\n')
                 log.write(json.dumps(args_dict).replace(', ', ',\n'))
                 log.write('\n\n')        
+        
         full_dataset = TouchChartDataset(self.touch_chart_path)
+
         self.encoder = model_touch.Encoder().to(device)
+
+        params = list(self.encoder.parameters())
+        self.optimizer = optim.Adam(params, lr=self.args.lr, weight_decay=0)
 
         # Cross validation
         if self.args.cross_validation:
@@ -73,6 +79,7 @@ class Trainer():
                     self.epoch = epoch
                     self.train(train_loader)
                     self.validate(val_loader)
+
         # Single training
         else:
             self.results[0] = dict()
@@ -131,9 +138,6 @@ class Trainer():
         total_loss = 0
         iterations = 0
         self.encoder.train()
-        params = list(self.encoder.parameters())
-
-        self.optimizer = optim.Adam(params, lr=self.args.lr, weight_decay=0)
 
         for batch in train_loader:
             iterations += 1
