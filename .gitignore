@@ -9,7 +9,7 @@ deep_sdf.egg-info
 scripts/.ipynb_checkpoints
 .vscode
 *.out
-*.sh
+jobs/*.sh
 data/shapenet_obj
 results/touch_charts_gt.npy
 results/runs_touch/
