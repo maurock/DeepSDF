@@ -5,7 +5,7 @@ import data_making.dataset_sdf as dataset
 from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 import argparse
-import results.runs as runs
+import results.runs_sdf as runs
 from utils.utils_deepsdf import SDFLoss_multishape
 import os
 from datetime import datetime

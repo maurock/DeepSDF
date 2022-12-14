@@ -23,11 +23,11 @@ def main(args):
     model = sdf_model.SDFModelMulti(num_layers=args.num_layers, no_skip_connections=args.no_skip_connections).to(device)
 
     # Load weights
-    weights_path = os.path.join(os.path.dirname(results.__file__), 'runs', folder, 'weights.pt')
+    weights_path = os.path.join(os.path.dirname(results.__file__), 'runs_sdf', folder, 'weights.pt')
     model.load_state_dict(torch.load(weights_path, map_location=device))
     
     # Load results dictionary
-    results_dict_path = os.path.join(os.path.dirname(results.__file__), 'runs', folder, 'results.npy')
+    results_dict_path = os.path.join(os.path.dirname(results.__file__), 'runs_sdf', folder, 'results.npy')
     results_dict = np.load(results_dict_path, allow_pickle=True).item()
 
     latent_codes_list = get_latent_codes_training(results_dict)
@@ -39,7 +39,7 @@ def main(args):
         vertices, faces = utils_deepsdf.extract_mesh(grad_size_axis, sdf)
 
         # save mesh using meshplot
-        mesh_dir = os.path.join(os.path.dirname(results.__file__), 'runs', folder, 'meshes_training')
+        mesh_dir = os.path.join(os.path.dirname(results.__file__), 'runs_sdf', folder, 'meshes_training')
         if not os.path.exists(mesh_dir):
             os.mkdir(mesh_dir)
         mesh_path = os.path.join(mesh_dir, f'latent_{idx}.html')

@@ -49,13 +49,25 @@ class Encoder(nn.Module):
         layers.append(nn.Sequential(nn.Linear(512, 256), nn.ReLU()))
         layers.append(nn.Sequential(nn.Linear(256, 128), nn.ReLU()))
         layers.append(nn.Sequential(nn.Linear(128, 75)))
-        self.fc = nn.Sequential(*layers)
+        self.FC_layers = nn.Sequential(*layers)
+
+        self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        '''
+        When we define all the modules such as the layers in '__init__()'
+        method above, these are all stored in 'self.modules()'.
+        We go through each module one by one. This is the entire network,
+        basically.
+        '''
+        if isinstance(module, nn.Linear):
+            module.weight = nn.init.normal_(module.weight, mean=0.0, std=0.001)
 
     def predict_verts(self, touch):
         for layer in self.CNN_layers:
             touch = layer(touch)
         points = touch.contiguous().view(-1, 512)
-        points = self.fc(points)
+        points = self.FC_layers(points)
         return points
 
     def forward(self, tactile_img, initial_verts):

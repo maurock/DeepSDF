@@ -5,9 +5,9 @@ import numpy as np
 import os
 from torch.utils.data import DataLoader
 from data_making.dataset_touch import TouchChartDataset
-
+import data
 import argparse
-
+import results
 from torch.utils.data import random_split
 from model import model_touch
 import torch 
@@ -16,31 +16,31 @@ from pytorch3d.io.obj_io import load_obj
 from datetime import datetime
 import json
 from sklearn.model_selection import KFold
-from utils import misc_utils
+from utils import utils_misc, utils_mesh 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class Trainer():
     def __init__(self, args):
-        misc_utils.set_seeds(41)
-        self.touch_chart_path = os.path.dirname(touch_charts.__file__)
+        utils_misc.set_seeds(41)
+        self.touch_chart_path = os.path.join(os.path.dirname(results.__file__), 'touch_charts_gt.npy')
         self.args = args
         # load initial mesh sheet to deform using the Encoder
-        chart_location = os.path.join(os.path.dirname(touch_charts.__file__),'touch_chart.obj')
-        self.initial_verts, self.initial_faces = mesh_utils.load_mesh_touch(chart_location)
+        chart_location = os.path.join(os.path.dirname(data.__file__), 'touch_chart.obj')
+        self.initial_verts, self.initial_faces = utils_mesh.load_mesh_touch(chart_location)
         # repeat as many times as the batch size. This is because we need to add the initial_verts to the prediction for every element in the batch.        
         self.initial_verts = self.initial_verts.view(1, self.initial_verts.shape[0], 3).repeat(
             args.batch_size, 1, 1
         )
         # Path debug
         self.timestamp_run = datetime.now().strftime('%d_%m_%H%M')   # timestamp to use for logging data
-        self.debug_val_path = os.path.join(os.path.dirname(checkpoints.__file__), 'touch_val_debug', f'val_dict_{self.timestamp_run}')
+        self.debug_val_path = os.path.join(os.path.dirname(results.__file__), 'touch_val_debug', f'val_dict_{self.timestamp_run}')
         self.results = dict()
         self.fold = 0
 
     def __call__(self):
         if self.args.log_info_train:         # log info train
             # Create folder to store files
-            self.log_train_dir = os.path.join(os.path.dirname(checkpoints.__file__), "touch_model", f"{self.timestamp_run}")
+            self.log_train_dir = os.path.join(os.path.dirname(results.__file__), "runs_touch", f"{self.timestamp_run}")
             if not os.path.exists(self.log_train_dir):
                 os.mkdir(self.log_train_dir)
             # Create log. This will be populated with settings, losses, etc..
@@ -52,6 +52,7 @@ class Trainer():
                 log.write('\n\n')        
         full_dataset = TouchChartDataset(self.touch_chart_path)
         self.encoder = model_touch.Encoder().to(device)
+
         # Cross validation
         if self.args.cross_validation:
             kfold = KFold(n_splits=self.args.k_folds, shuffle=True)
@@ -78,7 +79,8 @@ class Trainer():
                 print(f'============================ Epoch {epoch} ============================')
                 self.epoch = epoch
                 self.train(train_loader)
-                self.validate(val_loader)
+                with torch.no_grad():
+                    self.validate(val_loader)
 
     def get_loaders_cv(self, full_dataset, train_ids, val_ids):
         # Sample elements randomly from a given list of ids, no replacement.
@@ -110,7 +112,8 @@ class Trainer():
         train_loader = DataLoader(
                 train_data,
                 batch_size=self.args.batch_size,
-                shuffle=True
+                shuffle=True,
+                drop_last=True
             )
         val_loader = DataLoader(
             val_data,
@@ -129,7 +132,7 @@ class Trainer():
         self.optimizer = optim.Adam(params, lr=self.args.lr, weight_decay=0)
 
         for batch in train_loader:
-            iterations+=1
+            iterations += 1
             batch_size = batch[0].shape[0]
             # batch is a list containing X and Y
             self.optimizer.zero_grad()
@@ -137,7 +140,7 @@ class Trainer():
             pointcloud_gt = batch[1]    # this is [batch_size, N points, 3]
             pred_verts = self.encoder(tactile_imgs, self.initial_verts.clone()[:batch_size])
 
-            loss = self.args.loss_coeff * mesh_utils.chamfer_distance(
+            loss = self.args.loss_coeff * utils_mesh.chamfer_distance(
                 pred_verts, self.initial_faces, pointcloud_gt, self.args.num_samples
             )            
             loss = loss.mean()
@@ -171,29 +174,28 @@ class Trainer():
         pointcloud_gt_list = np.array([]).reshape(0, 2000, 3)
 
         for batch in valid_loader:
-            with torch.no_grad():
-                iterations += 1
-                batch_size = batch[0].shape[0]
-                # batch is a list containing X and Y
-                tactile_imgs = batch[0]
-                pointcloud_gt = batch[1]
-                pred_verts = self.encoder(tactile_imgs, self.initial_verts.clone()[:batch_size])
-                loss = self.args.loss_coeff * mesh_utils.chamfer_distance(
-                    pred_verts, self.initial_faces, pointcloud_gt, self.args.num_samples
-                )
-                loss = loss.mean()
-                total_loss += loss.data.cpu().numpy()
+            iterations += 1
+            batch_size = batch[0].shape[0]
+            # batch is a list containing X and Y
+            tactile_imgs = batch[0]
+            pointcloud_gt = batch[1]
+            pred_verts = self.encoder(tactile_imgs, self.initial_verts.clone()[:batch_size])
+            loss = self.args.loss_coeff * utils_mesh.chamfer_distance(
+                pred_verts, self.initial_faces, pointcloud_gt, self.args.num_samples
+            )
+            loss = loss.mean()
+            total_loss += loss.data.cpu().numpy()
 
-                if self.args.debug_validation:
-                    pred_points= mesh_utils.batch_sample(pred_verts, self.initial_faces, num=1000)
-                    pred_points_list = np.vstack((pred_points_list, pred_points.cpu().numpy()))
-                    pred_verts_list = np.vstack((pred_verts_list, pred_verts.cpu().numpy()))
-                    pointcloud_gt_list = np.vstack((pointcloud_gt_list, pointcloud_gt.cpu().numpy()))
-                    val_dict = dict()
-                    val_dict['pred_points'] = pred_points_list
-                    val_dict['pred_verts'] = pred_verts_list
-                    val_dict['pointcloud_gt'] = pointcloud_gt_list
-                    np.save(self.debug_val_path, val_dict)
+            if self.args.debug_validation:
+                pred_points= utils_mesh.batch_sample(pred_verts, self.initial_faces, num=1000)
+                pred_points_list = np.vstack((pred_points_list, pred_points.cpu().numpy()))
+                pred_verts_list = np.vstack((pred_verts_list, pred_verts.cpu().numpy()))
+                pointcloud_gt_list = np.vstack((pointcloud_gt_list, pointcloud_gt.cpu().numpy()))
+                val_dict = dict()
+                val_dict['pred_points'] = pred_points_list
+                val_dict['pred_verts'] = pred_verts_list
+                val_dict['pointcloud_gt'] = pointcloud_gt_list
+                np.save(self.debug_val_path, val_dict)
 
         print(f'Validation: loss {total_loss/iterations}')
         self.results[self.fold]['val'].append(total_loss/iterations)
@@ -219,33 +221,33 @@ if __name__=='__main__':
     parser.add_argument(
         "--num_samples",
         type=int,
-        default=2000,
+        default=500,
         help="Number of points in the predicted point cloud.",
     )
     parser.add_argument(
-        "--loss_coeff", type=float, default=1000.0, help="Coefficient for loss term."
+        "--loss_coeff", type=float, default=1.0, help="Coefficient for loss term."
     )
     parser.add_argument(
         "--analyse_dataset",
-        type=bool,
-        default=True,
+        action='store_true',
+        default=False,
         help="print info about training dataset",
     )
     parser.add_argument(
         "--debug_validation",
-        type=bool,
+        action='store_true',
         default=False,
         help="Store data to visualise the results of the model on the validation set",
     )
     parser.add_argument(
         "--log_info_train",
-        type=bool,
-        default=True,
+        action='store_true',
+        default=False,
         help="Log info about training",
     ) 
     parser.add_argument(
         "--cross_validation",
-        type=bool,
+        action='store_true',
         default=False,
         help="Set cross validation to True or False",
     )
@@ -257,6 +259,9 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    args.batch_size=3
+    args.batch_size = 5
+    args.analyse_dataset = True
+    args.log_info_train = True
+
     trainer = Trainer(args)
     trainer()

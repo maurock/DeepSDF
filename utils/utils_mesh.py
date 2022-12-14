@@ -6,6 +6,11 @@ from copy import deepcopy
 import pybullet as pb
 import data.objects as objects
 from data_making import extract_urdf
+import torch
+from pytorch3d.ops.mesh_face_areas_normals import mesh_face_areas_normals
+from pytorch3d.ops.sample_points_from_meshes import _rand_barycentric_coords
+from pytorch3d.loss import chamfer_distance as cuda_cd
+from pytorch3d.io.obj_io import load_obj
 
 def urdf_to_mesh(filepath):
     """
@@ -153,7 +158,7 @@ def rotate_pointcloud(pointcloud_A, rpy_BA=[np.pi / 2, 0, 0]):
     rot_Q = pb.getQuaternionFromEuler(rpy_BA)
     rot_M = np.array(pb.getMatrixFromQuaternion(rot_Q)).reshape(3, 3)
     pointcloud_B = np.einsum('ij,kj->ik', rot_M, pointcloud_A).transpose(1, 0)
-    
+
     return pointcloud_B
 
 
@@ -244,3 +249,69 @@ def load_save_objects(obj_dir):
         objs_dict[obj_index]['verts'] = new_verts
         objs_dict[obj_index]['faces'] = faces
     return objs_dict  
+
+
+# adapted from: https://github.com/facebookresearch/Active-3D-Vision-and-Touch/blob/main/pterotactyl/utility/utils.py
+# returns the chamfer distance between a mesh and a point cloud (Ed. Smith)
+def chamfer_distance(verts, faces, gt_points, num=1000, repeat=1):
+    pred_points= batch_sample(verts, faces, num=num)
+    cd, _ = cuda_cd(pred_points, gt_points, batch_reduction=None)
+    if repeat > 1:
+        cds = [cd]
+        for i in range(repeat - 1):
+            pred_points = batch_sample(verts, faces, num=num)
+            cd, _ = cuda_cd(pred_points, gt_points, batch_reduction=None)
+            cds.append(cd)
+        cds = torch.stack(cds)
+        cd = cds.mean(dim=0)
+    return cd
+
+
+# implemented from: https://github.com/facebookresearch/Active-3D-Vision-and-Touch/blob/main/pterotactyl/utility/utils.py, MIT License
+ # sample points from a batch of meshes
+def batch_sample(verts, faces, num=10000):
+    # Pytorch3D based code
+    bs = verts.shape[0]
+    face_dim = faces.shape[0]
+    vert_dim = verts.shape[1]
+    # following pytorch3D convention shift faces to correctly index flatten vertices
+    F = faces.unsqueeze(0).repeat(bs, 1, 1)
+    F += vert_dim * torch.arange(0, bs).unsqueeze(-1).unsqueeze(-1).to(F.device)
+    # flatten vertices and faces
+    F = F.reshape(-1, 3)
+    V = verts.reshape(-1, 3)
+    with torch.no_grad():
+        areas, _ = mesh_face_areas_normals(V, F)
+        Ar = areas.reshape(bs, -1)
+        Ar[Ar != Ar] = 0
+        Ar = torch.abs(Ar / Ar.sum(1).unsqueeze(1))
+        Ar[Ar != Ar] = 1
+
+        sample_face_idxs = Ar.multinomial(num, replacement=True)
+        sample_face_idxs += face_dim * torch.arange(0, bs).unsqueeze(-1).to(Ar.device)
+
+    # Get the vertex coordinates of the sampled faces.
+    face_verts = V[F]
+    v0, v1, v2 = face_verts[:, 0], face_verts[:, 1], face_verts[:, 2]
+
+    # Randomly generate barycentric coords.
+    w0, w1, w2 = _rand_barycentric_coords(bs, num, V.dtype, V.device)
+
+    # Use the barycentric coords to get a point on each sampled face.
+    A = v0[sample_face_idxs]  # (N, num_samples, 3)
+    B = v1[sample_face_idxs]
+    C = v2[sample_face_idxs]
+    samples = w0[:, :, None] * A + w1[:, :, None] * B + w2[:, :, None] * C
+
+    return samples
+
+
+# implemented from: https://github.com/facebookresearch/Active-3D-Vision-and-Touch/blob/main/pterotactyl/utility/utils.py, MIT License
+# loads the initial mesh and returns vertex, and face information
+def load_mesh_touch(obj):
+    obj_info = load_obj(obj)
+    verts = obj_info[0]
+    faces = obj_info[1].verts_idx
+    verts = torch.FloatTensor(verts)
+    faces = torch.LongTensor(faces)
+    return verts, faces

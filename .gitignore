@@ -3,7 +3,7 @@ data/objects.tgz
 __pycache__
 results/objs_dict.npy
 results/samples_dict.npy
-results/runs/
+results/runs_sdf/
 .DS_Store
 deep_sdf.egg-info
 scripts/.ipynb_checkpoints
@@ -12,3 +12,4 @@ scripts/.ipynb_checkpoints
 *.sh
 data/shapenet_obj
 results/touch_charts_gt.npy
+results/runs_touch/

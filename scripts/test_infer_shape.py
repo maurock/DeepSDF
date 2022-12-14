@@ -107,7 +107,7 @@ def main(args):
     folder = args.folder
 
     # Logging
-    test_path = os.path.join(os.path.dirname(results.__file__), 'runs', folder, 'test', datetime.now().strftime('%d_%m_%H%M%S'))
+    test_path = os.path.join(os.path.dirname(results.__file__), 'runs_sdf', folder, 'test', datetime.now().strftime('%d_%m_%H%M%S'))
     writer = SummaryWriter(log_dir=test_path)
     log_path = os.path.join(test_path, 'settings.txt')
     args_dict = vars(args)  # convert args to dict to write them as json
@@ -119,11 +119,11 @@ def main(args):
     model = sdf_model.SDFModelMulti(num_layers=8, no_skip_connections=False).to(device)
 
     # Load weights
-    weights_path = os.path.join(os.path.dirname(results.__file__), 'runs', folder, 'weights.pt')
+    weights_path = os.path.join(os.path.dirname(results.__file__), 'runs_sdf', folder, 'weights.pt')
     model.load_state_dict(torch.load(weights_path, map_location=device))
 
     # Load results dictionary
-    results_dict_path = os.path.join(os.path.dirname(results.__file__), 'runs', folder, 'results.npy')
+    results_dict_path = os.path.join(os.path.dirname(results.__file__), 'runs_sdf', folder, 'results.npy')
     results_dict = np.load(results_dict_path, allow_pickle=True).item()
 
     # Initialise latent code and optimiser

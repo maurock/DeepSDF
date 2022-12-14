@@ -1,5 +1,5 @@
 import torch
-import results.runs as runs
+import results.runs_sdf as runs
 import os
 import model.model_sdf as sdf_model
 import argparse
