@@ -259,9 +259,5 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    args.batch_size = 5
-    args.analyse_dataset = True
-    args.log_info_train = True
-
     trainer = Trainer(args)
     trainer()
