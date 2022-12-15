@@ -80,55 +80,6 @@ def rotate_vertices(vertices, rot=[np.pi / 2, 0, 0]):
     return new_verts
 
 
-def save_touch_charts(mesh_list, tactile_imgs, pointcloud_list, rot_M_wrld_list, pos_wrld_list, pos_wrk_list, initial_pos, path):
-    """
-    Receive list containing open3D.TriangleMesh of the local touch charts (25 vertices) and tactile images related to those meshes. It saves a dictionary containing vertices and faces as np array, and normalised tactile images. 
-
-    Parameters:
-        - mesh_list = list containing open3d.geometry.TriangleMesh (25 vertices and faces of the local geometry at touch site).
-                        len (num touches)
-        - tactile_imgs = np.array of tactile images, shape (num_touches, 256, 256)
-        - pointcloud_list = np.array of pointclouds, containing 2000 randomly sampled points that represent the ground truth to compute the chamfer distance, shape (num_touches, 2000, 3)
-        - rot_M_wrld_list: np.array of rotation matrices to convert from workframe to worldframe. shape (num_touches, 3, 3)
-        - pos_wrld_list: np.array of positions of the TCP in worldframe. shape(num_touches, 3)
-        - pos_wrk_list: np.array of positions of the TCP in workframe. shape(n, 3)
-        - initial_pos: list of initial obj pos, len (3)
-    Returns:
-        - touch_charts_data, dictionary with keys: 'verts', 'faces', 'tactile_imgs', 'pointclouds', 'rot_M_wrld;, 'pos_wrld', 'pos_wrk'
-            - 'verts': shape (n_samples, 75), ground truth vertices for various samples
-            - 'faces': shape (n_faces, 3), concatenated triangles. The number of faces per sample varies, so it is not possible to store faces per sample.
-            - 'tactile_imgs': shape (n_samples, 1, 256, 256)
-            - 'pointclouds': shape (n_samples, 2000, 3), points randomly samples on the touch charts mesh surface.
-            - 'rot_M_wrld': 3x3 rotation matrix collected from PyBullet.
-            - 'pos_wrld': position of the sensor in world coordinates at touch, collected from PyBullet (robots.coords_at_touch)
-            - 'pos_wrk': position of the sensor in world frame collected from PyBullet.
-    """
-    verts = np.array([], dtype=np.float32).reshape(0, 75)
-    faces = np.array([], dtype=np.float32).reshape(0, 3)
-    touch_charts_data = dict()
-
-    for mesh in mesh_list:
-        vert = np.asarray(mesh.vertices, dtype=np.float32).ravel()
-        verts = np.vstack((verts, vert))
-        faces = np.vstack((faces, np.asarray(mesh.triangles, dtype=np.float32)))   # (n, 3) not possible (b, n, 3) because n is not constant
-
-    touch_charts_data['verts'] = verts
-    touch_charts_data['faces'] = faces
-
-    # Conv2D requires [batch, channels, size1, size2] as input. tactile_imgs is currently [num_samples, size1, size2]. I need to add a second dimension.
-    tactile_imgs = np.expand_dims(tactile_imgs, 1) / 255     # normalize tactile images
-    touch_charts_data['tactile_imgs'] = tactile_imgs
-    touch_charts_data['pointclouds'] = pointcloud_list
-
-    # Store data for rotation and translation
-    touch_charts_data['rot_M_wrld'] = rot_M_wrld_list
-    touch_charts_data['pos_wrld'] = pos_wrld_list
-    touch_charts_data['pos_wrk'] = pos_wrk_list
-    touch_charts_data['initial_pos'] = initial_pos
-
-    np.save(path, touch_charts_data)
-
-
 def calculate_initial_z(obj_index, scale):
     """
     Compute the mesh geometry and return the initial z-axis. This is to avoid that the object

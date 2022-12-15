@@ -247,3 +247,8 @@ def suppress_stdout():
             _redirect_stdout(to=old_stdout)  # restore stdout.
             # buffering and flags such as
             # CLOEXEC may be different
+
+def get_ray_sphere(max_coords, initial_obj_pos):
+    ray_hemisphere = 1.5 * np.sqrt((max_coords[0] - initial_obj_pos[0])**2 + (max_coords[1] - initial_obj_pos[1])**2 + (max_coords[2] - initial_obj_pos[2])**2)
+
+    return ray_hemisphere
