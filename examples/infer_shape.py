@@ -17,13 +17,6 @@ import plotly.graph_objects as go
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def initialise_latent_code(latent_size, results_dict):
-    """Initialise latent code as the average over all the obtained latent codes"""
-    #latent_code = torch.mean(torch.from_numpy(results_dict['train']['best_latent_codes']), dim=0).view(1, -1).to(device)
-    #latent_code.requires_grad = True
-    latent_code = torch.normal(0, 0.01, size = (1, latent_size), dtype=torch.float32, requires_grad=True, device=device)
-    return latent_code
-
 def get_data(args, test_path):
     """Return x and y. Sample N points from the desired object.
     
@@ -127,7 +120,8 @@ def main(args):
     results_dict = np.load(results_dict_path, allow_pickle=True).item()
 
     # Initialise latent code and optimiser
-    latent_code = initialise_latent_code(args.latent_size, results_dict)
+    latent_code = model.initialise_latent_code(args.latent_size)
+    
     if args.optimiser == 'Adam':
         optim = torch.optim.Adam([latent_code], lr=args.lr)
     elif args.optimiser == 'LBFGS':
@@ -140,77 +134,6 @@ def main(args):
     coords, sdf_gt = get_data(args, test_path)
 
     best_latent_code = model.infer_latent_code(args, latent_code, coords, sdf_gt, optim, writer)
-    
-    # if args.lr_scheduler:
-    #     scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 
-    #                                             factor=args.lr_multiplier, 
-    #                                             patience=args.patience, 
-    #                                             threshold=0.0001, threshold_mode='rel')
-    
-
-    # best_loss = 1000000
-
-    # # prediction
-    # for epoch in tqdm(range(0, args.epochs)):
-    #     latent_code_tile = torch.tile(latent_code, (coords.shape[0], 1))
-    #     x = torch.hstack((latent_code_tile, coords))
-
-        # # Adam 
-        # if args.optimiser == 'Adam':
-
-        #     optim.zero_grad()
-
-        #     predictions = model(x)
-
-        #     if args.clamp:
-        #         predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
-
-        #     loss_value = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
-        #     loss_value.backward()
-            
-        #     #  add langevin noise (optional)
-        #     if args.langevin_noise > 0:
-        #         noise = torch.normal(0, args.langevin_noise, size = (1, args.latent_size), dtype=torch.float32, requires_grad=False, device=device)
-        #         latent_code.grad = latent_code.grad + noise
-
-        #     optim.step()
-
-        # # LBFGS
-        # else:
-
-        #     def closure():
-        #         optim.zero_grad()
-
-        #         predictions = model(x)
-
-        #         if args.clamp:
-        #             predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
-
-        #         loss_value = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
-        #         loss_value.backward()
-
-        #         return loss_value
-
-        #     optim.step(closure)
-
-        #     loss_value = closure()
-
-    #     if loss_value.detach().cpu().item() < best_loss:
-    #         best_loss = loss_value.detach().cpu().item()
-    #         best_latent_code = latent_code.clone()
-
-    #     # step scheduler and store on tensorboard (optional)
-    #     if args.lr_scheduler:
-    #         scheduler_latent.step(loss_value.item())
-    #         writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
-
-    #     # logging
-    #     writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
-    #     # store latent codes and their gradient on tensorboard
-    #     tag = f"latent_code_0"
-    #     writer.add_histogram(tag, latent_code, global_step=epoch)
-    #     tag = f"grad_latent_code_0"
-    #     writer.add_histogram(tag, latent_code.grad, global_step=epoch)
 
     # Save optimised latent_code
     latent_code_path = os.path.join(test_path, 'latent_code.pt')

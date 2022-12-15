@@ -37,25 +37,6 @@ class SDFModelMulti(torch.nn.Module):
             input_dim: 128 for latent space + 3 points = 131
         """
         super(SDFModelMulti, self).__init__()
-        # MLP
-        # layers = []
-        # if skip_connections and num_layers >= 8:
-        #     layers.append(nn.Sequential(nn.utils.weight_norm(nn.Linear(input_dim, inner_dim)), nn.ReLU()))
-        #     for _ in range(3):
-        #         layers.append(nn.Sequential(nn.utils.weight_norm(nn.Linear(inner_dim, inner_dim)), nn.ReLU()))
-        #     layers.append(nn.Sequential(nn.utils.weight_norm(nn.Linear(inner_dim, inner_dim - input_dim)), nn.ReLU()))
-        #     for _ in range(3):
-        #         layers.append(nn.Sequential(nn.utils.weight_norm(nn.Linear(inner_dim, inner_dim)), nn.ReLU()))
-        # else:
-        #     if skip_connections:
-        #         print('The model requires at least 8 layers to skip connections. Build the network without skipping connections.')
-        #     for _ in range(num_layers-1):
-        #         #layers.append(nn.Sequential(nn.utils.weight_norm(nn.Linear(input_dim, inner_dim)), nn.ReLU()))
-        #         layers.append(nn.Sequential(nn.utils.weight_norm(nn.Linear(input_dim, inner_dim)), nn.ReLU()))
-        #         input_dim = inner_dim
-        # #layers.append(nn.Sequential(nn.utils.weight_norm(nn.Linear(input_dim, output_dim)), nn.Tanh()))
-        # layers.append(nn.Sequential(nn.Linear(input_dim, output_dim), nn.Tanh()))
-
 
         self.num_layers = num_layers
         self.skip_connections = not no_skip_connections
@@ -86,6 +67,13 @@ class SDFModelMulti(torch.nn.Module):
             x = self.net(x)
             sdf = self.final_layer(x)
         return sdf
+
+    
+    def initialise_latent_code(self, latent_size):
+        """Initialise latent code with random noise."""
+        latent_code = torch.normal(0, 0.01, size = (1, latent_size), dtype=torch.float32, requires_grad=True, device=device)
+
+        return latent_code
 
 
     def infer_latent_code(self, args, latent_code, coords, sdf_gt, optim, writer):

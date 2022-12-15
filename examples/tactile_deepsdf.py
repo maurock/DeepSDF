@@ -15,6 +15,9 @@ import torch
 import data
 from results import runs_touch, runs_sdf
 import trimesh
+from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
+import json
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -23,8 +26,21 @@ Demo to reconstruct objects using tactile-gym.
 """
 
 def main(args):
+    # Logging
+    test_dir = os.path.join(os.path.dirname(runs_sdf.__file__), datetime.now().strftime('%d_%m_%H%M%S'))
+    if not os.path.exists(test_dir):
+        os.mkdir(test_dir)
+    writer = SummaryWriter(log_dir=test_dir)
+    log_path = os.path.join(test_dir, 'settings.txt')
+    args_dict = vars(args)  # convert args to dict to write them as json
+    with open(log_path, mode='a') as log:
+        log.write('Settings:\n')
+        log.write(json.dumps(args_dict).replace(', ', ',\n'))
+        log.write('\n\n')
+
     # Load sdf model
     sdf_model = model_sdf.SDFModelMulti(num_layers=8, no_skip_connections=False).to(device)
+    
     # Load weights for sdf model
     weights_path = os.path.join(os.path.dirname(runs_sdf.__file__), args.folder_sdf, 'weights.pt')
     sdf_model.load_state_dict(torch.load(weights_path, map_location=device))
@@ -36,6 +52,7 @@ def main(args):
     weights_path = os.path.join(os.path.dirname(runs_touch.__file__),  args.folder_touch, 'weights.pt')
     touch_model.load_state_dict(torch.load(weights_path, map_location=torch.device(device)))
     touch_model.eval()
+
 
     # Initial verts of the default touch chart
     chart_location = os.path.join(os.path.dirname(data.__file__), 'touch_chart.obj')
@@ -191,10 +208,18 @@ def main(args):
         pointcloud_deepsdf = torch.vstack((pointlcoud_deepsdf, pointcloud_scaled))   
         
         # Predict sdf values from pointcloud
-        sdf_model(pointcloud_deepsdf)
+        predicted_coords = sdf_model(pointcloud_deepsdf)
+        sdf_gt = torch.zeros(size=(predicted_coords.shape[0], 1)).to(device)
 
         # Infer latent code
-        
+        optim = torch.optim.Adam(sdf_model.parameters(), lr=args.lr)
+
+        latent_code = sdf_model.initialise_latent_code(args.latent_size)
+
+        optim = torch.optim.Adam([latent_code], lr=args.lr)
+
+        best_latent_code = sdf_model.infer_latent_code(args, latent_code, predicted_coords, sdf_gt, optim, writer)
+
 
 
         # 
@@ -274,6 +299,12 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--folder_touch", default=0, type=str, help="Folder containing the touch model weights"
+    )
+    parser.add_argument(
+        "--latent_size", default=128, type=int, help="Folder containing the touch model weights"
+    )
+    parser.add_argument(
+        "--optimiser", default='Adam', type=str, help="Choose the optimiser out of [Adam, LBFGS]"
     )
     args = parser.parse_args()
 
