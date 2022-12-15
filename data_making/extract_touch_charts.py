@@ -20,6 +20,14 @@ def main(args):
         pb.configureDebugVisualizer(pb.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
         pb.configureDebugVisualizer(pb.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
         pb.configureDebugVisualizer(pb.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)  
+
+        # set debug camera position
+        cam_dist = 0.5
+        cam_yaw = 90
+        cam_pitch = -25
+        cam_pos = [0.65, 0, 0.025]
+        pb.resetDebugVisualizerCamera(cam_dist, cam_yaw, cam_pitch, cam_pos)
+
     else:
         pb = bc.BulletClient(connection_mode=p.DIRECT)
         egl = pkgutil.get_loader('eglRenderer')
@@ -39,15 +47,7 @@ def main(args):
                                  # need to enable friction anchors (maybe something to experiment with)
                                  solverResidualThreshold=1e-7,
                                  contactSlop=0.001,
-                                 globalCFM=0.0001)
-
-    if args.show_gui:
-        # set debug camera position
-        cam_dist = 0.5
-        cam_yaw = 90
-        cam_pitch = -25
-        cam_pos = [0.65, 0, 0.025]
-        pb.resetDebugVisualizerCamera(cam_dist, cam_yaw, cam_pitch, cam_pos)
+                                 globalCFM=0.0001)        
 
     # load the environment
     plane_id = pb.loadURDF(
@@ -72,11 +72,9 @@ def main(args):
         'ny': 50
     }
     
-    list_objects = [filepath.split('/')[-1] for filepath in glob(os.path.join(os.path.dirname(objects.__file__), '*'))]
-    list_objects.remove('__init__.py')
-    list_objects.remove('__pycache__')
+    list_objects = [filepath.split('/')[-2] for filepath in glob(os.path.join(os.path.dirname(objects.__file__), '*/'))]   # list of object indices
 
-    # initialise dict with arrays to store. They'll be processed in samples_utils.save_touch_charts
+    # initialise dict with arrays to store.
     data = {
         "verts": np.array([]).reshape(0, 75), # verts of touch charts (25) flattened
         "tactile_imgs": np.array([], dtype=np.float32).reshape(0, 1, 256, 256),
@@ -111,12 +109,12 @@ def main(args):
 
         with utils_sample.suppress_stdout():          # to suppress b3Warning
             
-            obj_initial_z = utils_mesh.get_mesh_z(obj_index, args.scale)
+            # Calculate initial z position for object
+            obj_initial_z = utils_mesh.calculate_initial_z(obj_index, args.scale)
         
             stimulus_pos = [0.65, 0.0, obj_initial_z]
             
             obj_id = pb.loadURDF(
-                #os.path.join('/Users/ri21540/Documents/PhD/Code/tactile_gym_sim2real_dev_Mauro/tactile_gym_sim2real/data_collection/sim/stimuli/edge_stimuli/square/square.urdf'),
                 os.path.join(os.path.dirname(objects.__file__), f"{obj_index}/mobility.urdf"),
                 stimulus_pos,
                 stimulus_orn,
@@ -128,7 +126,6 @@ def main(args):
 
         robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
 
-        #mesh_list, tactile_imgs, pointcloud_list, obj_index, rot_M_wrld_list, pos_wrld_list, pos_wrk_list  =
         data = utils_sample.spherical_sampling(
             robot=robot,
             obj_id=obj_id, 
@@ -140,9 +137,9 @@ def main(args):
             data=data
         )
 
-        #utils_mesh.save_touch_charts(mesh_list, tactile_imgs, pointcloud_list, rot_M_wrld_list, pos_wrld_list, pos_wrk_list, stimulus_pos, path)
         pb.removeBody(obj_id)
         pb.removeBody(robot.robot_id)
+
         if args.show_gui:
             time.sleep(1)
 
@@ -168,9 +165,6 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--num_samples", type=int, default=10, help="Number of samplings on the objects"
-    )
-    parser.add_argument(
-        "--debug_rotation", default=False, action='store_true', help="Store data to see if rotation works"
     )
     parser.add_argument(
         "--render_scene", default=False, action='store_true', help="Render scene at touch"

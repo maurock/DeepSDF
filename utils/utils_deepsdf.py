@@ -81,7 +81,7 @@ def latent_to_tensorboard(writer, step, latent_codes):
 
 def model_graph_to_tensorboard(train_loader, model, writer, generate_xy):
     batch = next(iter(train_loader))
-    x, y, latent_codes_indexes_batch, latent_codes_batch = generate_xy(batch)
+    x, y, latent_codes_indices_batch, latent_codes_batch = generate_xy(batch)
     writer.add_graph(model, x)
 
 

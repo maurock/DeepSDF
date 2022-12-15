@@ -39,9 +39,9 @@ def extract_latent_code():
     """
     samples_dict_path = os.path.join(os.path.dirname(results.__file__), 'samples_dict.npy')
     samples_dict = np.load(samples_dict_path, allow_pickle=True).item()
-    obj_indexes = list(samples_dict.keys())
+    obj_indices = list(samples_dict.keys())
     # test for one object
-    obj_index = obj_indexes[0]
+    obj_index = obj_indices[0]
     latent_code = torch.Tensor(samples_dict[obj_index]['latent_code'])
     return latent_code
 

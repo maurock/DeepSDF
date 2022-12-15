@@ -129,7 +129,7 @@ def save_touch_charts(mesh_list, tactile_imgs, pointcloud_list, rot_M_wrld_list,
     np.save(path, touch_charts_data)
 
 
-def get_mesh_z(obj_index, scale):
+def calculate_initial_z(obj_index, scale):
     """
     Compute the mesh geometry and return the initial z-axis. This is to avoid that the object
     goes partially throught the ground.
@@ -230,7 +230,7 @@ def load_save_objects(obj_dir):
     Args:
         obj_dir: directory containing the object folders
     Returns:
-        dictionary of dictionaries, the first key is the object indexes, the second
+        dictionary of dictionaries, the first key is the object indices, the second
         key are 'verts' and 'faces', both stores as np.array
     """
     # List all the objects in data/objects/

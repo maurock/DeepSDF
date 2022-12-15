@@ -127,15 +127,15 @@ class Trainer():
             )
         return train_loader, val_loader
 
-    def get_latent_proportions(self, latent_codes_indexes_batch):
+    def get_latent_proportions(self, latent_codes_indices_batch):
         """
         The gradient is averaged across the entire batch, but every latent code only appears in a fraction of this batch.
         Therefore, the gradients wrt latent vectors are underestimated - because each latent vector only contributes
         to a proportion of the average gradient computed across the entire batch size.
         Solution: compute the proportion of samples per latent classes, and ajust the gradient accordingly.
         """
-        unique_latent_indexes_batch, counts = latent_codes_indexes_batch.unique(return_counts=True)
-        return unique_latent_indexes_batch, counts 
+        unique_latent_indices_batch, counts = latent_codes_indices_batch.unique(return_counts=True)
+        return unique_latent_indices_batch, counts 
 
     def generate_xy(self, batch):
         """
@@ -143,7 +143,7 @@ class Trainer():
         Return:
             - x: latent codes + coordinates, torch tensor shape (batch_size, latent_size + 3)
             - y: ground truth sdf, shape (batch_size, 1)
-            - latent_codes_indexes_batch: all latent class indexes per sample, shape (batch size, 1).
+            - latent_codes_indices_batch: all latent class indices per sample, shape (batch size, 1).
                                             e.g. [[2], [2], [1], ..] eaning the batch contains the 2nd, 2nd, 1st latent code
             - latent_batch_codes: all latent codes per sample, shape (batch_size, latent_size)
         Return ground truth as y, and the latent codes for this batch.
@@ -151,16 +151,16 @@ class Trainer():
         latent_classes_batch = batch[0][:, 0].view(-1, 1)               # shape (batch_size, 1)
         coords = batch[0][:, 1:]                                  # shape (batch_size, 3)
         # PROBABLY THE BUG IS HERE
-        latent_codes_indexes_batch = torch.tensor(
+        latent_codes_indices_batch = torch.tensor(
                 [self.dict_latent_codes[str(int(latent_class))] for latent_class in latent_classes_batch],
                 dtype=torch.int64
             ).to(device)
-        latent_codes_batch = self.latent_codes[latent_codes_indexes_batch]    # shape (batch_size, 128)
+        latent_codes_batch = self.latent_codes[latent_codes_indices_batch]    # shape (batch_size, 128)
         x = torch.hstack((latent_codes_batch, coords))                  # shape (batch_size, 131)
         y = batch[1]     # (batch_size, 1)
         if args.clamp:
             y = torch.clamp(y, -args.clamp_value, args.clamp_value)
-        return x, y, latent_codes_indexes_batch, latent_codes_batch
+        return x, y, latent_codes_indices_batch, latent_codes_batch
     
     def train(self, train_loader):
         total_loss = 0.0
@@ -175,8 +175,8 @@ class Trainer():
             self.optimizer_model.zero_grad()
             self.optimizer_latent.zero_grad()
 
-            x, y, latent_codes_indexes_batch, latent_codes_batch = self.generate_xy(batch)
-            unique_latent_indexes_batch, counts = self.get_latent_proportions(latent_codes_indexes_batch)
+            x, y, latent_codes_indices_batch, latent_codes_batch = self.generate_xy(batch)
+            unique_latent_indices_batch, counts = self.get_latent_proportions(latent_codes_indices_batch)
 
             predictions = self.model(x)  # (batch_size, 1)
             if args.clamp:
@@ -186,12 +186,12 @@ class Trainer():
             loss_value.backward()       
 
             # set gradients of latent codes that were not in the batch to 0     
-            #unique_latent_indexes_batch = torch.unique(latent_codes_indexes_batch, dim=0).to(device)
+            #unique_latent_indices_batch = torch.unique(latent_codes_indices_batch, dim=0).to(device)
             for i in range(0, self.latent_codes.shape[0]):
-                if i not in unique_latent_indexes_batch:
+                if i not in unique_latent_indices_batch:
                     self.latent_codes.grad[i, :].data.zero_()      
                 else:
-                    count = counts[unique_latent_indexes_batch == i]
+                    count = counts[unique_latent_indices_batch == i]
                     self.latent_codes.grad[i, :] = self.latent_codes.grad[i, :] * (self.args.batch_size / count)
 
             self.optimizer_latent.step()

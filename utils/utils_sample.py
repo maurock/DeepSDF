@@ -27,6 +27,7 @@ def sample_hemisphere(r):
     z = np.absolute(r * np.cos(theta))
     coords = [x, y, z]
     angles = [phi, theta]
+
     return coords, angles
 
 
@@ -78,7 +79,7 @@ def robot_touch_spherical(robot, robot_sphere_wrld, initial_pos, angles, max_hei
     high_wrld = np.array(initial_pos) + np.array([0, 0, max_height_wrld])
     move_wrld_to_work(robot, high_wrld)
     
-    # go to position on sphere
+    # Go to position on sphere
     orn_wrld = sphere_orn_wrld(robot, robot_sphere_wrld, angles)
     move_wrld_to_work(robot, robot_sphere_wrld, orn_wrld)
 
@@ -110,15 +111,10 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
         vertices_wrld = utils_mesh.rotate_pointcloud(np.array(vertices_wrld), initial_rpy) + initial_pos
 
     # Get min and max world object coordinates. 
-    min_coords = [ np.amin(vertices_wrld[:,0]), np.amin(vertices_wrld[:,1]), np.amin(vertices_wrld[:,2]) ]
     max_coords = [ np.amax(vertices_wrld[:,0]), np.amax(vertices_wrld[:,1]), np.amax(vertices_wrld[:,2]) ]
 
-    # ray: sqrt( (x1 - xc)**2 + (y1 - yc)**2)
+    # Ray: sqrt( (x1 - xc)**2 + (y1 - yc)**2)
     ray_hemisphere = 1.5 * np.sqrt((max_coords[0] - initial_pos[0])**2 + (max_coords[1] - initial_pos[1])**2 + (max_coords[2] - initial_pos[2])**2)
-      
-    # Initialize lists for debug
-    debug_rotation = dict()
-    debug_rotation[obj_index] = dict()
 
     for _ in range(args.num_samples):
 
@@ -141,32 +137,32 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
         robot.nx = robot_config['nx']
         robot.ny = robot_config['ny']
         
-        #robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
         robot.results_at_touch_wrld = None
 
+        # Sample random position on the hemisphere
         hemisphere_random_pos, angles = sample_hemisphere(ray_hemisphere)
 
-        #_debug_plot_sphere(ray_hemisphere, initial_pos)
+        # Move robot to random position on the hemisphere
         robot_sphere_wrld = np.array(initial_pos) + np.array(hemisphere_random_pos)
         robot = robot_touch_spherical(robot, robot_sphere_wrld, initial_pos, angles)
 
-        # If the robot touches the object, get mesh from pointcloud using Open3D, optionally visualise it. If not contact points, continue. 
+        # If not contact points, continue. 
         if robot.results_at_touch_wrld is None:
             continue
         
-        # filter points with information about contact, make sure there are at least 500 valid ones
+        # Filter points with information about contact, make sure there are at least 500 valid ones
         filtered_full_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld)
         if filtered_full_pointcloud.shape[0] < 500:
             print('Point cloud shape is too small')
             continue
-        # sample 500 random points among the valid ones
+
+        # Sample 500 random points among the valid ones and store them in the data dictionary
         random_indices = np.random.choice(filtered_full_pointcloud.shape[0], 500)
         sampled_pointcloud_wrld = filtered_full_pointcloud[random_indices]
-        # increase dimensionality for stacking
         tcp_pos_wrld, tcp_rpy_wrld, _, _, _ = robot.arm.get_current_TCP_pos_vel_worldframe()
         sampled_pointcloud_wrld = sampled_pointcloud_wrld - tcp_pos_wrld
         sampled_pointcloud_wrk = utils_mesh.rotate_pointcloud_inverse(sampled_pointcloud_wrld, tcp_rpy_wrld)
-        sampled_pointcloud_wrk = sampled_pointcloud_wrk[None, :, :]
+        sampled_pointcloud_wrk = sampled_pointcloud_wrk[None, :, :]  # increase dim for stacking
         data['pointclouds'] = np.vstack((data['pointclouds'], sampled_pointcloud_wrk))
 
         # Full pointcloud to 25 vertices. By default, vertices are converted to workframe.
@@ -186,10 +182,11 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
         tactile_imgs_norm = np.expand_dims(camera, 0) / 255     # normalize tactile images
         data['tactile_imgs'] = np.vstack((data['tactile_imgs'], tactile_imgs_norm))
 
-        # Store pose and rotation
+        # Store TCP position in work frame
         pos_wrk = robot.arm.get_current_TCP_pos_vel_workframe()[0]
         data['pos_wrk_list'] = np.vstack((data['pos_wrk_list'], pos_wrk))
 
+        # Store TCP orientation in world frame
         rot_Q_wrld = robot.arm.get_current_TCP_pos_vel_worldframe()[2]
         rot_M_wrld = np.array(pb.getMatrixFromQuaternion(rot_Q_wrld)).reshape(1, 3, 3)
         data['rot_M_wrld_list'] = np.vstack((data['rot_M_wrld_list'], rot_M_wrld))
