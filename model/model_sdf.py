@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torch
 import copy
+from tqdm import tqdm
+from utils import utils_deepsdf
 """
 Model based on the paper 'DeepSDF'
 """
@@ -25,6 +27,7 @@ class SDFModel(torch.nn.Module):
     def forward(self, points):
         sdf = self.net(points)
         return sdf
+
 
 class SDFModelMulti(torch.nn.Module):
     def __init__(self, num_layers, no_skip_connections, input_dim=131, inner_dim=512, output_dim=1):
@@ -66,6 +69,7 @@ class SDFModelMulti(torch.nn.Module):
         self.final_layer = nn.Sequential(nn.Linear(inner_dim, output_dim), nn.Tanh())
         self.skip_layer = nn.Sequential(nn.Linear(inner_dim, inner_dim - self.skip_tensor_dim), nn.ReLU())
 
+
     def forward(self, x):
         input_data = x.clone().detach()
         if self.skip_connections and self.num_layers >= 8:
@@ -82,3 +86,79 @@ class SDFModelMulti(torch.nn.Module):
             x = self.net(x)
             sdf = self.final_layer(x)
         return sdf
+
+
+    def infer_latent_code(self, args, latent_code, coords, sdf_gt, optim, writer):
+        """Infer latent code from coordinates, their sdf, and a trained model."""
+
+        if args.lr_scheduler:
+            scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 
+                                                    factor=args.lr_multiplier, 
+                                                    patience=args.patience, 
+                                                    threshold=0.0001, threshold_mode='rel')
+
+        best_loss = 1000000
+
+        for epoch in tqdm(range(0, args.epochs)):
+
+            latent_code_tile = torch.tile(latent_code, (coords.shape[0], 1))
+            x = torch.hstack((latent_code_tile, coords))
+
+            # Adam 
+            if args.optimiser == 'Adam':
+
+                optim.zero_grad()
+
+                predictions = self(x)
+
+                if args.clamp:
+                    predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+
+                loss_value = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
+                loss_value.backward()
+                
+                #  add langevin noise (optional)
+                if args.langevin_noise > 0:
+                    noise = torch.normal(0, args.langevin_noise, size = (1, args.latent_size), dtype=torch.float32, requires_grad=False, device=device)
+                    latent_code.grad = latent_code.grad + noise
+
+                optim.step()
+
+            # LBFGS
+            else:
+
+                def closure():
+                    optim.zero_grad()
+
+                    predictions = self(x)
+
+                    if args.clamp:
+                        predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+
+                    loss_value = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
+                    loss_value.backward()
+
+                    return loss_value
+
+                optim.step(closure)
+
+                loss_value = closure()
+
+            if loss_value.detach().cpu().item() < best_loss:
+                best_loss = loss_value.detach().cpu().item()
+                best_latent_code = latent_code.clone()
+
+            # step scheduler and store on tensorboard (optional)
+            if args.lr_scheduler:
+                scheduler_latent.step(loss_value.item())
+                writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
+
+            # logging
+            writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
+            # store latent codes and their gradient on tensorboard
+            tag = f"latent_code_0"
+            writer.add_histogram(tag, latent_code, global_step=epoch)
+            tag = f"grad_latent_code_0"
+            writer.add_histogram(tag, latent_code.grad, global_step=epoch)
+
+        return best_latent_code

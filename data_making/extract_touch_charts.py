@@ -89,21 +89,6 @@ def main(args):
     for idx, obj_index in enumerate(list_objects[1:10]): 
         print(f"Collecting data... Object index: {obj_index} \t {idx+1}/{len(list_objects)} ")
 
-        # # Load robot
-        # robot = CRIRobotArm(
-        #     pb,
-        #     workframe_pos = robot_config['workframe_pos'],
-        #     workframe_rpy = robot_config['workframe_rpy'],
-        #     image_size = [256, 256],
-        #     arm_type = "ur5",
-        #     t_s_type = robot_config['t_s_type'],
-        #     t_s_core = robot_config['t_s_core'],
-        #     t_s_name = robot_config['t_s_name'],
-        #     t_s_dynamics = robot_config['t_s_dynamics'],
-        #     show_gui = args.show_gui,
-        #     show_tactile = args.show_tactile
-        # )
-
         # Load object
         initial_obj_orn = p.getQuaternionFromEuler([0, 0, np.pi / 2])
 
@@ -130,11 +115,8 @@ def main(args):
         initial_rpy = [np.pi / 2, 0, 0]   # WHY DO I NEED THIS ARBITRARY ORN INSTEAD OF OBJ ORN?
         vertices_wrld = utils_mesh.rotate_pointcloud(np.array(vertices_wrld), initial_rpy) + initial_obj_pos
 
-        # Get min and max world object coordinates. 
-        max_coords = [ np.amax(vertices_wrld[:,0]), np.amax(vertices_wrld[:,1]), np.amax(vertices_wrld[:,2]) ]
-
         # Ray: sqrt( (x1 - xc)**2 + (y1 - yc)**2)
-        ray_hemisphere = utils_sample.get_ray_sphere(max_coords, initial_obj_pos) 
+        ray_hemisphere = utils_sample.get_ray_hemisphere(vertices_wrld, initial_obj_pos) 
 
         for _ in range(args.num_samples):
 
@@ -235,18 +217,6 @@ if __name__=='__main__':
         "--show_tactile", default=False, action='store_true', help="Show tactile image"
     )
     parser.add_argument(
-        "--debug_show_full_mesh", default=False, action='store_true', help="Show mesh obtained from first raycasting"
-    )
-    parser.add_argument(
-        "--debug_show_mesh_wrk", default=False, action='store_true', help="Show mesh obtained from applying the pivot ball technique on 25 vertices wrt workframe"
-    )
-    parser.add_argument(
-        "--debug_show_mesh_wrld", default=False, action='store_true', help="Show mesh obtained from applying the pivot ball technique on 25 vertices wrt worldframe"
-    )
-    parser.add_argument(
-        "--debug_contact_points", default=False, action='store_true', help="Show contact points on Plotly"
-    )
-    parser.add_argument(
         "--num_samples", type=int, default=10, help="Number of samplings on the objects"
     )
     parser.add_argument(
@@ -256,7 +226,5 @@ if __name__=='__main__':
         "--scale", default=0.1, type=float, help="Scale of the object in simulation wrt the urdf object"
     )
     args = parser.parse_args()
-
-    args.show_gui = True
 
     main(args)

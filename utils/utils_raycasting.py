@@ -91,8 +91,5 @@ def pointcloud_to_vertices_wrk(point_cloud, robot, args):
 
     print(f'Point cloud to vertices: {verts_wrk.shape}')
 
-    if args.debug_show_mesh_wrk:
-        trimesh.points.plot_points(verts_wrk)
-
     return verts_wrk
     

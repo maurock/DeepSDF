@@ -248,7 +248,11 @@ def suppress_stdout():
             # buffering and flags such as
             # CLOEXEC may be different
 
-def get_ray_sphere(max_coords, initial_obj_pos):
+def get_ray_hemisphere(vertices_wrld, initial_obj_pos):
+    # Get maximum coordinates of the vertices in world frame
+    max_coords = [ np.amax(vertices_wrld[:,0]), np.amax(vertices_wrld[:,1]), np.amax(vertices_wrld[:,2]) ]
+
+    # Get the radius of the hemisphere
     ray_hemisphere = 1.5 * np.sqrt((max_coords[0] - initial_obj_pos[0])**2 + (max_coords[1] - initial_obj_pos[1])**2 + (max_coords[2] - initial_obj_pos[2])**2)
 
     return ray_hemisphere

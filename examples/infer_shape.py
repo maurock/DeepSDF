@@ -136,78 +136,81 @@ def main(args):
         print('Please choose valid optimiser: [Adam, LBFGS]')
         exit()
 
-    if args.lr_scheduler:
-        scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 
-                                                factor=args.lr_multiplier, 
-                                                patience=args.patience, 
-                                                threshold=0.0001, threshold_mode='rel')
-    
     # create dataset
     coords, sdf_gt = get_data(args, test_path)
 
-    best_loss = 1000000
+    best_latent_code = model.infer_latent_code(args, latent_code, coords, sdf_gt, optim, writer)
+    
+    # if args.lr_scheduler:
+    #     scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 
+    #                                             factor=args.lr_multiplier, 
+    #                                             patience=args.patience, 
+    #                                             threshold=0.0001, threshold_mode='rel')
+    
 
-    # prediction
-    for epoch in tqdm(range(0, args.epochs)):
-        latent_code_tile = torch.tile(latent_code, (coords.shape[0], 1))
-        x = torch.hstack((latent_code_tile, coords))
+    # best_loss = 1000000
 
-        # Adam 
-        if args.optimiser == 'Adam':
+    # # prediction
+    # for epoch in tqdm(range(0, args.epochs)):
+    #     latent_code_tile = torch.tile(latent_code, (coords.shape[0], 1))
+    #     x = torch.hstack((latent_code_tile, coords))
 
-            optim.zero_grad()
+        # # Adam 
+        # if args.optimiser == 'Adam':
 
-            predictions = model(x)
+        #     optim.zero_grad()
 
-            if args.clamp:
-                predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+        #     predictions = model(x)
 
-            loss_value = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
-            loss_value.backward()
+        #     if args.clamp:
+        #         predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+
+        #     loss_value = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
+        #     loss_value.backward()
             
-            #  add langevin noise (optional)
-            if args.langevin_noise > 0:
-                noise = torch.normal(0, args.langevin_noise, size = (1, args.latent_size), dtype=torch.float32, requires_grad=False, device=device)
-                latent_code.grad = latent_code.grad + noise
+        #     #  add langevin noise (optional)
+        #     if args.langevin_noise > 0:
+        #         noise = torch.normal(0, args.langevin_noise, size = (1, args.latent_size), dtype=torch.float32, requires_grad=False, device=device)
+        #         latent_code.grad = latent_code.grad + noise
 
-            optim.step()
+        #     optim.step()
 
-        # LBFGS
-        else:
+        # # LBFGS
+        # else:
 
-            def closure():
-                optim.zero_grad()
+        #     def closure():
+        #         optim.zero_grad()
 
-                predictions = model(x)
+        #         predictions = model(x)
 
-                if args.clamp:
-                    predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+        #         if args.clamp:
+        #             predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
 
-                loss_value = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
-                loss_value.backward()
+        #         loss_value = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
+        #         loss_value.backward()
 
-                return loss_value
+        #         return loss_value
 
-            optim.step(closure)
+        #     optim.step(closure)
 
-            loss_value = closure()
+        #     loss_value = closure()
 
-        if loss_value.detach().cpu().item() < best_loss:
-            best_loss = loss_value.detach().cpu().item()
-            best_latent_code = latent_code.clone()
+    #     if loss_value.detach().cpu().item() < best_loss:
+    #         best_loss = loss_value.detach().cpu().item()
+    #         best_latent_code = latent_code.clone()
 
-        # step scheduler and store on tensorboard (optional)
-        if args.lr_scheduler:
-            scheduler_latent.step(loss_value.item())
-            writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
+    #     # step scheduler and store on tensorboard (optional)
+    #     if args.lr_scheduler:
+    #         scheduler_latent.step(loss_value.item())
+    #         writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
 
-        # logging
-        writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
-        # store latent codes and their gradient on tensorboard
-        tag = f"latent_code_0"
-        writer.add_histogram(tag, latent_code, global_step=epoch)
-        tag = f"grad_latent_code_0"
-        writer.add_histogram(tag, latent_code.grad, global_step=epoch)
+    #     # logging
+    #     writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
+    #     # store latent codes and their gradient on tensorboard
+    #     tag = f"latent_code_0"
+    #     writer.add_histogram(tag, latent_code, global_step=epoch)
+    #     tag = f"grad_latent_code_0"
+    #     writer.add_histogram(tag, latent_code.grad, global_step=epoch)
 
     # Save optimised latent_code
     latent_code_path = os.path.join(test_path, 'latent_code.pt')

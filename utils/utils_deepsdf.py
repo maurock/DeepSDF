@@ -122,25 +122,8 @@ def extract_mesh(grad_size_axis, sdf):
     return vertices, faces
 
 
-def scale_urdf_to_deepsdf(mesh):
-    """Scale the mesh from the default dimension of the URDF shapes of the PartNet-Mobility dataset
-    to the scale required by the DeepSDF model. This uses a function from the mesh_to_Sdf library."""
-    return scale_to_unit_sphere(mesh)
-
-
-def scale_deepsdf_to_sim(mesh_deepsdf, scale):
-    """Scale the mesh from the scale required by the DeepSDF model to the scale required by the simulator."""
-    vertices_sim = np.array(mesh_deepsdf.vertices) * scale
-    
-    mesh_sim = trimesh.Trimesh(vertices_sim, mesh_deepsdf.faces)
-    
-    return mesh_sim
-
-
-def scale_sim_to_deepsdf(mesh_sim, scale):
+def scale_sim_to_deepsdf(predicted_pointcloud, scale_sim, scale_deepsdf):
     """Scale the mesh from the scale required by the simulator to the scale required by the DeepSDF model."""
-    vertices_deepsdf = np.array(mesh_sim.vertices) / scale
-    
-    mesh_deepsdf = trimesh.Trimesh(vertices_deepsdf, mesh_sim.faces)
-    
-    return mesh_deepsdf
+    vertices_deepsdf = predicted_pointcloud / (scale_sim * scale_deepsdf)
+        
+    return vertices_deepsdf
