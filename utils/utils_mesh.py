@@ -66,7 +66,7 @@ def mesh_to_pointcloud(mesh, n_samples):
         pointcloud
     """
     pointcloud, _ = trimesh.sample.sample_surface(mesh, n_samples)
-    pointcloud = pointcloud.astype(np.float32)
+    pointcloud = np.array(pointcloud).astype(np.float32)
     return pointcloud
 
 
@@ -105,7 +105,7 @@ def rotate_pointcloud(pointcloud_A, rpy_BA=[np.pi / 2, 0, 0]):
     """
     The default rotation reflects the rotation used for the object during data collection.
     This calculates P_b, where P_b = R_b/a * P_a.
-    R_b/a is rotation matrix of a wrt. b frame.
+    R_b/a is rotation matrix of a wrt b frame.
     """
     # Rotate object
     rot_Q = pb.getQuaternionFromEuler(rpy_BA)
@@ -115,11 +115,11 @@ def rotate_pointcloud(pointcloud_A, rpy_BA=[np.pi / 2, 0, 0]):
     return pointcloud_B
 
 
-def rotate_pointcloud_inverse(pointcloud_A, rpy_BA):
+def rotate_pointcloud_inverse(pointcloud_A, rpy_AB):
     """
-    Convert point cloud in frame A to point cloud in frame B with 
-    euler angles of A wrt B """
-    rot_Q = pb.getQuaternionFromEuler(rpy_BA)
+    This calculates P_b, where P_b = (R_a/b)^-1 * P_a.
+    R_b/a is rotation matrix of a wrt b frame."""
+    rot_Q = pb.getQuaternionFromEuler(rpy_AB)
     rot_M = np.array(pb.getMatrixFromQuaternion(rot_Q)).reshape(3, 3)
     rot_M_inv = np.linalg.inv(rot_M)
     pointcloud_B = rot_M_inv @ pointcloud_A.transpose(1,0)
@@ -156,15 +156,16 @@ def debug_draw_vertices_on_pb(vertices_wrld, color=[235, 52, 52]):
 
 def translate_rotate_mesh(pos_wrld_list, rot_M_wrld_list, pointclouds_list, obj_initial_pos):
     """
-    Given a pointcloud (workframe), the position of the TCP (worldframe), the rotation matrix (worldframe),
-    it returns the pointcloud in worldframe. It assumes a default position of the object.
+    Given a pointcloud (workframe), the position of the TCP (worldframe), the rotation matrix (worldframe), it returns the pointcloud in worldframe. It assumes a known position of the object.
 
     Params:
         pos_wrld_list: (m, 3)
         rot_M_wrld_list: (m, 3, 3)
         pointclouds_list: pointcloud in workframe (m, number_points, 3)
+        obj_initial_pos: (3,)
 
     Returns:
+        pointcloud_wrld: (m, number_points, 3)
     """
     a = rot_M_wrld_list @ pointclouds_list.transpose(0,2,1)
     b = a.transpose(0,2,1)
@@ -185,20 +186,23 @@ def load_save_objects(obj_dir):
         key are 'verts' and 'faces', both stores as np.array
     """
     # List all the objects in data/objects/
-    list_objects = [filepath.split('/')[-1] for filepath in glob(os.path.join(obj_dir, '*'))]
-    list_objects.remove('__init__.py')
+    list_objects = [filepath.split('/')[-2] for filepath in glob(os.path.join(obj_dir, '*/'))]
 
-    if '__pycache__' in list_objects:
-        list_objects.remove('__pycache__')
     objs_dict = dict()
     
     for obj_index in list_objects:
+
         objs_dict[obj_index] = dict()
+
         filepath_obj = os.path.join(obj_dir, obj_index)
         mesh = urdf_to_mesh(filepath_obj)
+
         verts, faces = np.array(mesh.vertices), np.array(mesh.faces)
+
         verts_norm = extract_urdf.normalise_obj(verts)
+
         new_verts = rotate_pointcloud(verts_norm)
+        
         objs_dict[obj_index]['verts'] = new_verts
         objs_dict[obj_index]['faces'] = faces
     return objs_dict  

@@ -119,21 +119,10 @@ def main(args):
     results_dict_path = os.path.join(os.path.dirname(results.__file__), 'runs_sdf', folder, 'results.npy')
     results_dict = np.load(results_dict_path, allow_pickle=True).item()
 
-    # Initialise latent code and optimiser
-    latent_code = model.initialise_latent_code(args.latent_size)
-    
-    if args.optimiser == 'Adam':
-        optim = torch.optim.Adam([latent_code], lr=args.lr)
-    elif args.optimiser == 'LBFGS':
-        optim = torch.optim.LBFGS([latent_code], lr=args.lr, max_iter=args.LBFGS_maxiter)
-    else:
-        print('Please choose valid optimiser: [Adam, LBFGS]')
-        exit()
-
     # create dataset
     coords, sdf_gt = get_data(args, test_path)
 
-    best_latent_code = model.infer_latent_code(args, latent_code, coords, sdf_gt, optim, writer)
+    best_latent_code = model.infer_latent_code(args, coords, sdf_gt, writer)
 
     # Save optimised latent_code
     latent_code_path = os.path.join(test_path, 'latent_code.pt')

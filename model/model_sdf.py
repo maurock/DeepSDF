@@ -76,8 +76,19 @@ class SDFModelMulti(torch.nn.Module):
         return latent_code
 
 
-    def infer_latent_code(self, args, latent_code, coords, sdf_gt, optim, writer):
+    def infer_latent_code(self, args, coords, sdf_gt, writer):
         """Infer latent code from coordinates, their sdf, and a trained model."""
+
+        # Initialise latent code and optimiser
+        latent_code = self.initialise_latent_code(args.latent_size)
+        
+        if args.optimiser == 'Adam':
+            optim = torch.optim.Adam([latent_code], lr=args.lr)
+        elif args.optimiser == 'LBFGS':
+            optim = torch.optim.LBFGS([latent_code], lr=args.lr, max_iter=args.LBFGS_maxiter)
+        else:
+            print('Please choose valid optimiser: [Adam, LBFGS]')
+            exit()
 
         if args.lr_scheduler:
             scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 

@@ -1,0 +1,23 @@
+Settings:
+{"show_gui": true,
+"show_tactile": false,
+"num_samples": 10,
+"render_scene": false,
+"scale_sim": 0.1,
+"scale_deepsdf": 0.707,
+"obj_index": "102505",
+"folder_sdf": "25_11_084304",
+"folder_touch": "14_12_1508",
+"latent_size": 128,
+"optimiser": "Adam",
+"lr": 5e-05,
+"lr_scheduler": true,
+"sigma_regulariser": 0.01,
+"lr_multiplier": 0.5,
+"patience": 50,
+"epochs": 1000,
+"clamp": false,
+"clamp_value": 0.1,
+"langevin_noise": 0,
+"resolution": 50}
+

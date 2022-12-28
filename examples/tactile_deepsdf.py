@@ -13,21 +13,49 @@ import data.objects as objects
 from model import model_sdf, model_touch
 import torch
 import data
-from results import runs_touch, runs_sdf
+from results import runs_touch, runs_sdf, runs_touch_sdf
 import trimesh
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 import json
+import plotly.graph_objects as go
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 """
 Demo to reconstruct objects using tactile-gym.
 """
+def _debug_pointcloud(vertices_wrld, initial_obj_pos, touch_pointclouds_deepsdf, pos_wrld, args):
+    """
+    Plot the pointclouds of the object and the pointclouds of the predicted touch chart in:
+    - DeepSDF scale
+    - Simulation scale
+    Both centred at 0.
+    """
+    obj_pointcloud_sim_centred = vertices_wrld - initial_obj_pos
+    obj_pointcloud_deepsdf = utils_deepsdf.scale_sim_to_deepsdf(obj_pointcloud_sim_centred, args.scale_sim, args.scale_deepsdf)
+
+    fig = go.Figure([
+        go.Scatter3d(x=obj_pointcloud_deepsdf[:, 0], y=obj_pointcloud_deepsdf[:, 1],z=obj_pointcloud_deepsdf[:, 2], 
+        mode='markers', marker=dict(size=1)),
+        go.Scatter3d(x=touch_pointclouds_deepsdf[:, 0], y=touch_pointclouds_deepsdf[:, 1],z=touch_pointclouds_deepsdf[:, 2], 
+        mode='markers', marker=dict(size=1))
+        ]            
+    )
+    fig.show() 
+    fig = go.Figure([
+        go.Scatter3d(x=vertices_wrld[:, 0], y=vertices_wrld[:, 1],z=vertices_wrld[:, 2], 
+        mode='markers', marker=dict(size=1)),
+        go.Scatter3d(x=pos_wrld[:, 0], y=pos_wrld[:, 1],z=pos_wrld[:, 2], 
+        mode='markers', marker=dict(size=3))
+        ]         
+    )
+    fig.show() 
+
 
 def main(args):
     # Logging
-    test_dir = os.path.join(os.path.dirname(runs_sdf.__file__), datetime.now().strftime('%d_%m_%H%M%S'))
+    test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), datetime.now().strftime('%d_%m_%H%M%S'))
     if not os.path.exists(test_dir):
         os.mkdir(test_dir)
     writer = SummaryWriter(log_dir=test_dir)
@@ -53,13 +81,12 @@ def main(args):
     touch_model.load_state_dict(torch.load(weights_path, map_location=torch.device(device)))
     touch_model.eval()
 
-
     # Initial verts of the default touch chart
     chart_location = os.path.join(os.path.dirname(data.__file__), 'touch_chart.obj')
     initial_verts, initial_faces = utils_mesh.load_mesh_touch(chart_location)
     initial_verts = torch.unsqueeze(initial_verts, 0)
 
-    time_step = 1. / 960  # low for small objects
+    time_step = 1. / 3 #960  # low for small objects
 
     if args.show_gui:
         pb = bc.BulletClient(connection_mode=p.GUI)
@@ -147,9 +174,9 @@ def main(args):
     ray_hemisphere = utils_sample.get_ray_hemisphere(vertices_wrld, initial_obj_pos) 
 
     # Instantiate pointcloud for DeepSDF prediction
-    pointlcoud_deepsdf = torch.tensor([]).view(0, 3).to(device)
+    pointclouds_deepsdf = torch.tensor([]).view(0, 3).to(device)
 
-    for _ in range(args.num_samples):
+    for num_sample in range(args.num_samples):
 
         robot = CRIRobotArm(
             pb,
@@ -186,82 +213,56 @@ def main(args):
             continue
         
         # Store tactile images
-        camera = robot.get_tactile_observation()[np.newaxis, :, :]
-        # Conv2D requires [batch, channels, size1, size2] as input
-        tactile_img = np.expand_dims(camera, 0) / 255     # normalise tactile images
+        camera = robot.get_tactile_observation()    # shape (256, 256)
+
+        # Conv2D requires (batch, channels, size1, size2) as input. Increase dim and normalise tactile images
+        tactile_img = camera[None, None, :, :] / 255.0
         tactile_img = torch.from_numpy(tactile_img).float().to(device)
 
-        # Predict vertices from tactile image
+        # Predict vertices from tactile image (TCP frame, Sim scale)
         predicted_verts = touch_model(tactile_img, initial_verts)[0]
 
         # Create mesh from predicted vertices
         predicted_mesh = trimesh.Trimesh(predicted_verts.detach().numpy(), initial_faces)
 
-        # Sample pointcloud from predicted mesh in Sim coordinates
-        predicted_pointcloud = utils_mesh.mesh_to_pointcloud(predicted_mesh, 500)
+        # Sample pointcloud from predicted mesh in Sim coordinates (TCP frame, Sim scale)
+        predicted_pointcloud = utils_mesh.mesh_to_pointcloud(predicted_mesh, 500)[None, :, :]
 
-        # Rescale from Sim to DeepSDF coordinates
-        pointcloud_scaled = utils_deepsdf.scale_sim_to_deepsdf(predicted_pointcloud, args.scale_sim, args.scale_deepsdf)
-        pointcloud_scaled = torch.from_numpy(pointcloud_scaled).float().to(device)
+        # Translate to world frame
+        pos_wrld = robot.coords_at_touch_wrld[None, :]
+        rot_Q_wrld = robot.arm.get_current_TCP_pos_vel_worldframe()[2]
+        rot_M_wrld = np.array(pb.getMatrixFromQuaternion(rot_Q_wrld)).reshape(1, 3, 3)
+        predicted_pointcloud_wrld = utils_mesh.translate_rotate_mesh(pos_wrld, rot_M_wrld, predicted_pointcloud, initial_obj_pos) # shape (1, n, 3), World frame, Sim scale
 
-        # Concatenate pointclouds
-        pointcloud_deepsdf = torch.vstack((pointlcoud_deepsdf, pointcloud_scaled))   
+        # Rescale from Sim scale to DeepSDF scale
+        pointcloud_deepsdf = utils_deepsdf.scale_sim_to_deepsdf(predicted_pointcloud_wrld, args.scale_sim, args.scale_deepsdf) # shape (1, n, 3), World frame, DeepSDF scale
+
+        # Concatenate predicted pointclouds of the touch charts from all samples
+        pointcloud_deepsdf = torch.from_numpy(pointcloud_deepsdf).float().to(device)[0]  # shape (n, 3)
+        pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_deepsdf))   
         
-        # Predict sdf values from pointcloud
-        predicted_coords = sdf_model(pointcloud_deepsdf)
-        sdf_gt = torch.zeros(size=(predicted_coords.shape[0], 1)).to(device)
+        _debug_pointcloud(vertices_wrld, initial_obj_pos, pointclouds_deepsdf, pos_wrld, args)
+
+        # The sdf of points on the object surface is 0.
+        sdf_gt = torch.zeros(size=(pointclouds_deepsdf.shape[0], 1)).to(device)
 
         # Infer latent code
-        optim = torch.optim.Adam(sdf_model.parameters(), lr=args.lr)
+        best_latent_code = sdf_model.infer_latent_code(args, pointclouds_deepsdf, sdf_gt, writer)
 
-        latent_code = sdf_model.initialise_latent_code(args.latent_size)
+        # Predict sdf values from pointcloud
+        # input_deepsdf = torch.cat((pointclouds_deepsdf, best_latent_code.repeat(pointclouds_deepsdf.shape[0], 1)), dim=1)
+        # predicted_coords = sdf_model(input_deepsdf)
 
-        optim = torch.optim.Adam([latent_code], lr=args.lr)
+        # Extract mesh obtained with the latent code optimised at inference
+        coords, grid_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
 
-        best_latent_code = sdf_model.infer_latent_code(args, latent_code, predicted_coords, sdf_gt, optim, writer)
+        sdf = utils_deepsdf.predict_sdf(best_latent_code, coords, sdf_model)
 
+        vertices, faces = utils_deepsdf.extract_mesh(grid_size_axis, sdf)
 
-
-        # 
-        
-        # # Filter points with information about contact, make sure there are at least 500 valid ones
-        # contact_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld)
-        # if contact_pointcloud.shape[0] < 500:
-        #     print('Point cloud shape is too small')
-        #     pb.removeBody(robot.robot_id)
-        #     continue
-        
-        # # Sample 500 random points among the contact ones 
-        # random_indices = np.random.choice(contact_pointcloud.shape[0], 500)
-        # sampled_pointcloud_wrld = contact_pointcloud[random_indices]
-        # # Centre points on origin and convert to workframe
-        # tcp_pos_wrld, tcp_rpy_wrld, _, _, _ = robot.arm.get_current_TCP_pos_vel_worldframe()
-        # sampled_pointcloud_wrld = sampled_pointcloud_wrld - tcp_pos_wrld
-        # sampled_pointcloud_wrk = utils_mesh.rotate_pointcloud_inverse(sampled_pointcloud_wrld, tcp_rpy_wrld)
-        # sampled_pointcloud_wrk = sampled_pointcloud_wrk[None, :, :]  # increase dim for stacking
-        # data['pointclouds'] = np.vstack((data['pointclouds'], sampled_pointcloud_wrk))
-
-        # # Full pointcloud to 25 vertices. By default, vertices are converted to workframe.
-        # verts_wrk = utils_raycasting.pointcloud_to_vertices_wrk(contact_pointcloud, robot, args)
-        # verts_ravel_wrk = np.asarray(verts_wrk, dtype=np.float32).ravel()
-        # data['verts'] = np.vstack((data['verts'], verts_ravel_wrk))
-
-        # # Store world position of the TCP
-        # data['pos_wrld_list'] = np.vstack((data['pos_wrld_list'], robot.coords_at_touch_wrld))
-
-
-        # # Store TCP position in work frame
-        # pos_wrk = robot.arm.get_current_TCP_pos_vel_workframe()[0]
-        # data['pos_wrk_list'] = np.vstack((data['pos_wrk_list'], pos_wrk))
-
-        # # Store TCP orientation in world frame
-        # rot_Q_wrld = robot.arm.get_current_TCP_pos_vel_worldframe()[2]
-        # rot_M_wrld = np.array(pb.getMatrixFromQuaternion(rot_Q_wrld)).reshape(1, 3, 3)
-        # data['rot_M_wrld_list'] = np.vstack((data['rot_M_wrld_list'], rot_M_wrld))
-
-        # data['obj_index'] = np.vstack((data['obj_index'], obj_index))
-
-        # data['initial_pos'] = np.vstack((data['initial_pos'], initial_obj_pos))
+        # Save mesh
+        mesh_path = os.path.join(test_dir, f'final_mesh_{num_sample}.html')
+        utils_deepsdf.save_meshplot(vertices, faces, mesh_path)
 
         pb.removeBody(robot.robot_id)
 
@@ -273,6 +274,8 @@ def main(args):
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
+
+    # Arguments for sampling
     parser.add_argument(
         "--show_gui", default=False, action='store_true', help="Show PyBullet GUI"
     )
@@ -289,7 +292,7 @@ if __name__=='__main__':
         "--scale_sim", default=0.1, type=float, help="Scale of the object in simulation wrt the urdf object"
     )
     parser.add_argument(
-        "--scale_deepsdf", default=1.414, type=float, help="Scale of the DeepSDF mesh wrt the urdf object"
+        "--scale_deepsdf", default=0.707, type=float, help="Scale of the DeepSDF mesh wrt the urdf object"
     )
     parser.add_argument(
         "--obj_index", default=0, type=str, help="Index of the object to reconstruct"
@@ -300,17 +303,53 @@ if __name__=='__main__':
     parser.add_argument(
         "--folder_touch", default=0, type=str, help="Folder containing the touch model weights"
     )
+
+    # Argument for inference
     parser.add_argument(
         "--latent_size", default=128, type=int, help="Folder containing the touch model weights"
     )
     parser.add_argument(
         "--optimiser", default='Adam', type=str, help="Choose the optimiser out of [Adam, LBFGS]"
     )
+    parser.add_argument(
+        "--lr", default=0.00001, type=float, help="Learning rate to infer the latent code"
+    )
+    parser.add_argument(
+        "--lr_scheduler", default=False, action='store_true', help="Learning rate to infer the latent code"
+    )
+    parser.add_argument(
+        "--sigma_regulariser", default=0.01, type=float, help="Regulariser for the loss function"
+    )
+    parser.add_argument(
+        "--lr_multiplier", default=0.5, type=float, help="Learning rate multiplier for the scheduler"
+    )
+    parser.add_argument(
+        "--patience", default=50, type=float, help="Patience for latent code inference"
+    )
+    parser.add_argument(
+        "--epochs", default=100, type=float, help="Number of epochs for latent code inference"
+    )
+    parser.add_argument(
+        "--clamp", default=False, action='store_true', help="Clip the network prediction"
+    )
+    parser.add_argument(
+        "--clamp_value", type=float, default=0.1, help="Value of the clip"
+    )
+    parser.add_argument(
+        "--langevin_noise", type=float, default=0, help="If this value is higher than 0, it adds noise to the latent space after every update."
+    )
+    parser.add_argument(
+        "--resolution", type=int, default=50, help="Resolution of the extracted mesh"
+    )
     args = parser.parse_args()
 
-    args.show_gui = True
-    args.folder_sdf = '25_11_084304'
-    args.folder_touch = '14_12_1508'
-    args.obj_index = '3398'
+    # args.show_gui = True
+    # args.folder_sdf = '25_11_084304'
+    # args.folder_touch = '14_12_1508'
+    # args.obj_index = '102505'
+    # args.lr_scheduler = True
+
+    # args.epochs = 1000
+    # args.lr = 0.00005
 
     main(args)
