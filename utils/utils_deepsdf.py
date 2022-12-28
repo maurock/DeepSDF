@@ -1,12 +1,10 @@
-import numpy as np
-import trimesh
 import torch
 import meshplot as mp
 import skimage
-from mesh_to_sdf.utils import scale_to_unit_sphere
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+mp.offline()
 
 def clamp(x, delta=torch.tensor([[0.1]]).to(device)):
     """Clamp function introduced in the paper DeepSDF.
@@ -86,12 +84,16 @@ def model_graph_to_tensorboard(train_loader, model, writer, generate_xy):
 
 
 def get_volume_coords(resolution = 50):
-    """Get threedimensional vector (M, N, P) accoridng to the desired resolutions."""
+    """Get 3-dimensional vector (M, N, P) according to the desired resolutions."""
     grid_values = torch.arange(-1, 1, float(1/resolution)).to(device) # 50 resolution -> 1/50 
-    grad_size_axis = grid_values.shape[0]
+
+    grid_size_axis = grid_values.shape[0]
+
     grid = torch.meshgrid(grid_values, grid_values, grid_values)
+
     coords = torch.vstack((grid[0].ravel(), grid[1].ravel(), grid[2].ravel())).transpose(1, 0).to(device)
-    return coords, grad_size_axis
+
+    return coords, grid_size_axis
 
 
 def save_meshplot(vertices, faces, path):
@@ -99,6 +101,7 @@ def save_meshplot(vertices, faces, path):
 
 
 def predict_sdf(latent, coords, model):
+
     sdf = torch.tensor([], dtype=torch.float32).view(0, 1).to(device)
     coords = coords.clone().to(device)
     coords_batches = torch.split(coords, 1000000)
@@ -122,8 +125,15 @@ def extract_mesh(grad_size_axis, sdf):
     return vertices, faces
 
 
-def scale_sim_to_deepsdf(predicted_pointcloud, scale_sim, scale_deepsdf):
+def scale_sim_to_deepsdf(pointcloud_sim, scale_sim, scale_deepsdf):
     """Scale the mesh from the scale required by the simulator to the scale required by the DeepSDF model."""
-    vertices_deepsdf = predicted_pointcloud / (scale_sim * scale_deepsdf)
+    pointcloud_deepsdf = pointcloud_sim * scale_deepsdf / scale_sim
         
-    return vertices_deepsdf
+    return pointcloud_deepsdf
+
+
+def scale_urdf_to_deepsdf(pointcloud_urdf, scale_deepsdf):
+    """Scale the mesh from the scale required by the simulator to the scale required by the DeepSDF model."""
+    pointcloud_deepsdf = pointcloud_urdf * scale_deepsdf
+        
+    return pointcloud_deepsdf
