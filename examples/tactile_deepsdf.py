@@ -346,7 +346,7 @@ if __name__=='__main__':
     # args.show_gui = True
     # args.folder_sdf = '25_11_084304'
     # args.folder_touch = '14_12_1508'
-    # args.obj_index = '102505'
+    # args.obj_index = '3398' #'102505'
     # args.lr_scheduler = True
 
     # args.epochs = 1000
