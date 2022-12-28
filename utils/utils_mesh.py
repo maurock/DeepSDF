@@ -174,40 +174,6 @@ def translate_rotate_mesh(pos_wrld_list, rot_M_wrld_list, pointclouds_list, obj_
     return pointcloud_wrld
 
 
-def load_save_objects(obj_dir):
-    """
-    Extract objects (verts and faces) from the URDF files in the PartNet-Mobility dataset.
-    Store objects in dictionaries, where key=obj_idx and value=np.array[verts, faces]
-
-    Args:
-        obj_dir: directory containing the object folders
-    Returns:
-        dictionary of dictionaries, the first key is the object indices, the second
-        key are 'verts' and 'faces', both stores as np.array
-    """
-    # List all the objects in data/objects/
-    list_objects = [filepath.split('/')[-2] for filepath in glob(os.path.join(obj_dir, '*/'))]
-
-    objs_dict = dict()
-    
-    for obj_index in list_objects:
-
-        objs_dict[obj_index] = dict()
-
-        filepath_obj = os.path.join(obj_dir, obj_index)
-        mesh = urdf_to_mesh(filepath_obj)
-
-        verts, faces = np.array(mesh.vertices), np.array(mesh.faces)
-
-        verts_norm = extract_urdf.normalise_obj(verts)
-
-        new_verts = rotate_pointcloud(verts_norm)
-        
-        objs_dict[obj_index]['verts'] = new_verts
-        objs_dict[obj_index]['faces'] = faces
-    return objs_dict  
-
-
 # adapted from: https://github.com/facebookresearch/Active-3D-Vision-and-Touch/blob/main/pterotactyl/utility/utils.py
 # returns the chamfer distance between a mesh and a point cloud (Ed. Smith)
 def chamfer_distance(verts, faces, gt_points, num=1000, repeat=1):
