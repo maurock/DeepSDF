@@ -172,13 +172,13 @@ def main(args):
             data['pointclouds'] = np.vstack((data['pointclouds'], sampled_pointcloud_wrk))
 
             # Full pointcloud to 25 vertices. By default, vertices are converted to workframe.
-            verts_wrk = utils_raycasting.pointcloud_to_vertices_wrk(contact_pointcloud, robot, args)
+            # verts_wrk = utils_raycasting.pointcloud_to_vertices_wrk(contact_pointcloud, robot, args)
             # if verts_wrk.shape[0] != 25:
             #     print('Point cloud to vertices could not extract 25 vertices.')
             #     pb.removeBody(robot.robot_id)
             #     continue
-            verts_ravel_wrk = np.asarray(verts_wrk, dtype=np.float32).ravel()
-            data['verts'] = np.vstack((data['verts'], verts_ravel_wrk))
+            # verts_ravel_wrk = np.asarray(verts_wrk, dtype=np.float32).ravel()
+            # data['verts'] = np.vstack((data['verts'], verts_ravel_wrk))
 
             # Store world position of the TCP
             data['pos_wrld_list'] = np.vstack((data['pos_wrld_list'], robot.coords_at_touch_wrld))
