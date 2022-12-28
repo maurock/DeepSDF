@@ -173,10 +173,10 @@ def main(args):
 
             # Full pointcloud to 25 vertices. By default, vertices are converted to workframe.
             verts_wrk = utils_raycasting.pointcloud_to_vertices_wrk(contact_pointcloud, robot, args)
-            if verts_wrk.shape[0] != 25:
-                print('Point cloud to vertices could not extract 25 vertices.')
-                pb.removeBody(robot.robot_id)
-                continue
+            # if verts_wrk.shape[0] != 25:
+            #     print('Point cloud to vertices could not extract 25 vertices.')
+            #     pb.removeBody(robot.robot_id)
+            #     continue
             verts_ravel_wrk = np.asarray(verts_wrk, dtype=np.float32).ravel()
             data['verts'] = np.vstack((data['verts'], verts_ravel_wrk))
 
