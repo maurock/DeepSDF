@@ -89,12 +89,15 @@ def get_contact_points(current_TCP_pos_vel_worldframe, pb, sensor, nx=5, ny=5, d
 
         normal_wrk = np.array([0, 0, 1])
         normal_wrld = utils_mesh.rotate_pointcloud(np.array([normal_wrk]), rpy_wrld)[0]
+        
+        # Get the centre of the tactip
+        central_point = current_TCP_pos_vel_worldframe[0] - 0.02 * normal_wrld
 
         # Convert from workframe to worldframe
         points_on_sensor_wrld = utils_mesh.rotate_pointcloud(points_on_sensor_wrk, rpy_wrld)
-        points_on_sensor_wrld = points_on_sensor_wrld + (current_TCP_pos_vel_worldframe[0] - 0.02 * normal_wrld)
+        points_on_sensor_wrld = points_on_sensor_wrld + central_point
 
-        raysFrom = np.tile(current_TCP_pos_vel_worldframe[0], (points_on_sensor_wrld.shape[0], 1)) 
+        raysFrom = np.tile(central_point, (points_on_sensor_wrld.shape[0], 1)) 
         raysTo = points_on_sensor_wrld
 
         # debug points
@@ -106,6 +109,7 @@ def get_contact_points(current_TCP_pos_vel_worldframe, pb, sensor, nx=5, ny=5, d
                 pointColorsRGB=color_From_array,
                 pointSize=1
             )
+
     else:
         _, grid_vecs_TCP_wrld, z_TCP_wrld = shoot_rays(current_TCP_pos_vel_worldframe, pb, nx, ny)
         # the grid is defined 0.5 units in front of the plane passing through the TCP centrer of mass
