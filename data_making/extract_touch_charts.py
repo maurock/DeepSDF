@@ -164,8 +164,10 @@ def main(args):
             # Sample 500 random points among the contact ones 
             random_indices = np.random.choice(contact_pointcloud.shape[0], 500)
             sampled_pointcloud_wrld = contact_pointcloud[random_indices]
-            # Centre points on origin and convert to workframe
+
+            # Centre touch point cloud on origin and convert to workframe
             tcp_pos_wrld, tcp_rpy_wrld, _, _, _ = robot.arm.get_current_TCP_pos_vel_worldframe()
+
             sampled_pointcloud_wrld = sampled_pointcloud_wrld - tcp_pos_wrld
             sampled_pointcloud_wrk = utils_mesh.rotate_pointcloud_inverse(sampled_pointcloud_wrld, tcp_rpy_wrld)
             sampled_pointcloud_wrk = sampled_pointcloud_wrk[None, :, :]  # increase dim for stacking
