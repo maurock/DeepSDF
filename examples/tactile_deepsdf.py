@@ -151,7 +151,7 @@ def main(args):
         initial_obj_orn = p.getQuaternionFromEuler([0, 0, np.pi / 2])
 
         # Calculate initial z position for object
-        obj_initial_z = utils_mesh.calculate_initial_z(args.obj_index, args.scale_sim)
+        obj_initial_z = utils_mesh.calculate_initial_z(args.obj_index, args.scale_sim, args.dataset)
     
         initial_obj_pos = [0.65, 0.0, obj_initial_z]
         
@@ -302,6 +302,9 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--folder_touch", default=0, type=str, help="Folder containing the touch model weights"
+    )
+    parser.add_argument(
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
     )
 
     # Argument for inference
