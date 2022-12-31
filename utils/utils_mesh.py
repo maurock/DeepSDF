@@ -11,35 +11,56 @@ from pytorch3d.ops.mesh_face_areas_normals import mesh_face_areas_normals
 from pytorch3d.ops.sample_points_from_meshes import _rand_barycentric_coords
 from pytorch3d.loss import chamfer_distance as cuda_cd
 from pytorch3d.io.obj_io import load_obj
+import data.ShapeNetCoreV2
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-def urdf_to_mesh(filepath):
+def urdf_to_mesh(filepath, dataset):
     """
-    Receives path to object index containing the .URDF and verts and faces (both np.array).
-    Directory tree:
-    - obj_idx  <-- filepath
-    |   - textured_objs
-    |   |   - ...obj
-    |- ...
-    """
-    total_objs = glob(os.path.join(filepath, 'textured_objs/*.obj'))
-    verts = np.array([]).reshape((0,3))
-    faces = np.array([]).reshape((0,3))
+    Receives path to object index containing the .URDF files, it extracts verts and faces, and returns the corresponding mesh.
 
-    mesh_list = []
-    for obj_file in total_objs:
+    If dataset=='PartNetMobility', the path directory tree should be as follows:
+    - objects
+    |   - Object ID  <-- filepath
+    |   |   - textured_objs
+    |   |   |   - ...obj
+    |   |- ...
+
+    If dataset=='ShapeNetCore', the path directory tree should be as follows:
+    - ShapeNetCoreV2  
+    |   - Category ID
+    |   |   - Object ID   <-- filepath
+    |   |   |   - model.urdf 
+    |   |   |   - ...
+    """
+    if dataset == 'ShapeNetCore':
+        obj_file = os.path.join(filepath, 'models/model_normalized.obj')
+
         mesh = _as_mesh(trimesh.load(obj_file))
-        mesh_list.append(mesh)           
-                
-    verts_list = [mesh.vertices for mesh in mesh_list]
-    faces_list = [mesh.faces for mesh in mesh_list]
-    faces_offset = np.cumsum([v.shape[0] for v in verts_list], dtype=np.float32)   # num of faces per mesh
-    faces_offset = np.insert(faces_offset, 0, 0)[:-1]            # compute offset for faces, otherwise they all start from 0
-    verts = np.vstack(verts_list).astype(np.float32)
-    faces = np.vstack([face + offset for face, offset in zip(faces_list, faces_offset)]).astype(np.float32)
+        # Convert verts and faces to np.float32
+        mesh = trimesh.Trimesh(np.array(mesh.vertices).astype(np.float32), np.array(mesh.faces).astype(np.float32))
 
-    mesh = trimesh.Trimesh(verts, faces)
+    elif dataset == 'PartNetMobility':
+        total_objs = glob(os.path.join(filepath, 'textured_objs/*.obj'))
+        verts = np.array([]).reshape((0,3))
+        faces = np.array([]).reshape((0,3))
+
+        mesh_list = []
+        for obj_file in total_objs:
+            mesh = _as_mesh(trimesh.load(obj_file))
+            mesh_list.append(mesh)           
+                    
+        verts_list = [mesh.vertices for mesh in mesh_list]
+        faces_list = [mesh.faces for mesh in mesh_list]
+        faces_offset = np.cumsum([v.shape[0] for v in verts_list], dtype=np.float32)   # num of faces per mesh
+        faces_offset = np.insert(faces_offset, 0, 0)[:-1]            # compute offset for faces, otherwise they all start from 0
+        verts = np.vstack(verts_list)
+        faces = np.vstack([face + offset for face, offset in zip(faces_list, faces_offset)])
+        mesh = trimesh.Trimesh(verts, faces)
+
+    else: 
+        print("Please select a valid dataset: 'ShapeNetCore' or 'PartNetMobility'")
+
     return mesh
 
 
@@ -80,13 +101,13 @@ def rotate_vertices(vertices, rot=[np.pi / 2, 0, 0]):
     return new_verts
 
 
-def calculate_initial_z(obj_index, scale):
+def calculate_initial_z(obj_index, scale, dataset):
     """
     Compute the mesh geometry and return the initial z-axis. This is to avoid that the object
     goes partially throught the ground.
     """
     filepath_obj = os.path.join(os.path.dirname(objects.__file__), obj_index)
-    mesh = urdf_to_mesh(filepath_obj)
+    mesh = urdf_to_mesh(filepath_obj, dataset)
     verts = mesh.vertices
     pointcloud_s = scale_pointcloud(np.array(verts), scale)
     pointcloud_s_r = rotate_pointcloud(pointcloud_s)

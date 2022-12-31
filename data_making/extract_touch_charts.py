@@ -10,6 +10,7 @@ from utils import utils_sample, utils_mesh, utils_raycasting
 import argparse
 from glob import glob
 import data.objects as objects
+import results 
 
 def main(args):
     time_step = 1. / 960  # low for small objects
@@ -73,6 +74,8 @@ def main(args):
 
     # Get list of object indices
     list_objects = [filepath.split('/')[-2] for filepath in glob(os.path.join(os.path.dirname(objects.__file__), '*/'))]  
+    if '__pycache__' in list_objects:
+        list_objects.remove('__pycache__')
 
     # Initialise dict with arrays to store.
     data = {
@@ -94,7 +97,7 @@ def main(args):
 
         with utils_sample.suppress_stdout():          # to suppress b3Warning   
             # Calculate initial z position for object
-            obj_initial_z = utils_mesh.calculate_initial_z(obj_index, args.scale)
+            obj_initial_z = utils_mesh.calculate_initial_z(obj_index, args.scale, args.dataset)
         
             initial_obj_pos = [0.65, 0.0, obj_initial_z]
             
@@ -114,6 +117,9 @@ def main(args):
         _, vertices_wrld = pb.getMeshData(obj_id, 0)   
         initial_rpy = [np.pi / 2, 0, 0]   # WHY DO I NEED THIS ARBITRARY ORN INSTEAD OF OBJ ORN?
         vertices_wrld = utils_mesh.rotate_pointcloud(np.array(vertices_wrld), initial_rpy) + initial_obj_pos
+
+        # Store the scaled, rotated, and translated mesh vertices
+        # np.save(os.path.join(os.path.dirname(results.__file__), f'checkpoints/vertices_wrld_{obj_index}.npy'), vertices_wrld)
 
         # Ray: sqrt( (x1 - xc)**2 + (y1 - yc)**2)
         ray_hemisphere = utils_sample.get_ray_hemisphere(vertices_wrld, initial_obj_pos) 
@@ -230,6 +236,9 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--scale", default=0.1, type=float, help="Scale of the object in simulation wrt the urdf object"
+    )
+    parser.add_argument(
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
     )
     args = parser.parse_args()
 

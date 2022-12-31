@@ -14,3 +14,6 @@ data/shapenet_obj
 results/touch_charts_gt.npy
 results/runs_touch/
 results/runs_touch_sdf/
+data/ShapeNetCoreV2
+data/ShapeNetCoreV2_ALL
+docs/
