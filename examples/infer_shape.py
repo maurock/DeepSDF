@@ -30,7 +30,7 @@ def get_data(args, test_path):
         - sdf_gt: ground truth for the signed distance function 
     """
     # dictionaries
-    objs_dict = np.load(os.path.join(os.path.dirname(results.__file__), 'objs_dict.npy'), allow_pickle=True).item()
+    objs_dict = np.load(os.path.join(os.path.dirname(results.__file__), f'objs_dict_{args.dataset}.npy'), allow_pickle=True).item()
     samples_dict = np.load(os.path.join(os.path.dirname(results.__file__), 'samples_dict.npy'), allow_pickle=True).item()
 
     # list of objects
@@ -197,6 +197,9 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         "--LBFGS_maxiter", type=int, default=20, help="Maximum interations for the LBFGS optimiser"
+    )
+    parser.add_argument(
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
     )
     args = parser.parse_args()
 
