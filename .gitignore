@@ -2,6 +2,8 @@ data/objects
 data/objects.tgz
 __pycache__
 results/objs_dict.npy
+results/objs_dict_ShapeNetCore.npy
+results/objs_dict_PartNetMobility.npy
 results/samples_dict.npy
 results/runs_sdf/
 .DS_Store

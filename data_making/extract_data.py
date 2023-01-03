@@ -92,11 +92,11 @@ def _debug_plot(samples, dist=True):
 def main(args):
 
     # load objs_dict from results/objs_dict.npy
-    if not os.path.exists(os.path.join(os.path.dirname(results.__file__), 'objs_dict.npy')):
+    if not os.path.exists(os.path.join(os.path.dirname(results.__file__), f'objs_dict_{args.dataset}.npy')):
         print('Object dictionary does not exist. Please create it running extract_urdf.py')
         exit()
 
-    objs_dict = np.load(os.path.join(os.path.dirname(results.__file__), 'objs_dict.npy'), allow_pickle=True).item()
+    objs_dict = np.load(os.path.join(os.path.dirname(results.__file__), f'objs_dict_{args.dataset}.npy'), allow_pickle=True).item()
 
     samples_dict = dict()
 
@@ -165,6 +165,9 @@ if __name__=='__main__':
     )
     parser.add_argument(
         '--sign_method', default='depth', type=str, help="Mode to determine the sign of the SDF, library method"
+    )
+    parser.add_argument(
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
     )
     args = parser.parse_args()
     main(args)

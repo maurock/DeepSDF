@@ -7,6 +7,7 @@ import model.model_sdf as sdf_model
 import argparse
 import meshplot as mp
 from utils import utils_deepsdf
+import trimesh
 mp.offline()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -44,6 +45,10 @@ def main(args):
             os.mkdir(mesh_dir)
         mesh_path = os.path.join(mesh_dir, f'latent_{idx}.html')
         utils_deepsdf.save_meshplot(vertices, faces, mesh_path)
+
+        # save mesh as obj
+        obj_path = os.path.join(mesh_dir, f"mesh_{idx}.obj")
+        trimesh.exchange.export.export_mesh(trimesh.Trimesh(vertices, faces), obj_path, file_type='obj')
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()

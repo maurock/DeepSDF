@@ -7,6 +7,7 @@ import argparse
 from tqdm import tqdm 
 from utils import utils_deepsdf
 from datetime import datetime
+import trimesh
 
 """Extract mesh from an already optimised latent code and network. 
 Store the mesh in the same folder where the latent code is located."""
@@ -30,6 +31,10 @@ def main(args):
     output_path = os.path.dirname(latent_code_path)
     mesh_path = os.path.join(output_path, f"mesh_{datetime.now().strftime('%d_%m_%H%M%S')}.html")
     utils_deepsdf.save_meshplot(vertices, faces, mesh_path)
+
+    # save mesh as obj
+    obj_path = os.path.join(output_path, f"mesh_{datetime.now().strftime('%d_%m_%H%M%S')}.obj")
+    trimesh.exchange.export.export_mesh(trimesh.Trimesh(vertices, faces), obj_path, file_type='obj')
 
 
 if __name__ == '__main__':
