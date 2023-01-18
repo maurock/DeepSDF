@@ -8,7 +8,7 @@ from copy import deepcopy
 from glob import glob
 import argparse
 """
-Extract URDFs from the PartNetMobility dataset and store vertices and faces in a dictionary.
+Extract URDFs from the PartNetMobility or SHapeNetCore dataset and store vertices and faces in a dictionary.
 """
 
 
@@ -47,6 +47,7 @@ def load_objects(dataset):
         key are 'verts' and 'faces', both stores as np.array
     """
     if dataset=='PartNetMobility':
+
         obj_dir = os.path.dirname(objects.__file__)
         # List all the objects
         list_objects = [filepath.split('/')[-2] for filepath in glob(os.path.join(obj_dir, '*/'))]
@@ -54,6 +55,7 @@ def load_objects(dataset):
             list_objects.remove('__pycache__')
 
     elif dataset=='ShapeNetCore':
+
         obj_dir = os.path.dirname(ShapeNetCoreV2.__file__)
         # List all the objects
         list_objects_split = [filepath.split('/')[-3:-1] for filepath in glob(os.path.join(obj_dir, '*/*/'))]
@@ -68,14 +70,17 @@ def load_objects(dataset):
         filepath_obj = os.path.join(obj_dir, obj_index)
         mesh = utils_mesh.urdf_to_mesh(filepath_obj, dataset)
 
-        verts, faces = np.array(mesh.vertices).astype(np.float32), np.array(mesh.faces).astype(np.float32)
-
-        verts = normalise_obj(verts)
-
-        new_verts = utils_mesh.rotate_pointcloud(verts)
+        verts, faces = np.array(mesh.vertices).astype(np.float16), np.array(mesh.faces).astype(np.float16)
         
-        objs_dict[obj_index]['verts'] = new_verts
+        if dataset=='PartNetMobility':
+
+            # Normalise and rotate point clouds
+            verts = normalise_obj(verts)
+            verts = utils_mesh.rotate_pointcloud(verts)
+        
+        objs_dict[obj_index]['verts'] = verts
         objs_dict[obj_index]['faces'] = faces
+
     return objs_dict  
 
 

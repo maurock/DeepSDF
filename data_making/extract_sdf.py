@@ -93,7 +93,7 @@ def main(args):
 
     # load objs_dict from results/objs_dict.npy
     if not os.path.exists(os.path.join(os.path.dirname(results.__file__), f'objs_dict_{args.dataset}.npy')):
-        print('Object dictionary does not exist. Please create it running extract_urdf.py')
+        print('Object dictionary does not exist. Please create it by running extract_urdf.py')
         exit()
 
     objs_dict = np.load(os.path.join(os.path.dirname(results.__file__), f'objs_dict_{args.dataset}.npy'), allow_pickle=True).item()
