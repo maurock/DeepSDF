@@ -43,7 +43,7 @@ class Trainer():
             log.write('\n\n')
 
         # calculate num objects in samples_dictionary, wich is the number of keys
-        samples_dict_path = os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy')
+        samples_dict_path = os.path.join(os.path.dirname(results.__file__), f'TEMP_samples_dict_{args.dataset}.npy')
         samples_dict = np.load(samples_dict_path, allow_pickle=True).item()
 
         # instantiate model and optimisers
@@ -298,6 +298,5 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    args.batch_size = 4
     trainer = Trainer(args)
     trainer()
