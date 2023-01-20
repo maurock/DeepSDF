@@ -107,10 +107,6 @@ def main(args):
             idx_str2int_dict[obj_idx_str] = obj_idx
             idx_int2str_dict[obj_idx] = obj_idx_str
 
-            # To decode:
-            # recoveredbytes = obj_idx.to_bytes((obj_idx.bit_length() + 7) // 8, 'little')
-            # obj_idx_str = recoveredbytes.decode('utf-8')
-
             # Dictionary to store the samples and SDFs
             samples_dict[obj_idx] = dict()
 
@@ -146,10 +142,6 @@ def main(args):
         print('Choose a valid method')
         exit()      
 
-    samples_dict[obj_idx]['latent_class'] = np.array([obj_idx], dtype=np.int32)
-
-    samples_dict[obj_idx]['samples_latent_class'] = combine_sample_latent(samples_dict[obj_idx]['samples'], samples_dict[obj_idx]['latent_class'])  
-
     #_debug_plot(samples_dict[obj_idx])  
     np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy'), samples_dict)
 
@@ -163,8 +155,8 @@ if __name__=='__main__':
         "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
     )
     parser.add_argument(
-        '--method', default='pcu', type=str, help="Choose between 'mesh_to_sdf' or 'pcu'. 'mesh_to_sdf' uses the python package mesh_to_sdf, " +
-                                                    "'pcu' uses the python package point-cloud-utils"
+        '--method', default='pcu', type=str, help="Choose between 'mesh_to_sdf' or 'pcu'. 'mesh_to_sdf' uses the python package " +
+                                                    "mesh_to_sdf, 'pcu' uses the python package point-cloud-utils"
     )
     # Args for mesh_to_sdf
     parser.add_argument(

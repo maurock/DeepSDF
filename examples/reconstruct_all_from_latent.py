@@ -53,7 +53,7 @@ def main(args):
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--folder", type=str, default='', help="Folder that contains the network parameters"
+        "--folder", type=str, default='', help="Folder that contains the network parameters inside results/runs_sdf/"
     )
     parser.add_argument(
         "--resolution", type=int, default=50, help="Folder that contains the network parameters"
