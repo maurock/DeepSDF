@@ -19,3 +19,9 @@ results/runs_touch_sdf/
 data/ShapeNetCoreV2
 data/ShapeNetCoreV2_ALL
 docs/
+results/idx_int2str_dict.npy
+results/idx_str2int_dict.npy
+results/samples_dict_PartNetMobility.npy
+results/samples_dict_ShapeNetCore.npy
+.vs/
+data/ShapeNetCoreV2urdf

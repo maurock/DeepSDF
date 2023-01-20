@@ -43,7 +43,7 @@ class Trainer():
             log.write('\n\n')
 
         # calculate num objects in samples_dictionary, wich is the number of keys
-        samples_dict_path = os.path.join(os.path.dirname(results.__file__), 'samples_dict.npy')
+        samples_dict_path = os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy')
         samples_dict = np.load(samples_dict_path, allow_pickle=True).item()
 
         # instantiate model and optimisers
@@ -150,9 +150,8 @@ class Trainer():
         """
         latent_classes_batch = batch[0][:, 0].view(-1, 1)               # shape (batch_size, 1)
         coords = batch[0][:, 1:]                                  # shape (batch_size, 3)
-        # PROBABLY THE BUG IS HERE
         latent_codes_indices_batch = torch.tensor(
-                [self.dict_latent_codes[str(int(latent_class))] for latent_class in latent_classes_batch],
+                [self.dict_latent_codes[int(latent_class)] for latent_class in latent_classes_batch],
                 dtype=torch.int64
             ).to(device)
         latent_codes_batch = self.latent_codes[latent_codes_indices_batch]    # shape (batch_size, 128)
@@ -238,6 +237,9 @@ class Trainer():
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
+    )
+    parser.add_argument(
         "--seed", type=int, default=42, help="Setting for the random seed"
     )
     parser.add_argument(
@@ -296,5 +298,6 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
+    args.batch_size = 4
     trainer = Trainer(args)
     trainer()

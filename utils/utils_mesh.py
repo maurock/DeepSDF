@@ -11,7 +11,6 @@ from pytorch3d.ops.mesh_face_areas_normals import mesh_face_areas_normals
 from pytorch3d.ops.sample_points_from_meshes import _rand_barycentric_coords
 from pytorch3d.loss import chamfer_distance as cuda_cd
 from pytorch3d.io.obj_io import load_obj
-import data.ShapeNetCoreV2
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

@@ -1,6 +1,6 @@
 import os
 import data.objects as objects
-import data.ShapeNetCoreV2 as ShapeNetCoreV2
+import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
 import results
 from utils import utils_mesh
 import numpy as np
@@ -8,9 +8,8 @@ from copy import deepcopy
 from glob import glob
 import argparse
 """
-Extract URDFs from the PartNetMobility or SHapeNetCore dataset and store vertices and faces in a dictionary.
+Extract URDFs from the PartNetMobility or ShapeNetCore dataset and store vertices and faces in a dictionary.
 """
-
 
 def normalise_obj(verts):
     """
@@ -67,8 +66,8 @@ def load_objects(dataset):
 
         objs_dict[obj_index] = dict()
 
-        filepath_obj = os.path.join(obj_dir, obj_index)
-        mesh = utils_mesh.urdf_to_mesh(filepath_obj, dataset)
+        obj_dir = os.path.join(obj_dir, obj_index)   # directory to the object folder
+        obj_path = os.path.join(obj_dir, 'model.obj')   # path to the URDF file
 
         verts, faces = np.array(mesh.vertices).astype(np.float16), np.array(mesh.faces).astype(np.float16)
         
