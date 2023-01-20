@@ -12,6 +12,7 @@ from tqdm import tqdm
 import point_cloud_utils as pcu
 import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
 from glob import glob
+import pybullet as pb
 
 """
 For each object, sample points and store their distance to the nearest triangle.
@@ -115,6 +116,12 @@ def main(args):
             except:
                 continue
             
+            # In Shapenet, the front is the -Z axis with +Y still being the up axis. 
+            # Rotate objects to align with the canonical axis. 
+            rot_M = pb.getMatrixFromQuaternion(pb.getQuaternionFromEuler([np.pi/2, 0, -np.pi/2]))
+            rot_M = np.array(rot_M).reshape(3, 3)
+            verts = utils_mesh.rotate_pointcloud(verts, [np.pi/2, 0, -np.pi/2])
+
             # Generate random points in the predefined volume that surrounds all the shapes.
             # NOTE: ShapeNet shapes are normalized within [-1, 1]^3
             p_vol = np.random.rand(args.num_samples_in_volume, 3) * 2 - 1

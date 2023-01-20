@@ -32,12 +32,12 @@ def extract_mesh_skimage(sdf_prediction):
     )
     return verts, faces, normals, values
 
-def extract_latent_code():
+def extract_latent_code(dataset):
     """Extract latent code from the collected data.
     Returns:
         latent_code = torch.tensor of shape (1, dimension_latent)
     """
-    samples_dict_path = os.path.join(os.path.dirname(results.__file__), 'samples_dict.npy')
+    samples_dict_path = os.path.join(os.path.dirname(results.__file__), f'samples_dict_{dataset}.npy')
     samples_dict = np.load(samples_dict_path, allow_pickle=True).item()
     obj_indices = list(samples_dict.keys())
     # test for one object
@@ -69,7 +69,7 @@ def main(args):
     model.load_state_dict(torch.load(weights_path, map_location=torch.device(device)))
     model.eval()
     # Latent code
-    latent_code = extract_latent_code()
+    latent_code = extract_latent_code(args.dataset)
     # Volumetric grid as a torch.Tensor, size([1000000, 3])
     volum_grid = generate_volum_grid()
     # Combine volumetric grid and latent code
@@ -92,7 +92,8 @@ if __name__=='__main__':
     parser.add_argument(
         "--run_folder", type=str
     )
+    parser.add_argument(
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
+    )
     args = parser.parse_args()
-    args.run_folder = '25_10_175615'
-
     main(args)

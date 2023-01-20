@@ -109,7 +109,7 @@ class Trainer():
         print(f'Time elapsed: {end - start} s')
 
     def get_loaders(self):
-        data = dataset.SDFDataset()
+        data = dataset.SDFDataset(self.args.dataset)
         train_size = int(0.8 * len(data))
         val_size = len(data) - train_size
         train_data, val_data = random_split(data, [train_size, val_size])

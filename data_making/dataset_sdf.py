@@ -10,8 +10,8 @@ class SDFDataset(Dataset):
     """
     TODO: adapting to handle multiple objects
     """
-    def __init__(self):
-        samples_dict = np.load(os.path.join(os.path.dirname(results.__file__), 'samples_dict.npy'), allow_pickle=True).item()
+    def __init__(self, dataset_name):
+        samples_dict = np.load(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{dataset_name}.npy'), allow_pickle=True).item()
         self.data = dict()
         for obj_idx in list(samples_dict.keys()):  # samples_dict.keys() for all the objects
             for key in samples_dict[obj_idx].keys():   # keys are ['samples', 'sdf', 'latent_class', 'samples_latent_class']
@@ -33,4 +33,5 @@ class SDFDataset(Dataset):
         return latent_class, sdf
 
 if __name__=='__main__':
-    dataset = SDFDataset()
+    dataset_name = "ShapeNetCore"
+    dataset = SDFDataset(dataset_name)

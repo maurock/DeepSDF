@@ -31,7 +31,7 @@ def get_data(args, test_path):
     """
     # dictionaries
     objs_dict = np.load(os.path.join(os.path.dirname(results.__file__), f'objs_dict_{args.dataset}.npy'), allow_pickle=True).item()
-    samples_dict = np.load(os.path.join(os.path.dirname(results.__file__), 'samples_dict.npy'), allow_pickle=True).item()
+    samples_dict = np.load(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy'), allow_pickle=True).item()
 
     # list of objects
     objs = list(samples_dict.keys())

@@ -130,7 +130,7 @@ def rotate_pointcloud(pointcloud_A, rpy_BA=[np.pi / 2, 0, 0]):
     # Rotate object
     rot_Q = pb.getQuaternionFromEuler(rpy_BA)
     rot_M = np.array(pb.getMatrixFromQuaternion(rot_Q)).reshape(3, 3)
-    pointcloud_B = np.einsum('ij,kj->ik', rot_M, pointcloud_A).transpose(1, 0)
+    pointcloud_B = np.einsum('ij,kj->ki', rot_M, pointcloud_A)
 
     return pointcloud_B
 

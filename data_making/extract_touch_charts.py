@@ -10,7 +10,7 @@ from utils import utils_sample, utils_mesh, utils_raycasting
 import argparse
 from glob import glob
 import data.objects as objects
-import results 
+import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
 
 def main(args):
     time_step = 1. / 960  # low for small objects
