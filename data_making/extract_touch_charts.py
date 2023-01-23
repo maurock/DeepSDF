@@ -11,6 +11,7 @@ import argparse
 from glob import glob
 import data.objects as objects
 import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
+import trimesh
 
 def main(args):
     time_step = 1. / 960  # low for small objects
@@ -50,9 +51,9 @@ def main(args):
                                  globalCFM=0.0001)        
 
     # load the environment
-    plane_id = pb.loadURDF(
-        add_assets_path("shared_assets/environment_objects/plane/plane.urdf")
-    )
+    #plane_id = pb.loadURDF(
+    #    add_assets_path("shared_assets/environment_objects/plane/plane.urdf")
+    #)
 
     # robot configuration
     robot_config = {
@@ -72,10 +73,13 @@ def main(args):
         'ny': 50
     }
 
-    # Get list of object indices
-    list_objects = [filepath.split('/')[-2] for filepath in glob(os.path.join(os.path.dirname(objects.__file__), '*/'))]  
-    if '__pycache__' in list_objects:
-        list_objects.remove('__pycache__')
+    # Get list of object indices (PartNet-Mobility)
+    # list_objects = [filepath.split('/')[-2] for filepath in glob(os.path.join(os.path.dirname(objects.__file__), '*/'))]  
+    # if '__pycache__' in list_objects:
+    #     list_objects.remove('__pycache__')
+    
+    # Directories that contain all .obj and urdf folders
+    obj_dirs = glob(os.path.join(os.path.dirname(ShapeNetCoreV2.__file__), '*', '*/'))
 
     # Initialise dict with arrays to store.
     data = {
@@ -89,20 +93,17 @@ def main(args):
         "initial_pos": np.array([], dtype=np.float32).reshape(0, 3)
     }
 
-    for idx, obj_index in enumerate(list_objects[1:10]): 
-        print(f"Collecting data... Object index: {obj_index} \t {idx+1}/{len(list_objects)} ")
+    for idx, obj_index in enumerate(obj_dirs): 
+        print(f"Collecting data... Object index: {obj_index} \t {idx+1}/{len(obj_dirs)} ")
 
         # Load object
-        initial_obj_orn = p.getQuaternionFromEuler([0, 0, np.pi / 2])
+        initial_obj_rpy = [np.pi/2, 0, -np.pi/2]
+        initial_obj_orn = p.getQuaternionFromEuler(initial_obj_rpy)
+        initial_obj_pos = [0.5, 0.0, 0]
 
-        with utils_sample.suppress_stdout():          # to suppress b3Warning   
-            # Calculate initial z position for object
-            obj_initial_z = utils_mesh.calculate_initial_z(obj_index, args.scale, args.dataset)
-        
-            initial_obj_pos = [0.65, 0.0, obj_initial_z]
-            
+        with utils_sample.suppress_stdout():          # to suppress b3Warning           
             obj_id = pb.loadURDF(
-                os.path.join(os.path.dirname(objects.__file__), f"{obj_index}/mobility.urdf"),
+                os.path.join(obj_index, "model.urdf"),
                 initial_obj_pos,
                 initial_obj_orn,
                 useFixedBase=True,
@@ -113,16 +114,26 @@ def main(args):
 
         #robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
 
-        # Get world frame coordinates. These do not take into account the initial obj position.
-        _, vertices_wrld = pb.getMeshData(obj_id, 0)   
-        initial_rpy = [np.pi / 2, 0, 0]   # WHY DO I NEED THIS ARBITRARY ORN INSTEAD OF OBJ ORN?
-        vertices_wrld = utils_mesh.rotate_pointcloud(np.array(vertices_wrld), initial_rpy) + initial_obj_pos
+        # Load object and get world frame coordinates.
+        obj_path = os.path.join(obj_index, "model.obj")
+        mesh_original = utils_mesh._as_mesh(trimesh.load(obj_path))
+        # Process object vertices to match thee transformations on the urdf file
+        vertices_wrld = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy) * args.scale + initial_obj_pos
+        mesh = trimesh.Trimesh(vertices=vertices_wrld, faces=mesh_original.faces)
 
-        # Store the scaled, rotated, and translated mesh vertices
-        # np.save(os.path.join(os.path.dirname(results.__file__), f'checkpoints/vertices_wrld_{obj_index}.npy'), vertices_wrld)
+        utils_mesh.debug_draw_vertices_on_pb(vertices_wrld, size=5)
 
         # Ray: sqrt( (x1 - xc)**2 + (y1 - yc)**2)
-        ray_hemisphere = utils_sample.get_ray_hemisphere(vertices_wrld, initial_obj_pos) 
+        ray_hemisphere = utils_sample.get_ray_hemisphere(mesh)
+
+        # Debug hemisphere ##################
+        # hemisphere_array = np.array([]).reshape(0, 3)
+        # for _ in range(1000):
+        #     hemisphere_random_pos, angles = utils_sample.sample_hemisphere(ray_hemisphere)
+        #     sphere_wrld = np.array(initial_obj_pos) + np.array(hemisphere_random_pos)
+        #     hemisphere_array = np.vstack((hemisphere_array, sphere_wrld))
+        # utils_mesh.debug_draw_vertices_on_pb(hemisphere_array, size=5)
+        # Debug hemisphere ##################
 
         for _ in range(args.num_samples):
 
@@ -179,15 +190,6 @@ def main(args):
             sampled_pointcloud_wrk = sampled_pointcloud_wrk[None, :, :]  # increase dim for stacking
             data['pointclouds'] = np.vstack((data['pointclouds'], sampled_pointcloud_wrk))
 
-            # Full pointcloud to 25 vertices. By default, vertices are converted to workframe.
-            # verts_wrk = utils_raycasting.pointcloud_to_vertices_wrk(contact_pointcloud, robot, args)
-            # if verts_wrk.shape[0] != 25:
-            #     print('Point cloud to vertices could not extract 25 vertices.')
-            #     pb.removeBody(robot.robot_id)
-            #     continue
-            # verts_ravel_wrk = np.asarray(verts_wrk, dtype=np.float32).ravel()
-            # data['verts'] = np.vstack((data['verts'], verts_ravel_wrk))
-
             # Store world position of the TCP
             data['pos_wrld_list'] = np.vstack((data['pos_wrld_list'], robot.coords_at_touch_wrld))
 
@@ -235,7 +237,7 @@ if __name__=='__main__':
         "--render_scene", default=False, action='store_true', help="Render scene at touch"
     )
     parser.add_argument(
-        "--scale", default=0.1, type=float, help="Scale of the object in simulation wrt the urdf object"
+        "--scale", default=0.2, type=float, help="Scale of the object in simulation wrt the urdf object"
     )
     parser.add_argument(
         "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"

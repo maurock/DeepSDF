@@ -164,13 +164,13 @@ def preprocess_urdf():
     pass
 
 
-def debug_draw_vertices_on_pb(vertices_wrld, color=[235, 52, 52]):
+def debug_draw_vertices_on_pb(vertices, color=[235, 52, 52], size=1):
     color = np.array(color)/255
-    color_From_array = np.full(shape=vertices_wrld.shape, fill_value=color)
+    color_From_array = np.full(shape=vertices.shape, fill_value=color)
     pb.addUserDebugPoints(
-        pointPositions=vertices_wrld,
+        pointPositions=vertices,
         pointColorsRGB=color_From_array,
-        pointSize=1
+        pointSize=size
     )
 
 

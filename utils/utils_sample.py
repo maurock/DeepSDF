@@ -11,7 +11,7 @@ import results
 from contextlib import contextmanager
 import trimesh
 
-def sample_hemisphere(r):
+def sample_sphere(r):
     """
     Uniform sampling on a hemisphere.
     Parameter:
@@ -21,10 +21,10 @@ def sample_hemisphere(r):
         - [phi, theta]: phi is horizontal (0, pi/2), theta is vertical (0, pi/2) 
     """
     phi = 2 * np.pi * np.random.uniform()
-    theta = np.arccos(1 - np.random.uniform())
+    theta = np.arccos(1 - 2 * np.random.uniform())
     x = r * np.sin(theta) * np.cos(phi)
     y = r * np.sin(theta) * np.sin(phi)
-    z = np.absolute(r * np.cos(theta))
+    z = r * np.cos(theta)
     coords = [x, y, z]
     angles = [phi, theta]
 
@@ -249,11 +249,17 @@ def suppress_stdout():
             # buffering and flags such as
             # CLOEXEC may be different
 
-def get_ray_hemisphere(vertices_wrld, initial_obj_pos):
+def get_ray_hemisphere_old(vertices_wrld, initial_obj_pos):
     # Get maximum coordinates of the vertices in world frame
     max_coords = [ np.amax(vertices_wrld[:,0]), np.amax(vertices_wrld[:,1]), np.amax(vertices_wrld[:,2]) ]
 
     # Get the radius of the hemisphere
     ray_hemisphere = 1.5 * np.sqrt((max_coords[0] - initial_obj_pos[0])**2 + (max_coords[1] - initial_obj_pos[1])**2 + (max_coords[2] - initial_obj_pos[2])**2)
 
+    return ray_hemisphere
+
+
+def get_ray_hemisphere(mesh):
+    diameter = np.linalg.norm(mesh.bounding_box.bounds[1] - mesh.bounding_box.bounds[0])
+    ray_hemisphere = ( .5 * diameter ) * 1.1  # slightly larger than the diameter of the object
     return ray_hemisphere
