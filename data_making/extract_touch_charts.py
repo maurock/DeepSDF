@@ -160,7 +160,7 @@ def main(args):
             robot.results_at_touch_wrld = None
 
             # Sample random position on the hemisphere
-            hemisphere_random_pos, angles = utils_sample.sample_hemisphere(ray_hemisphere)
+            hemisphere_random_pos, angles = utils_sample.sample_sphere(ray_hemisphere)
 
             # Move robot to random position on the hemisphere
             robot_sphere_wrld = np.array(initial_obj_pos) + np.array(hemisphere_random_pos)
