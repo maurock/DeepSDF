@@ -81,11 +81,14 @@ def main(args):
     # Directories that contain all .obj and urdf folders
     obj_dirs = glob(os.path.join(os.path.dirname(ShapeNetCoreV2.__file__), '*', '*/'))
 
+    # Set number of points to consider the touch chart collection valid.
+    num_valid_points = 300
+
     # Initialise dict with arrays to store.
     data = {
         "verts": np.array([]).reshape(0, 75), # verts of touch charts (25) flattened
         "tactile_imgs": np.array([], dtype=np.float32).reshape(0, 1, 256, 256),
-        "pointclouds": np.array([], dtype=np.float32).reshape(0, 500, 3),   # fixed dimension touch chart pointcloud (workframe)
+        "pointclouds": np.array([], dtype=np.float32).reshape(0, num_valid_points, 3),   # fixed dimension touch chart pointcloud (workframe)
         "rot_M_wrld_list": np.array([], dtype=np.float32).reshape(0, 3, 3),      # rotation matrix (work wrt worldframe)
         "pos_wrld_list": np.array([]).reshape(0, 3) , # TCP pos (worldframe)
         "pos_wrk_list": np.array([], dtype=np.float32).reshape(0, 3),   # TCP pos (worldframe)
@@ -170,7 +173,6 @@ def main(args):
                 continue
             
             # Filter points with information about contact, make sure there are at least {num_valid_points} valid ones
-            num_valid_points = 300
             contact_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld)
             if contact_pointcloud.shape[0] < num_valid_points:
                 print(f'Point cloud shape is too small: {contact_pointcloud.shape[0]} points')
