@@ -93,8 +93,8 @@ def main(args):
         "initial_pos": np.array([], dtype=np.float32).reshape(0, 3)
     }
 
-    for idx, obj_index in enumerate(obj_dirs): 
-        print(f"Collecting data... Object index: {obj_index} \t {idx+1}/{len(obj_dirs)} ")
+    for idx, obj_dir in enumerate(obj_dirs): 
+        print(f"Collecting data... Object index: {obj_dir} \t {idx+1}/{len(obj_dirs)} ")
 
         # Load object
         initial_obj_rpy = [np.pi/2, 0, -np.pi/2]
@@ -103,7 +103,7 @@ def main(args):
 
         with utils_sample.suppress_stdout():          # to suppress b3Warning           
             obj_id = pb.loadURDF(
-                os.path.join(obj_index, "model.urdf"),
+                os.path.join(obj_dir, "model.urdf"),
                 initial_obj_pos,
                 initial_obj_orn,
                 useFixedBase=True,
@@ -115,13 +115,11 @@ def main(args):
         #robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
 
         # Load object and get world frame coordinates.
-        obj_path = os.path.join(obj_index, "model.obj")
+        obj_path = os.path.join(obj_dir, "model.obj")
         mesh_original = utils_mesh._as_mesh(trimesh.load(obj_path))
         # Process object vertices to match thee transformations on the urdf file
         vertices_wrld = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy) * args.scale + initial_obj_pos
         mesh = trimesh.Trimesh(vertices=vertices_wrld, faces=mesh_original.faces)
-
-        utils_mesh.debug_draw_vertices_on_pb(vertices_wrld, size=5)
 
         # Ray: sqrt( (x1 - xc)**2 + (y1 - yc)**2)
         ray_hemisphere = utils_sample.get_ray_hemisphere(mesh)
@@ -171,15 +169,16 @@ def main(args):
                 pb.removeBody(robot.robot_id)
                 continue
             
-            # Filter points with information about contact, make sure there are at least 500 valid ones
+            # Filter points with information about contact, make sure there are at least {num_valid_points} valid ones
+            num_valid_points = 300
             contact_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld)
-            if contact_pointcloud.shape[0] < 500:
+            if contact_pointcloud.shape[0] < num_valid_points:
                 print(f'Point cloud shape is too small: {contact_pointcloud.shape[0]} points')
                 pb.removeBody(robot.robot_id)
                 continue
 
-            # Sample 500 random points among the contact ones 
-            random_indices = np.random.choice(contact_pointcloud.shape[0], 500)
+            # Sample {num_valid_points} random points among the contact ones 
+            random_indices = np.random.choice(contact_pointcloud.shape[0], num_valid_points)
             sampled_pointcloud_wrld = contact_pointcloud[random_indices]
 
             # Centre touch point cloud on origin and convert to workframe
@@ -208,6 +207,7 @@ def main(args):
             rot_M_wrld = np.array(pb.getMatrixFromQuaternion(rot_Q_wrld)).reshape(1, 3, 3)
             data['rot_M_wrld_list'] = np.vstack((data['rot_M_wrld_list'], rot_M_wrld))
 
+            obj_index = os.sep.join(obj_dir.split(os.sep)[-3:-1])  # index is category_idx/object_idx
             data['obj_index'] = np.vstack((data['obj_index'], obj_index))
 
             data['initial_pos'] = np.vstack((data['initial_pos'], initial_obj_pos))
