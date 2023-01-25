@@ -6,6 +6,7 @@ results/objs_dict_ShapeNetCore.npy
 results/objs_dict_PartNetMobility.npy
 results/samples_dict.npy
 results/runs_sdf/
+results/runs_touch_sdf/
 .DS_Store
 deep_sdf.egg-info
 scripts/.ipynb_checkpoints
