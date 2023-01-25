@@ -58,9 +58,10 @@ def sphere_orn_wrld(robot, origin, angles):
     rot_M = np.array([  [-np.sin(phi), np.cos(theta) * np.cos(phi), -np.sin(theta)*np.cos(phi)],
                         [np.cos(phi), np.cos(theta) * np.sin(phi), -np.sin(theta) * np.sin(phi)],
                         [0, -np.sin(theta), -np.cos(theta)]])
-    pb.addUserDebugLine(origin, (origin + rot_M[:, 0]), lineColorRGB=[1,0,0], lifeTime=20)
-    pb.addUserDebugLine(origin, (origin + rot_M[:, 1]), lineColorRGB=[0,1,0], lifeTime=20)
-    pb.addUserDebugLine(origin, (origin + rot_M[:, 2]), lineColorRGB=[0,0,1], lifeTime=20)
+    # Draw sensor's frame for debug purposes
+    # pb.addUserDebugLine(origin, (origin + rot_M[:, 0]), lineColorRGB=[1,0,0], lifeTime=20)
+    # pb.addUserDebugLine(origin, (origin + rot_M[:, 1]), lineColorRGB=[0,1,0], lifeTime=20)
+    # pb.addUserDebugLine(origin, (origin + rot_M[:, 2]), lineColorRGB=[0,0,1], lifeTime=20)
     r = R.from_matrix(rot_M)
     orn = r.as_euler('xyz')
     return orn
@@ -73,7 +74,7 @@ def move_wrld_to_work(robot, pos_wrld, orn_wrld=[3.14, 0, 1.57]):
 
 
 def robot_touch_spherical(robot, robot_sphere_wrld, initial_pos, angles, max_height_wrld=0.2):
-    """Given x-y coordinates in the worldframe, the robot moves to a high position and then goes down to sample the object's surface"""
+    """Given x-y coordinates in the worldframe, the robot first moves to a high position and then sample the object's surface"""
     
     # go to rest position
     high_wrld = np.array(initial_pos) + np.array([0, 0, max_height_wrld])
@@ -85,6 +86,7 @@ def robot_touch_spherical(robot, robot_sphere_wrld, initial_pos, angles, max_hei
 
     robot.stop_at_touch = True
 
+    # Sample the object
     move_wrld_to_work(robot, initial_pos, orn_wrld)    # This does not work in DIRECT mode for a problem in the backgroun sensor image
     robot.results_at_touch_wrld = utils_raycasting.get_contact_points(robot.arm.get_current_TCP_pos_vel_worldframe(), robot._pb, robot.t_s_name, robot.nx, robot.ny)
     

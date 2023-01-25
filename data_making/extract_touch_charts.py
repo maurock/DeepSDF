@@ -156,8 +156,9 @@ def main(args):
             robot.nx = robot_config['nx']
             robot.ny = robot_config['ny']
 
+            # Reach an initial position
             robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
-            
+
             robot.results_at_touch_wrld = None
 
             # Sample random position on the hemisphere
@@ -186,6 +187,7 @@ def main(args):
             # Centre touch point cloud on origin and convert to workframe
             tcp_pos_wrld, tcp_rpy_wrld, _, _, _ = robot.arm.get_current_TCP_pos_vel_worldframe()
 
+            # Store pointclouds in workframe
             sampled_pointcloud_wrld = sampled_pointcloud_wrld - tcp_pos_wrld
             sampled_pointcloud_wrk = utils_mesh.rotate_pointcloud_inverse(sampled_pointcloud_wrld, tcp_rpy_wrld)
             sampled_pointcloud_wrk = sampled_pointcloud_wrk[None, :, :]  # increase dim for stacking
@@ -209,11 +211,14 @@ def main(args):
             rot_M_wrld = np.array(pb.getMatrixFromQuaternion(rot_Q_wrld)).reshape(1, 3, 3)
             data['rot_M_wrld_list'] = np.vstack((data['rot_M_wrld_list'], rot_M_wrld))
 
+            # Store object category and index
             obj_index = os.sep.join(obj_dir.split(os.sep)[-3:-1])  # index is category_idx/object_idx
             data['obj_index'] = np.vstack((data['obj_index'], obj_index))
 
+            # Store object initial position
             data['initial_pos'] = np.vstack((data['initial_pos'], initial_obj_pos))
 
+            # Save all
             utils_sample.save_touch_charts(data)
 
             pb.removeBody(robot.robot_id)
@@ -245,5 +250,5 @@ if __name__=='__main__':
         "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
     )
     args = parser.parse_args()
-
+    
     main(args)
