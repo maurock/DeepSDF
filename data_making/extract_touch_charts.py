@@ -9,7 +9,6 @@ from tactile_gym.assets import add_assets_path
 from utils import utils_sample, utils_mesh, utils_raycasting
 import argparse
 from glob import glob
-import data.objects as objects
 import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
 import trimesh
 

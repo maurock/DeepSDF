@@ -100,11 +100,13 @@ def main(args):
             # Calculate initial z position for object
             #obj_initial_z = utils_mesh.calculate_initial_z(obj_index, args.scale, args.dataset)
         
-            initial_obj_pos = [0.0, 0.0, 0.0]
+            initial_obj_rpy = [np.pi/2, 0, -np.pi/2]
+            initial_obj_orn = p.getQuaternionFromEuler(initial_obj_rpy)
+            initial_obj_pos = [0.5, 0.0, 0]
             
             obj_id = pb.loadURDF(
                 #os.path.join(os.path.dirname(objects.__file__), f"{obj_index}/model.urdf"),
-                os.path.join('/Users/ri21540/Documents/PhD/Code/TEMP/STL/model.urdf'),
+                os.path.join('/Users/ri21540/Documents/PhD/Code/DeepSDF/data/ShapeNetCoreV2urdf/bowl/c0f57c7f98d2581c744a455c7eef0ae5/model.urdf'),
                 initial_obj_pos,
                 initial_obj_orn,
                 useFixedBase=True,
@@ -113,14 +115,10 @@ def main(args):
             )
             print(f'PyBullet object ID: {obj_id}')
 
-       
-
         #robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
-
 
         # Store the scaled, rotated, and translated mesh vertices
         # np.save(os.path.join(os.path.dirname(results.__file__), f'checkpoints/vertices_wrld_{obj_index}.npy'), vertices_wrld)
-
 
         robot = CRIRobotArm(
             pb,
@@ -172,6 +170,6 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     args.show_gui = True
-    args.scale = 0.01
+    args.scale = 0.2
 
     main(args)
