@@ -75,6 +75,8 @@ class Trainer():
         if self.args.lr_scheduler:
             self.scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.0001, threshold_mode='rel')
 
+        best_loss = 1000000
+
         # Cross validation
         if self.args.cross_validation:
             kfold = KFold(n_splits=self.args.k_folds, shuffle=True)
@@ -109,8 +111,12 @@ class Trainer():
 
                 if self.args.lr_scheduler:
                     self.scheduler.step(val_loss)
-
                     self.writer.add_scalar('Learning rate', self.scheduler._last_lr[0], epoch)
+
+                if val_loss < best_loss:
+                    best_loss = val_loss.item()
+                    torch.save(self.encoder.state_dict(), os.path.join(self.log_train_dir, 'weights.pt'))
+
 
     def get_loaders_cv(self, full_dataset, train_ids, val_ids):
         # Sample elements randomly from a given list of ids, no replacement.
@@ -192,7 +198,7 @@ class Trainer():
         if self.args.log_info_train:
             with open(self.log_path, mode='a') as log:
                 log.write(f'Fold {self.fold}, Epoch {self.epoch}, Train loss: {total_loss / iterations} \n')
-            torch.save(self.encoder.state_dict(), os.path.join(self.log_train_dir, 'weights.pt'))
+
 
     def validate(self, valid_loader):
         total_loss = 0
@@ -305,6 +311,6 @@ if __name__=='__main__':
         "--patience", type=int, default=20, help="Patience for the learning rate scheduling"
     )    
     args = parser.parse_args()
-
+       
     trainer = Trainer(args)
     trainer()
