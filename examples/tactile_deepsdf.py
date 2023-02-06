@@ -196,7 +196,7 @@ def main(args):
         predicted_verts = touch_model(tactile_img, initial_verts)[0]
 
         # Create mesh from predicted vertices
-        predicted_mesh = trimesh.Trimesh(predicted_verts.detach(), initial_faces)
+        predicted_mesh = trimesh.Trimesh(predicted_verts.detach().cpu(), initial_faces)
 
         # Sample pointcloud from predicted mesh in Sim coordinates (TCP frame, Sim scale)
         predicted_pointcloud = utils_mesh.mesh_to_pointcloud(predicted_mesh, 500)
