@@ -300,7 +300,7 @@ if __name__=='__main__':
         "--patience", default=50, type=float, help="Patience for latent code inference"
     )
     parser.add_argument(
-        "--epochs", default=100, type=float, help="Number of epochs for latent code inference"
+        "--epochs", default=100, type=int, help="Number of epochs for latent code inference"
     )
     parser.add_argument(
         "--clamp", default=False, action='store_true', help="Clip the network prediction"
