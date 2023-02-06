@@ -181,7 +181,7 @@ def translate_rotate_mesh(pos_wrld_list, rot_M_wrld_list, pointclouds_list, obj_
     Params:
         pos_wrld_list: (m, 3)
         rot_M_wrld_list: (m, 3, 3)
-        pointclouds_list: pointcloud in workframe (m, number_points, 3)
+        pointclouds_list: pointcloud in workframe (m, number_points, 3) or (number_points, 3)
         obj_initial_pos: (3,)
 
     Returns:
