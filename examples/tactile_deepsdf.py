@@ -229,12 +229,12 @@ def main(args):
 
         sdf = utils_deepsdf.predict_sdf(best_latent_code, coords, sdf_model)
 
-        vertices, faces = utils_deepsdf.extract_mesh(grid_size_axis, sdf)
+        vertices_deepsdf, faces_deepsdf = utils_deepsdf.extract_mesh(grid_size_axis, sdf)
 
         # Save mesh
         checkpoint_dict[num_sample] = dict()
-        checkpoint_dict[num_sample]['mesh'] = [vertices.detach().cpu(), faces.detach().cpu()]
-        checkpoint_dict[num_sample]['pointcloud'] = [utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy).detach().cpu(), pointclouds_deepsdf.detach().cpu()]
+        checkpoint_dict[num_sample]['mesh'] = [vertices_deepsdf, faces_deepsdf]
+        checkpoint_dict[num_sample]['pointcloud'] = [utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy), pointclouds_deepsdf.cpu()]
 
         pb.removeBody(robot.robot_id)
 
@@ -318,5 +318,15 @@ if __name__=='__main__':
         "--obj_folder", type=str, default='', help="Object to reconstruct as obj_class/obj_category, e.g. 02818832/1aa55867200ea789465e08d496c0420f"
     )
     args = parser.parse_args()
+
+    args.show_gui = True
+    args.folder_sdf = '23_01_095414'
+    args.folder_touch = '06_02_1817'
+    args.obj_folder = 'lamp/c3277019e57251cfb784faac204319d9'
+    args.lr_scheduler = True
+    args.epochs = 10
+    args.lr = 0.00005
+    args.num_samples = 2
+
 
     main(args)
