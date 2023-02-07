@@ -233,8 +233,8 @@ def main(args):
 
         # Save mesh
         checkpoint_dict[num_sample] = dict()
-        checkpoint_dict[num_sample]['mesh'] = [vertices, faces]
-        checkpoint_dict[num_sample]['pointcloud'] = [utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy), pointclouds_deepsdf]
+        checkpoint_dict[num_sample]['mesh'] = [vertices.detach().cpu(), faces.detach().cpu()]
+        checkpoint_dict[num_sample]['pointcloud'] = [utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy).detach().cpu(), pointclouds_deepsdf.detach().cpu()]
 
         pb.removeBody(robot.robot_id)
 
