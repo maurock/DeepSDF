@@ -319,14 +319,4 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    args.show_gui = True
-    args.folder_sdf = '23_01_095414'
-    args.folder_touch = '06_02_1817'
-    args.obj_folder = 'lamp/c3277019e57251cfb784faac204319d9'
-    args.lr_scheduler = True
-    args.epochs = 10
-    args.lr = 0.00005
-    args.num_samples = 2
-
-
     main(args)
