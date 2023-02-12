@@ -85,7 +85,7 @@ def mesh_to_pointcloud(mesh, n_samples):
     Returns:
         pointcloud
     """
-    pointcloud, _ = trimesh.sample.sample_surface(mesh, n_samples)
+    pointcloud, _ = trimesh.sample.sample_surface_even(mesh, n_samples)
     pointcloud = np.array(pointcloud).astype(np.float32)
     return pointcloud
 

@@ -265,3 +265,26 @@ def get_ray_hemisphere(mesh):
     diameter = np.linalg.norm(mesh.bounding_box.bounds[1] - mesh.bounding_box.bounds[0])
     ray_hemisphere = ( .5 * diameter ) * 1.1  # slightly larger than the diameter of the object
     return ray_hemisphere
+
+
+def sample_along_normals(std_dev, pointcloud, normals, N):
+    """It samples N points along the normal in both directions.
+    Args:
+        std_dev: standard deviation of the normal distribution
+        pointcloud: pointcloud, np.array (n, 3)
+        normals: normals, np.array (n, 3)
+        N: number of points to sample along the normal
+    Returns:
+        sampled_points: np.array (n * N, 3)
+    """
+    # Tile array vertically 
+    pointcloud_tile = np.tile(pointcloud, (N, 1))
+    normals_tile = np.tile(normals, (N, 1))
+
+    # Signed distance as sampled standard deviation
+    signed_distance = np.random.normal(loc=0, scale=std_dev, size=(pointcloud_tile.shape[0], 1))
+
+    # Sample points along normals
+    samples_along_normals_global = signed_distance * normals_tile + pointcloud_tile
+
+    return samples_along_normals_global, signed_distance

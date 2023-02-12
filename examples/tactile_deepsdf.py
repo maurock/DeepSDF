@@ -17,6 +17,7 @@ import trimesh
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 import json
+import point_cloud_utils as pcu
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -208,14 +209,30 @@ def main(args):
         predicted_pointcloud_wrld = utils_mesh.translate_rotate_mesh(pos_wrld, rot_M_wrld, predicted_pointcloud[None, :, :], initial_obj_pos)
 
         # Rescale from Sim scale to DeepSDF scale
-        pointcloud_deepsdf = predicted_pointcloud_wrld * 1 / args.scale
+        pointcloud_deepsdf_np = predicted_pointcloud_wrld / args.scale
 
         # Concatenate predicted pointclouds of the touch charts from all samples
-        pointcloud_deepsdf = torch.from_numpy(pointcloud_deepsdf).float().to(device)[0]  # shape (n, 3)
+        pointcloud_deepsdf = torch.from_numpy(pointcloud_deepsdf_np).float().to(device)[0]  # shape (n, 3)
         pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_deepsdf))   
         
         # The sdf of points on the object surface is 0.
         sdf_gt = torch.zeros(size=(pointclouds_deepsdf.shape[0], 1)).to(device)
+
+        # TODO: add randomly sampled points from normals
+        if args.augment_points:
+            # Everything in this block is in deepsdf scale
+            # Vectors pointing from the points to the TCP position
+            sensor_dirs = robot.arm.get_current_TCP_pos_vel_worldframe()[0] - pointcloud_deepsdf_np
+            
+            # Estimate point cloud normals
+            _, n = pcu.estimate_point_cloud_normals_knn(pointcloud_deepsdf_np, 32, view_directions=sensor_dirs)
+
+            # Sample along normals
+            pointcloud_along_norm_np = utils_sample.sample_along_normals(
+                std_dev=args.augment_points_std, pointcloud=pointcloud_deepsdf_np, normals=n, N=args.augment_points_num)
+            pointcloud_along_norm = torch.from_numpy(pointcloud_along_norm_np).float().to(device)
+
+            pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_along_norm))
 
         # Infer latent code
         best_latent_code = sdf_model.infer_latent_code(args, pointclouds_deepsdf, sdf_gt, writer)
@@ -316,6 +333,15 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--obj_folder", type=str, default='', help="Object to reconstruct as obj_class/obj_category, e.g. 02818832/1aa55867200ea789465e08d496c0420f"
+    )
+    parser.add_argument(
+        "--augment_points", default=False, action='store_true', help="Estimate point cloud normals and sample points along them (negative and positive direction)"
+    )
+    parser.add_argument(
+        "--augment_points_std", default=0.05, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
+    )
+    parser.add_argument(
+        "--augment_points_num", default=5, type=int, help="Number of points to sample along normals (if augment_points is True)"
     )
     args = parser.parse_args()
 

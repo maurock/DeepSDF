@@ -17,6 +17,9 @@ import plotly.graph_objects as go
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+"""Given a run_sdf folder, it first loads the DeepSDF weights. Then, it samples a specific object from the PartNet-Mobility dataset
+and reconstructs its mesh."""
+
 def get_data(args, test_path):
     """Return x and y. Sample N points from the desired object.
     
