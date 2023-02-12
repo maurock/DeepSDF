@@ -30,7 +30,6 @@ def main(args):
     test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), datetime.now().strftime('%d_%m_%H%M%S'))
     if not os.path.exists(test_dir):
         os.mkdir(test_dir)
-    writer = SummaryWriter(log_dir=test_dir)
     log_path = os.path.join(test_dir, 'settings.txt')
     args_dict = vars(args)  # convert args to dict to write them as json
     with open(log_path, mode='a') as log:
@@ -235,6 +234,10 @@ def main(args):
             pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_along_norm))
 
         # Infer latent code
+        log_tensorboard_path = os.path.join(test_dir, str(num_sample))
+        if not os.path.isdir(log_tensorboard_path):
+            os.makedirs(log_tensorboard_path)
+        writer = SummaryWriter(log_dir=os.path.join(test_dir, str(num_sample)))
         best_latent_code = sdf_model.infer_latent_code(args, pointclouds_deepsdf, sdf_gt, writer)
 
         # Predict sdf values from pointcloud
@@ -338,7 +341,7 @@ if __name__=='__main__':
         "--augment_points", default=False, action='store_true', help="Estimate point cloud normals and sample points along them (negative and positive direction)"
     )
     parser.add_argument(
-        "--augment_points_std", default=0.05, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
+        "--augment_points_std", default=0.1, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
     )
     parser.add_argument(
         "--augment_points_num", default=5, type=int, help="Number of points to sample along normals (if augment_points is True)"
