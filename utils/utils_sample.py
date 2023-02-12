@@ -276,6 +276,7 @@ def sample_along_normals(std_dev, pointcloud, normals, N):
         N: number of points to sample along the normal
     Returns:
         sampled_points: np.array (n * N, 3)
+        signed_distance: np.array, standard deviation
     """
     # Tile array vertically 
     pointcloud_tile = np.tile(pointcloud, (N, 1))

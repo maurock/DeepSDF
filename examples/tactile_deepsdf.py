@@ -208,10 +208,10 @@ def main(args):
         predicted_pointcloud_wrld = utils_mesh.translate_rotate_mesh(pos_wrld, rot_M_wrld, predicted_pointcloud[None, :, :], initial_obj_pos)
 
         # Rescale from Sim scale to DeepSDF scale
-        pointcloud_deepsdf_np = predicted_pointcloud_wrld / args.scale
+        pointcloud_deepsdf_np = (predicted_pointcloud_wrld / args.scale)[0]  # shape (n, 3)
 
         # Concatenate predicted pointclouds of the touch charts from all samples
-        pointcloud_deepsdf = torch.from_numpy(pointcloud_deepsdf_np).float().to(device)[0]  # shape (n, 3)
+        pointcloud_deepsdf = torch.from_numpy(pointcloud_deepsdf_np).float().to(device)  # shape (n, 3)
         pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_deepsdf))   
         
         # The sdf of points on the object surface is 0.
@@ -226,12 +226,14 @@ def main(args):
             # Estimate point cloud normals
             _, n = pcu.estimate_point_cloud_normals_knn(pointcloud_deepsdf_np, 32, view_directions=sensor_dirs)
 
-            # Sample along normals
-            pointcloud_along_norm_np = utils_sample.sample_along_normals(
+            # Sample along normals and return points and distances
+            pointcloud_along_norm_np, signed_distance_np = utils_sample.sample_along_normals(
                 std_dev=args.augment_points_std, pointcloud=pointcloud_deepsdf_np, normals=n, N=args.augment_points_num)
             pointcloud_along_norm = torch.from_numpy(pointcloud_along_norm_np).float().to(device)
+            signed_distance = torch.from_numpy(signed_distance_np).float().to(device)
 
             pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_along_norm))
+            sdf_gt = torch.vstack((sdf_gt, signed_distance))
 
         # Infer latent code
         log_tensorboard_path = os.path.join(test_dir, str(num_sample))
@@ -341,7 +343,7 @@ if __name__=='__main__':
         "--augment_points", default=False, action='store_true', help="Estimate point cloud normals and sample points along them (negative and positive direction)"
     )
     parser.add_argument(
-        "--augment_points_std", default=0.1, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
+        "--augment_points_std", default=0.01, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
     )
     parser.add_argument(
         "--augment_points_num", default=5, type=int, help="Number of points to sample along normals (if augment_points is True)"
