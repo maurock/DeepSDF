@@ -133,8 +133,10 @@ def main(args):
 
     # Extract mesh obtained with the latent code optimised at inference
     coords, grad_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
+    coords = coords.clone().to(device)
+    coords_batches = torch.split(coords, 100000)
 
-    sdf = utils_deepsdf.predict_sdf(best_latent_code, coords, model)
+    sdf = utils_deepsdf.predict_sdf(best_latent_code, coords_batches, model)
     vertices, faces = utils_deepsdf.extract_mesh(grad_size_axis, sdf)
 
     # save mesh using meshplot

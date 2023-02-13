@@ -34,9 +34,11 @@ def main(args):
     latent_codes_list = get_latent_codes_training(results_dict)
   
     coords, grad_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
+    coords = coords.clone().to(device)
+    coords_batches = torch.split(coords, 100000)
 
     for idx, latent in enumerate(latent_codes_list):
-        sdf = utils_deepsdf.predict_sdf(latent, coords, model)
+        sdf = utils_deepsdf.predict_sdf(latent, coords_batches, model)
         vertices, faces = utils_deepsdf.extract_mesh(grad_size_axis, sdf)
 
         # save mesh using meshplot

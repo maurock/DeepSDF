@@ -147,6 +147,11 @@ def main(args):
     # Instantiate pointcloud for DeepSDF prediction
     pointclouds_deepsdf = torch.tensor([]).view(0, 3).to(device)
 
+    # Instantiate grid coordinates for mesh extraction
+    coords, grid_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
+    coords = coords.clone().to(device)
+    coords_batches = torch.split(coords, 100000)
+
     # Instantiate variables to store checkpoints
     checkpoint_dict = dict()
 
@@ -247,10 +252,7 @@ def main(args):
         # predicted_coords = sdf_model(input_deepsdf)
 
         # Extract mesh obtained with the latent code optimised at inference
-        coords, grid_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
-
-        sdf = utils_deepsdf.predict_sdf(best_latent_code, coords, sdf_model)
-
+        sdf = utils_deepsdf.predict_sdf(best_latent_code, coords_batches, sdf_model)
         vertices_deepsdf, faces_deepsdf = utils_deepsdf.extract_mesh(grid_size_axis, sdf)
 
         # Save mesh
