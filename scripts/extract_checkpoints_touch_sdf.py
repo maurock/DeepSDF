@@ -16,7 +16,7 @@ def main(args):
         original_mesh, pointclouds_deepsdf = checkpoint_dict[num_sample]['pointcloud']
 
         # Save mesh
-        mesh_path = os.path.join(test_dir, f'final_mesh_{num_sample}.html')
+        mesh_path = os.path.join(test_dir, str(num_sample), f'final_mesh.html')
         utils_deepsdf.save_meshplot(vertices, faces, mesh_path)
 
         # Save pointclouds
@@ -27,7 +27,7 @@ def main(args):
             mode='markers', marker=dict(size=1))
             ]         
         )
-        fig.write_html(os.path.join(test_dir, f'final_pointclouds_{num_sample}.html'))
+        fig.write_html(os.path.join(test_dir, str(num_sample), f'final_pointclouds.html'))
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
@@ -35,5 +35,5 @@ if __name__=='__main__':
         "--folder_touch_sdf", default=0, type=str, help="Folder containing the checkpoint of the touch_sdf test"
     )
     args = parser.parse_args()
-
+    
     main(args)
