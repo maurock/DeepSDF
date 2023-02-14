@@ -196,9 +196,9 @@ def main(args):
             data['pos_wrld_list'] = np.vstack((data['pos_wrld_list'], robot.coords_at_touch_wrld))
 
             # Store tactile images
-            camera = robot.get_tactile_observation()[np.newaxis, :, :]
+            camera = robot.get_tactile_observation()
             # Conv2D requires [batch, channels, size1, size2] as input
-            tactile_imgs_norm = np.expand_dims(camera, 0) / 255     # normalize tactile images
+            tactile_imgs_norm = camera[np.newaxis, np.newaxis, :, :] / 255 
             data['tactile_imgs'] = np.vstack((data['tactile_imgs'], tactile_imgs_norm))
 
             # Store TCP position in work frame

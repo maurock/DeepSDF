@@ -70,8 +70,6 @@ def sphere_orn_wrld(robot, origin, angles):
 def move_wrld_to_work(robot, pos_wrld, orn_wrld=[3.14, 0, 1.57]):
     pos_wrk, orn_wrk = robot.arm.worldframe_to_workframe(pos_wrld, orn_wrld)
     robot.move_linear(pos_wrk, orn_wrk)
-    time.sleep(0.1)
-
 
 def robot_touch_spherical(robot, robot_sphere_wrld, initial_pos, angles, max_height_wrld=0.2):
     """Given x-y coordinates in the worldframe, the robot first moves to a high position and then sample the object's surface"""
