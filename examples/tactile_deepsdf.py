@@ -24,7 +24,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 """
 Demo to reconstruct objects using tactile-gym.
 """
-
+@profile
 def main(args):
     # Logging
     test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), datetime.now().strftime('%d_%m_%H%M%S'))
