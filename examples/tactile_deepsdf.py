@@ -151,7 +151,7 @@ def main(args):
     # Instantiate grid coordinates for mesh extraction
     coords, grid_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
     coords = coords.clone().to(device)
-    coords_batches = torch.split(coords, 100000)
+    coords_batches = torch.split(coords, 100000).to(device)
 
     # Instantiate variables to store checkpoints
     checkpoint_dict = dict()

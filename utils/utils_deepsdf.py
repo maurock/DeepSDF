@@ -104,14 +104,13 @@ def predict_sdf(latent, coords_batches, model):
 
     sdf = torch.tensor([], dtype=torch.float32).view(0, 1).to(device)
 
-    for coords in coords_batches:
-        model.eval()
-        with torch.no_grad():
+    model.eval()
+    with torch.no_grad():
+        for coords in coords_batches:
             latent_tile = torch.tile(latent, (coords.shape[0], 1))
-            coords_latent = torch.hstack((latent_tile, coords)).to(device)
+            coords_latent = torch.hstack((latent_tile, coords))
             sdf_batch = model(coords_latent)
-
-        sdf = torch.vstack((sdf, sdf_batch))        
+            sdf = torch.vstack((sdf, sdf_batch))        
 
     return sdf
 
