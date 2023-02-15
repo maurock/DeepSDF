@@ -24,7 +24,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 """
 Demo to reconstruct objects using tactile-gym.
 """
-@profile
+#@profile
 def main(args):
     # Logging
     test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), datetime.now().strftime('%d_%m_%H%M%S'))
@@ -151,10 +151,16 @@ def main(args):
     # Instantiate grid coordinates for mesh extraction
     coords, grid_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
     coords = coords.clone().to(device)
-    coords_batches = torch.split(coords, 100000)
+    coords_batches = torch.split(coords, 500000)
 
     # Instantiate variables to store checkpoints
     checkpoint_dict = dict()
+
+    # Total signed distance
+    sdf_gt = torch.tensor([]).view(0, 1).to(device)
+
+    # Save checkpoint
+    checkpoint_path = os.path.join(test_dir, 'checkpoint_dict.npy')
 
     for num_sample in range(args.num_samples):
 
@@ -219,13 +225,18 @@ def main(args):
         pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_deepsdf))   
         
         # The sdf of points on the object surface is 0.
-        sdf_gt = torch.zeros(size=(pointclouds_deepsdf.shape[0], 1)).to(device)
+        sdf_gt = torch.vstack((sdf_gt, torch.zeros(size=(pointcloud_deepsdf.shape[0], 1)))).to(device)
 
         # Add randomly sampled points from normals
         if args.augment_points:
-            # Everything in this block is in deepsdf scale
-            # Vectors pointing from the points to the TCP position
-            sensor_dirs = robot.arm.get_current_TCP_pos_vel_worldframe()[0] - pointcloud_deepsdf_np
+            # The sensor direction is given by the vectors pointing from the pointcloud to the TCP position
+            # We need to first convert the TCP position to DeepSDF scale
+            rpy_wrld = np.array(robot.arm.get_current_TCP_pos_vel_worldframe()[1]) # TCP orientation
+            normal_wrk = np.array([[0, 0, 1]])
+            normal_wrld = utils_mesh.rotate_pointcloud(normal_wrk, rpy_wrld)[0]
+            TCP_pos_deepsdf = (robot.arm.get_current_TCP_pos_vel_worldframe()[0] -  0.01 * normal_wrld)  # move it slightly away from the object
+            TCP_pos_deepsdf = (TCP_pos_deepsdf -  initial_obj_pos)/ args.scale # convert to DeepSDF scale
+            sensor_dirs = TCP_pos_deepsdf - pointcloud_deepsdf_np
             
             # Estimate point cloud normals
             _, n = pcu.estimate_point_cloud_normals_knn(pointcloud_deepsdf_np, 32, view_directions=sensor_dirs)
@@ -234,10 +245,10 @@ def main(args):
             pointcloud_along_norm_np, signed_distance_np = utils_sample.sample_along_normals(
                 std_dev=args.augment_points_std, pointcloud=pointcloud_deepsdf_np, normals=n, N=args.augment_points_num)
             pointcloud_along_norm = torch.from_numpy(pointcloud_along_norm_np).float().to(device)
-            signed_distance = torch.from_numpy(signed_distance_np).float().to(device)
+            sdf_normal_gt = torch.from_numpy(signed_distance_np).float().to(device)
 
             pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_along_norm))
-            sdf_gt = torch.vstack((sdf_gt, signed_distance))
+            sdf_gt = torch.vstack((sdf_gt, sdf_normal_gt))
 
         # Infer latent code
         log_tensorboard_path = os.path.join(test_dir, str(num_sample))
@@ -254,18 +265,17 @@ def main(args):
         sdf = utils_deepsdf.predict_sdf(best_latent_code, coords_batches, sdf_model)
         vertices_deepsdf, faces_deepsdf = utils_deepsdf.extract_mesh(grid_size_axis, sdf)
 
-        # Save mesh
+        # Save mesh, pointclouds, and their signed distance
         checkpoint_dict[num_sample] = dict()
         checkpoint_dict[num_sample]['mesh'] = [vertices_deepsdf, faces_deepsdf]
         checkpoint_dict[num_sample]['pointcloud'] = [utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy), pointclouds_deepsdf.cpu()]
+        checkpoint_dict[num_sample]['sdf'] = sdf_gt.cpu()
+        np.save(checkpoint_path, checkpoint_dict)
 
         pb.removeBody(robot.robot_id)
 
     pb.removeBody(obj_id)
 
-    # Save checkpoint
-    checkpoint_path = os.path.join(test_dir, 'checkpoint_dict.npy')
-    np.save(checkpoint_path, checkpoint_dict)
 
     if args.show_gui:
         time.sleep(1)
@@ -352,15 +362,15 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     # args.show_gui =True
-    # args.num_samples =20
+    # args.num_samples =3
     # args.folder_sdf ='23_01_095414'
     # args.folder_touch ='14_02_1521' 
     # args.obj_folder ='lamp/c3277019e57251cfb784faac204319d9' 
     # args.lr_scheduler = True
-    # args.epochs =1000 
+    # args.epochs =5 
     # args.lr =0.00005 
     # args.patience =100 
-    # args.resolution =256 
+    # args.resolution =20 
     # args.augment_points=True
 
     main(args)

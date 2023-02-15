@@ -14,6 +14,7 @@ def main(args):
         # Read data
         vertices, faces = checkpoint_dict[num_sample]['mesh']
         original_mesh, pointclouds_deepsdf = checkpoint_dict[num_sample]['pointcloud']
+        signed_distance = checkpoint_dict[num_sample]['sdf'].numpy().ravel()
 
         # Save mesh
         mesh_path = os.path.join(test_dir, str(num_sample), f'final_mesh.html')
@@ -22,9 +23,11 @@ def main(args):
         # Save pointclouds
         fig = go.Figure([
             go.Scatter3d(x=original_mesh[:, 0], y=original_mesh[:, 1],z=original_mesh[:, 2], 
-            mode='markers', marker=dict(size=1)),
+            mode='markers', marker=dict(size=2)),
             go.Scatter3d(x=pointclouds_deepsdf[:, 0], y=pointclouds_deepsdf[:, 1],z=pointclouds_deepsdf[:, 2], 
-            mode='markers', marker=dict(size=1))
+            mode='markers', marker=dict(size=2, color=signed_distance.ravel(), 
+                                cmin=np.amin(signed_distance), cmax=np.amax(signed_distance), colorscale='rdbu',
+                                showscale=True))
             ]         
         )
         fig.write_html(os.path.join(test_dir, str(num_sample), f'final_pointclouds.html'))
@@ -35,5 +38,5 @@ if __name__=='__main__':
         "--folder_touch_sdf", default=0, type=str, help="Folder containing the checkpoint of the touch_sdf test"
     )
     args = parser.parse_args()
-    
+
     main(args)
