@@ -166,11 +166,6 @@ def main(args):
             # Move robot to random position on the hemisphere
             robot_sphere_wrld = np.array(initial_obj_pos) + np.array(hemisphere_random_pos)
             robot = utils_sample.robot_touch_spherical(robot, robot_sphere_wrld, initial_obj_pos, angles)
-
-            # If not contact points, continue. 
-            if robot.results_at_touch_wrld is None:
-                pb.removeBody(robot.robot_id)
-                continue
             
             # Filter points with information about contact, make sure there are at least {num_valid_points} valid ones
             contact_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld)

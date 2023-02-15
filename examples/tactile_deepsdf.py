@@ -6,7 +6,7 @@ import pkgutil
 import os
 from cri_robot_arm import CRIRobotArm
 from tactile_gym.assets import add_assets_path
-from utils import utils_sample, utils_mesh, utils_deepsdf
+from utils import utils_sample, utils_mesh, utils_deepsdf, utils_raycasting
 import argparse
 import data.ShapeNetCoreV2urdf as ShapeNetCore
 from model import model_sdf, model_touch
@@ -117,6 +117,7 @@ def main(args):
         'ny': 50
     }
     
+    # Set initial object pose
     initial_obj_rpy = [np.pi/2, 0, -np.pi/2]
     initial_obj_orn = p.getQuaternionFromEuler(initial_obj_rpy)
     initial_obj_pos = [0.5, 0.0, 0]
@@ -185,14 +186,12 @@ def main(args):
         # Move robot to random position on the hemisphere
         robot_sphere_wrld = np.array(initial_obj_pos) + np.array(hemisphere_random_pos)
         robot = utils_sample.robot_touch_spherical(robot, robot_sphere_wrld, initial_obj_pos, angles)
-
-        # If not contact points, continue. 
-        if robot.results_at_touch_wrld is None:
+        
+        # Check that the robot is touching the object
+        camera = robot.get_tactile_observation()
+        if np.mean(camera) == 0.0:
             pb.removeBody(robot.robot_id)
             continue
-        
-        # Store tactile images
-        camera = robot.get_tactile_observation()
         # Conv2D requires [batch, channels, size1, size2] as input
         tactile_imgs_norm = camera[np.newaxis, np.newaxis, :, :] / 255 
         tactile_img = torch.tensor(tactile_imgs_norm, dtype=torch.float32).to(device)
@@ -222,7 +221,7 @@ def main(args):
         # The sdf of points on the object surface is 0.
         sdf_gt = torch.zeros(size=(pointclouds_deepsdf.shape[0], 1)).to(device)
 
-        # TODO: add randomly sampled points from normals
+        # Add randomly sampled points from normals
         if args.augment_points:
             # Everything in this block is in deepsdf scale
             # Vectors pointing from the points to the TCP position
@@ -351,5 +350,17 @@ if __name__=='__main__':
         "--augment_points_num", default=5, type=int, help="Number of points to sample along normals (if augment_points is True)"
     )
     args = parser.parse_args()
+
+    # args.show_gui =True
+    # args.num_samples =20
+    # args.folder_sdf ='23_01_095414'
+    # args.folder_touch ='14_02_1521' 
+    # args.obj_folder ='lamp/c3277019e57251cfb784faac204319d9' 
+    # args.lr_scheduler = True
+    # args.epochs =1000 
+    # args.lr =0.00005 
+    # args.patience =100 
+    # args.resolution =256 
+    # args.augment_points=True
 
     main(args)
