@@ -225,7 +225,7 @@ def main(args):
         pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_deepsdf))   
         
         # The sdf of points on the object surface is 0.
-        sdf_gt = torch.vstack((sdf_gt, torch.zeros(size=(pointcloud_deepsdf.shape[0], 1)))).to(device)
+        sdf_gt = torch.vstack((sdf_gt, torch.zeros(size=(pointcloud_deepsdf.shape[0], 1)).to(device)))
 
         # Add randomly sampled points from normals
         if args.augment_points:
