@@ -138,7 +138,9 @@ def main(args):
         # utils_mesh.debug_draw_vertices_on_pb(hemisphere_array, size=5)
         # Debug hemisphere ##################
 
+        # For debugging render scene
         time_str = datetime.now().strftime('%d_%m_%H%M%S')
+        counter_render_scene = 0
 
         for sample in range(args.num_samples):
 
@@ -220,7 +222,7 @@ def main(args):
             # Save all
             utils_sample.save_touch_charts(data)
 
-            # Save picture for debuggins
+            # Save picture for debugging
             if args.render_scene:
                 # Camera settings
                 fov = 50
@@ -245,7 +247,8 @@ def main(args):
                 ]
                     
                 # Set image directory
-                image_dir = os.path.join( os.path.dirname(results.__file__), 'checkpoints', time_str, f'{sample}' )
+                image_dir = os.path.join( os.path.dirname(results.__file__), 'checkpoints', f'extract_touch_charts_{time_str}', f'{counter_render_scene}' )
+                counter_render_scene += 1
                 # Create image directory
                 os.makedirs(image_dir)
                 

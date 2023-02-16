@@ -18,6 +18,8 @@ from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 import json
 import point_cloud_utils as pcu
+import results
+import matplotlib.pyplot as plt
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -162,6 +164,9 @@ def main(args):
     # Save checkpoint
     checkpoint_path = os.path.join(test_dir, 'checkpoint_dict.npy')
 
+    # For debugging render scene
+    time_str = datetime.now().strftime('%d_%m_%H%M%S')
+
     for num_sample in range(args.num_samples):
 
         robot = CRIRobotArm(
@@ -271,6 +276,40 @@ def main(args):
         checkpoint_dict[num_sample]['pointcloud'] = [utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy), pointclouds_deepsdf.cpu()]
         checkpoint_dict[num_sample]['sdf'] = sdf_gt.cpu()
         np.save(checkpoint_path, checkpoint_dict)
+
+        if args.render_scene:
+            # Camera settings
+            fov = 50
+            width = 512
+            height = 512
+            aspect = width / height
+            near = 0.0001
+            far = 2
+            projection_matrix = pb.computeProjectionMatrixFOV(fov, aspect, near, far)
+            # Set camera position
+            cameraTargetPosition = initial_obj_pos
+            cameraUpVector = [0, 0, 1]
+            # Set starting positions
+            cameraEyePositions = [
+                [0.5, -0.4, 0.5],
+                [0.5, 0.4, 0.5],
+                [0.501, 0, -0.3],
+                [0.501, 0, 0.6],
+                [0.8, 0, 0],
+                [0.5, -0.4, -0.3],
+                [0.5, 0.4, -0.3]
+            ]
+                
+            # Set image directory
+            image_dir = os.path.join( os.path.dirname(results.__file__), 'checkpoints', f'tactile_deepsdf_{time_str}', f'{num_sample}' )
+            # Create image directory
+            os.makedirs(image_dir)
+            
+            for idx_camera, cameraEyePosition in enumerate(cameraEyePositions):                      
+                view_matrix = pb.computeViewMatrix(cameraEyePosition, cameraTargetPosition, cameraUpVector)
+                rgb_image = utils_sample.render_scene(view_matrix, projection_matrix, width, height)
+                # Save image
+                plt.imsave(os.path.join(image_dir, f'camera_{idx_camera}.png'), rgb_image)
 
         pb.removeBody(robot.robot_id)
 
