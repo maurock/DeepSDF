@@ -354,7 +354,7 @@ if __name__=='__main__':
         "--augment_points", default=False, action='store_true', help="Estimate point cloud normals and sample points along them (negative and positive direction)"
     )
     parser.add_argument(
-        "--augment_points_std", default=0.01, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
+        "--augment_points_std", default=0.002, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
     )
     parser.add_argument(
         "--augment_points_num", default=5, type=int, help="Number of points to sample along normals (if augment_points is True)"

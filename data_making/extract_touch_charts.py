@@ -11,6 +11,9 @@ import argparse
 from glob import glob
 import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
 import trimesh
+import results
+import matplotlib.pyplot as plt
+from datetime import datetime
 
 def main(args):
     time_step = 1. / 960  # low for small objects
@@ -135,7 +138,9 @@ def main(args):
         # utils_mesh.debug_draw_vertices_on_pb(hemisphere_array, size=5)
         # Debug hemisphere ##################
 
-        for _ in range(args.num_samples):
+        time_str = datetime.now().strftime('%d_%m_%H%M%S')
+
+        for sample in range(args.num_samples):
 
             robot = CRIRobotArm(
                 pb,
@@ -214,6 +219,41 @@ def main(args):
 
             # Save all
             utils_sample.save_touch_charts(data)
+
+            # Save picture for debuggins
+            if args.render_scene:
+                # Camera settings
+                fov = 50
+                width = 512
+                height = 512
+                aspect = width / height
+                near = 0.0001
+                far = 2
+                projection_matrix = pb.computeProjectionMatrixFOV(fov, aspect, near, far)
+                # Set camera position
+                cameraTargetPosition = initial_obj_pos
+                cameraUpVector = [0, 0, 1]
+                # Set starting positions
+                cameraEyePositions = [
+                    [0.5, -0.4, 0.5],
+                    [0.5, 0.4, 0.5],
+                    [0.501, 0, -0.3],
+                    [0.501, 0, 0.6],
+                    [0.8, 0, 0],
+                    [0.5, -0.4, -0.3],
+                    [0.5, 0.4, -0.3]
+                ]
+                    
+                # Set image directory
+                image_dir = os.path.join( os.path.dirname(results.__file__), 'checkpoints', time_str, f'{sample}' )
+                # Create image directory
+                os.makedirs(image_dir)
+                
+                for idx_camera, cameraEyePosition in enumerate(cameraEyePositions):                      
+                    view_matrix = pb.computeViewMatrix(cameraEyePosition, cameraTargetPosition, cameraUpVector)
+                    rgb_image = utils_sample.render_scene(view_matrix, projection_matrix, width, height)
+                    # Save image
+                    plt.imsave(os.path.join(image_dir, f'camera_{idx_camera}.png'), rgb_image)
 
             pb.removeBody(robot.robot_id)
 

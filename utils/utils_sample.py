@@ -141,7 +141,7 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
         robot.results_at_touch_wrld = None
 
         # Sample random position on the hemisphere
-        hemisphere_random_pos, angles = sample_hemisphere(ray_hemisphere)
+        hemisphere_random_pos, angles = sample_sphere(ray_hemisphere)
 
         # Move robot to random position on the hemisphere
         robot_sphere_wrld = np.array(initial_pos) + np.array(hemisphere_random_pos)
@@ -287,3 +287,18 @@ def sample_along_normals(std_dev, pointcloud, normals, N):
     samples_along_normals_global = signed_distance * normals_tile + pointcloud_tile
 
     return samples_along_normals_global, signed_distance
+
+
+def render_scene(view_matrix, projection_matrix, width=512, height=512):
+    # Get depth values
+    image = pb.getCameraImage(width,
+                          height,
+                          view_matrix,
+                          projection_matrix,
+                          renderer=pb.ER_BULLET_HARDWARE_OPENGL)
+
+    rgb_image = np.reshape(image[2], (height, width, 4)) * 1. / 255.
+
+    return rgb_image
+    
+    
