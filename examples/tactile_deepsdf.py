@@ -187,6 +187,10 @@ def main(args):
         robot.nx = robot_config['nx']
         robot.ny = robot_config['ny']
 
+        # Deactivate collision between robot and object. Raycasting to extract point cloud still works.
+        for link_idx in range(pb.getNumJoints(robot.robot_id)+1):
+            pb.setCollisionFilterPair(robot.robot_id, obj_id, link_idx, -1, 0)
+
         robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
         
         robot.results_at_touch_wrld = None
@@ -198,11 +202,13 @@ def main(args):
         robot_sphere_wrld = np.array(initial_obj_pos) + np.array(hemisphere_random_pos)
         robot = utils_sample.robot_touch_spherical(robot, robot_sphere_wrld, initial_obj_pos, angles)
         
-        # Check that the robot is touching the object
+        # Check that the robot is touching the object and the avg colour pixel doesn't exceed a threshold
         camera = robot.get_tactile_observation()
-        if np.mean(camera) == 0.0:
+        check_on_camera = utils_sample.check_on_camera(camera)
+        if not check_on_camera:
             pb.removeBody(robot.robot_id)
             continue
+        # Preprocess and store tactile image
         # Conv2D requires [batch, channels, size1, size2] as input
         tactile_imgs_norm = camera[np.newaxis, np.newaxis, :, :] / 255 
         tactile_img = torch.tensor(tactile_imgs_norm, dtype=torch.float32).to(device)

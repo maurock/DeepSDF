@@ -27,3 +27,4 @@ results/samples_dict_ShapeNetCore.npy
 .vs/
 data/ShapeNetCoreV2urdf
 scripts/*.ipynb
+results/checkpoints/*

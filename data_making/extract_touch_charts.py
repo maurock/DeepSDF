@@ -162,6 +162,10 @@ def main(args):
             robot.nx = robot_config['nx']
             robot.ny = robot_config['ny']
 
+            # Deactivate collision between robot and object. Raycasting to extract point cloud still works.
+            for link_idx in range(pb.getNumJoints(robot.robot_id)+1):
+                pb.setCollisionFilterPair(robot.robot_id, obj_id, link_idx, -1, 0)
+
             # Reach an initial position
             robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
 
@@ -173,13 +177,25 @@ def main(args):
             # Move robot to random position on the hemisphere
             robot_sphere_wrld = np.array(initial_obj_pos) + np.array(hemisphere_random_pos)
             robot = utils_sample.robot_touch_spherical(robot, robot_sphere_wrld, initial_obj_pos, angles)
+
+            # Check on camera and store tactile images
+            camera = robot.get_tactile_observation()
+            check_on_camera = utils_sample.check_on_camera(camera)
+            if not check_on_camera:
+                pb.removeBody(robot.robot_id)
+                continue
             
             # Filter points with information about contact, make sure there are at least {num_valid_points} valid ones
-            contact_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld)
-            if contact_pointcloud.shape[0] < num_valid_points:
+            contact_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld, obj_id)
+            check_on_contact_pointcloud = utils_sample.check_on_contact_pointcloud(contact_pointcloud, num_valid_points)
+            if not check_on_contact_pointcloud:
                 print(f'Point cloud shape is too small: {contact_pointcloud.shape[0]} points')
                 pb.removeBody(robot.robot_id)
                 continue
+         
+            # Conv2D requires [batch, channels, size1, size2] as input
+            tactile_imgs_norm = camera[np.newaxis, np.newaxis, :, :] / 255 
+            data['tactile_imgs'] = np.vstack((data['tactile_imgs'], tactile_imgs_norm))       
 
             # Sample {num_valid_points} random points among the contact ones 
             random_indices = np.random.choice(contact_pointcloud.shape[0], num_valid_points)
@@ -196,12 +212,6 @@ def main(args):
 
             # Store world position of the TCP
             data['pos_wrld_list'] = np.vstack((data['pos_wrld_list'], robot.coords_at_touch_wrld))
-
-            # Store tactile images
-            camera = robot.get_tactile_observation()
-            # Conv2D requires [batch, channels, size1, size2] as input
-            tactile_imgs_norm = camera[np.newaxis, np.newaxis, :, :] / 255 
-            data['tactile_imgs'] = np.vstack((data['tactile_imgs'], tactile_imgs_norm))
 
             # Store TCP position in work frame
             pos_wrk = robot.arm.get_current_TCP_pos_vel_workframe()[0]
@@ -287,5 +297,5 @@ if __name__=='__main__':
         "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
     )
     args = parser.parse_args()
-    
+   
     main(args)

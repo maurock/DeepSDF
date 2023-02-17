@@ -126,7 +126,7 @@ def get_contact_points(current_TCP_pos_vel_worldframe, pb, sensor, nx=5, ny=5, d
         start = 0
         while end != size:
             end = start + max_rays if (start + max_rays < size) else size
-            rays = pb.rayTestBatch(raysFrom[start:end], raysTo[start:end])
+            rays = pb.rayTestBatch(raysFrom[start:end], raysTo[start:end], numThreads=0)
             results_rays.append(rays)
             start = start + max_rays
         results_rays = np.array(results_rays, dtype=object)
@@ -136,16 +136,16 @@ def get_contact_points(current_TCP_pos_vel_worldframe, pb, sensor, nx=5, ny=5, d
     return results_rays
 
 
-def filter_point_cloud(contact_info):
+def filter_point_cloud(contact_info, obj_id):
     """ Receives contact information from PyBullet. It filters out null contact points
     Params:
         contact_info = results of PyBullet pb.rayTestBatch. It is a tuple of objectUniqueId,  linkIndex, hit_fraction, hit_position, hit_normal. Contact info is calculated in robot.blocking_move -> get_contact_points()
     Return:
         filtered point cloud
      """
-    # filter out null contacts and convert tuple -> np.array()
-    contact_info_non_null = contact_info[contact_info[:,0]!=-1]
-    point_cloud = contact_info_non_null[:, 3]
+    # filter out points not intersecting with the object and convert tuple -> np.array()
+    contact_info_on_obj = contact_info[contact_info[:,0] == obj_id]
+    point_cloud = contact_info_on_obj[:, 3]
     point_cloud = np.array([np.array(_) for _ in point_cloud])
 
     return point_cloud

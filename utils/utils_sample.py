@@ -152,10 +152,11 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
             continue
         
         # Filter points with information about contact, make sure there are at least 500 valid ones
-        filtered_full_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld)
+        filtered_full_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld, obj_id)
         if filtered_full_pointcloud.shape[0] < 500:
             print('Point cloud shape is too small')
             continue
+
 
         # Sample 500 random points among the valid ones and store them in the data dictionary
         random_indices = np.random.choice(filtered_full_pointcloud.shape[0], 500)
@@ -301,4 +302,15 @@ def render_scene(view_matrix, projection_matrix, width=512, height=512):
 
     return rgb_image
     
-    
+
+def check_on_camera(camera, threshold=3):
+    """Check that the tactile image is not empty or that its value doesn't exceed a certain threshold.
+    When the average colour exceeds a certain value, it probably means that the sensor is inside the object.
+    """
+    return (np.mean(camera) != 0.0) and (np.mean(camera) < threshold)
+
+
+def check_on_contact_pointcloud(contact_pointcloud, num_valid_points):
+    """Filter out non valid contact points, and check that the valid contact pointcloud
+    contains at least {num_valid_points} points."""
+    return contact_pointcloud.shape[0] > num_valid_points
