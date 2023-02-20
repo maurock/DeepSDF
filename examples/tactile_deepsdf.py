@@ -261,28 +261,6 @@ def main(args):
             pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_along_norm))
             sdf_gt = torch.vstack((sdf_gt, sdf_normal_gt))
 
-        # Infer latent code
-        log_tensorboard_path = os.path.join(test_dir, str(num_sample))
-        if not os.path.isdir(log_tensorboard_path):
-            os.makedirs(log_tensorboard_path)
-        writer = SummaryWriter(log_dir=os.path.join(test_dir, str(num_sample)))
-        best_latent_code = sdf_model.infer_latent_code(args, pointclouds_deepsdf, sdf_gt, writer)
-
-        # Predict sdf values from pointcloud
-        # input_deepsdf = torch.cat((pointclouds_deepsdf, best_latent_code.repeat(pointclouds_deepsdf.shape[0], 1)), dim=1)
-        # predicted_coords = sdf_model(input_deepsdf)
-
-        # Extract mesh obtained with the latent code optimised at inference
-        sdf = utils_deepsdf.predict_sdf(best_latent_code, coords_batches, sdf_model)
-        vertices_deepsdf, faces_deepsdf = utils_deepsdf.extract_mesh(grid_size_axis, sdf)
-
-        # Save mesh, pointclouds, and their signed distance
-        checkpoint_dict[num_sample] = dict()
-        checkpoint_dict[num_sample]['mesh'] = [vertices_deepsdf, faces_deepsdf]
-        checkpoint_dict[num_sample]['pointcloud'] = [utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy), pointclouds_deepsdf.cpu()]
-        checkpoint_dict[num_sample]['sdf'] = sdf_gt.cpu()
-        np.save(checkpoint_path, checkpoint_dict)
-
         if args.render_scene:
             # Camera settings
             fov = 50
@@ -307,7 +285,7 @@ def main(args):
             ]
                 
             # Set image directory
-            image_dir = os.path.join( os.path.dirname(results.__file__), 'checkpoints', f'tactile_deepsdf_{time_str}', f'{num_sample}' )
+            image_dir = os.path.join( test_dir, 'scene', f'tactile_deepsdf_{time_str}', f'{num_sample}' )
             # Create image directory
             os.makedirs(image_dir)
             
@@ -317,13 +295,36 @@ def main(args):
                 # Save image
                 plt.imsave(os.path.join(image_dir, f'camera_{idx_camera}.png'), rgb_image)
 
+        # Save pointclouds
+        points_sdf = torch.hstack((pointclouds_deepsdf.detach().cpu(), sdf_gt.detach().cpu()))
+        np.save(os.path.join(test_dir, f'points_sdf_{num_sample}.npy'), points_sdf)
+
         pb.removeBody(robot.robot_id)
 
-    pb.removeBody(obj_id)
+        ########################################################################################################
 
+    if False:
+        # Infer latent code
+        log_tensorboard_path = os.path.join(test_dir, str(num_sample))
+        if not os.path.isdir(log_tensorboard_path):
+            os.makedirs(log_tensorboard_path)
+        writer = SummaryWriter(log_dir=os.path.join(test_dir, str(num_sample)))
+        best_latent_code = sdf_model.infer_latent_code(args, pointclouds_deepsdf, sdf_gt, writer)
 
-    if args.show_gui:
-        time.sleep(1)
+        # Predict sdf values from pointcloud
+        # input_deepsdf = torch.cat((pointclouds_deepsdf, best_latent_code.repeat(pointclouds_deepsdf.shape[0], 1)), dim=1)
+        # predicted_coords = sdf_model(input_deepsdf)
+
+        # Extract mesh obtained with the latent code optimised at inference
+        sdf = utils_deepsdf.predict_sdf(best_latent_code, coords_batches, sdf_model)
+        vertices_deepsdf, faces_deepsdf = utils_deepsdf.extract_mesh(grid_size_axis, sdf)
+
+        # Save mesh, pointclouds, and their signed distance
+        checkpoint_dict[num_sample] = dict()
+        checkpoint_dict[num_sample]['mesh'] = [vertices_deepsdf, faces_deepsdf]
+        checkpoint_dict[num_sample]['pointcloud'] = [utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy), pointclouds_deepsdf.cpu()]
+        checkpoint_dict[num_sample]['sdf'] = sdf_gt.cpu()
+        np.save(checkpoint_path, checkpoint_dict)
 
 
 if __name__=='__main__':
