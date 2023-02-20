@@ -134,6 +134,10 @@ def main(args):
     vertices_wrld = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy) * args.scale + initial_obj_pos
     mesh = trimesh.Trimesh(vertices=vertices_wrld, faces=mesh_original.faces)
 
+    # Store processed mesh in deepsdf pose
+    verts_deepsdf = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy)
+    trimesh.save_mesh(os.path.join(test_dir, 'mesh_deepsdf.obj'), trimesh.Trimesh(vertices=verts_deepsdf, faces=mesh_original.faces))
+
     # Ray: sqrt( (x1 - xc)**2 + (y1 - yc)**2)
     ray_hemisphere = utils_sample.get_ray_hemisphere(mesh)
 
@@ -281,7 +285,7 @@ def main(args):
         points_sdf_dir = os.path.join(test_dir, str(num_sample))
         if not os.path.isdir(points_sdf_dir):
             os.makedirs(points_sdf_dir)
-        torch.save(points_sdf, os.path.join(points_sdf_dir, f'points_sdf_{num_sample}.npy'))
+        torch.save(points_sdf, os.path.join(points_sdf_dir, f'points_sdf.pt'))
 
         pb.removeBody(robot.robot_id)
 
