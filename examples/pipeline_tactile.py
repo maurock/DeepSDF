@@ -278,7 +278,10 @@ def main(args):
 
         # Save pointclouds
         points_sdf = torch.hstack((pointclouds_deepsdf.detach().cpu(), sdf_gt.detach().cpu()))
-        torch.save(points_sdf, os.path.join(test_dir, f'points_sdf_{num_sample}.npy'))
+        points_sdf_dir = os.path.join(test_dir, str(num_sample))
+        if not os.path.isdir(points_sdf_dir):
+            os.makedirs(points_sdf_dir)
+        torch.save(points_sdf, os.path.join(points_sdf_dir, f'points_sdf_{num_sample}.npy'))
 
         pb.removeBody(robot.robot_id)
 
@@ -301,9 +304,6 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--scale", default=0.2, type=float, help="Scale of the object in simulation wrt the urdf object"
-    )
-    parser.add_argument(
-        "--folder_sdf", default=0, type=str, help="Folder containing the sdf model weights"
     )
     parser.add_argument(
         "--folder_touch", default=0, type=str, help="Folder containing the touch model weights"
