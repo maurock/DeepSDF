@@ -136,7 +136,7 @@ def main(args):
 
     # Store processed mesh in deepsdf pose
     verts_deepsdf = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy)
-    trimesh.save_mesh(os.path.join(test_dir, 'mesh_deepsdf.obj'), trimesh.Trimesh(vertices=verts_deepsdf, faces=mesh_original.faces))
+    trimesh.Trimesh(vertices=verts_deepsdf, faces=mesh_original.faces).export(os.path.join(test_dir, 'mesh_deepsdf.obj'))
 
     # Ray: sqrt( (x1 - xc)**2 + (y1 - yc)**2)
     ray_hemisphere = utils_sample.get_ray_hemisphere(mesh)
@@ -330,15 +330,9 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     # args.show_gui =True
-    # args.num_samples =3
-    # args.folder_sdf ='23_01_095414'
+    # args.num_samples = 2
     # args.folder_touch ='14_02_1521' 
     # args.obj_folder ='lamp/c3277019e57251cfb784faac204319d9' 
-    # args.lr_scheduler = True
-    # args.epochs =5 
-    # args.lr =0.00005 
-    # args.patience =100 
-    # args.resolution =20 
     # args.augment_points=True
 
     main(args)
