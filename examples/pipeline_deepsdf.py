@@ -26,7 +26,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #@profile
 def main(args):
     # Logging
-    test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf, datetime.now().strftime('%d_%m_%H%M%S'))
+    test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf, f"infer_latent_{datetime.now().strftime('%d_%m_%H%M%S')}")
     if not os.path.exists(test_dir):
         os.mkdir(test_dir)
     log_path = os.path.join(test_dir, 'settings.txt')
@@ -55,16 +55,23 @@ def main(args):
     coords_batches = torch.split(coords, 500000)
 
     # Save checkpoint
+    checkpoint_dict = dict()
     checkpoint_path = os.path.join(test_dir, 'checkpoint_dict.npy')
 
-    sample_folders = glob(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf, '*/')
+    data_folders = glob(os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf, 'data', '*/'))
 
     # Infer latent code
-    for sample_folder in sample_folders:
-        writer = SummaryWriter(log_dir=sample_folder)
+    for data_folder in data_folders:
+
+        # Sample folder to store tensorboard log and inferred latent code
+        num_sample = data_folder.split('/')[-2]
+        sample_dir = os.path.join(test_dir, num_sample)
+        if not os.path.exists(sample_dir):
+            os.mkdir(sample_dir)
+        writer = SummaryWriter(log_dir=sample_dir)
 
         # Load pointclouds and sdf ground truth
-        points_sdf = torch.load(os.path.join(sample_folder, 'points_sdf.pt'), map_location=device)
+        points_sdf = torch.load(os.path.join(data_folder, 'points_sdf.pt'), map_location=device)
         pointclouds_deepsdf = points_sdf[0]
         sdf_gt = points_sdf[1]
 
@@ -76,11 +83,15 @@ def main(args):
         vertices_deepsdf, faces_deepsdf = utils_deepsdf.extract_mesh(grid_size_axis, sdf)
 
         # Save mesh, pointclouds, and their signed distance
-        checkpoint_dict = dict()
-        checkpoint_dict['mesh'] = [vertices_deepsdf, faces_deepsdf]
-        checkpoint_dict['pointcloud'] = pointclouds_deepsdf.cpu()
-        checkpoint_dict['sdf'] = sdf_gt.cpu()
+        checkpoint_dict[num_sample] = dict()
+        checkpoint_dict[num_sample]['mesh'] = [vertices_deepsdf, faces_deepsdf]
+        checkpoint_dict[num_sample]['pointcloud'] = pointclouds_deepsdf.cpu()
+        checkpoint_dict[num_sample]['sdf'] = sdf_gt.cpu()
         np.save(checkpoint_path, checkpoint_dict)
+
+        # Save inferred latent code
+        latent_code_path = os.path.join(sample_dir, 'latent_code.pt')
+        torch.save(best_latent_code.cpu(), latent_code_path)
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
@@ -130,16 +141,12 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    # args.show_gui =True
-    # args.num_samples =3
     # args.folder_sdf ='23_01_095414'
-    # args.folder_touch ='14_02_1521' 
-    # args.obj_folder ='lamp/c3277019e57251cfb784faac204319d9' 
+    # args.folder_touch_sdf ='21_02_134102' 
     # args.lr_scheduler = True
     # args.epochs =5 
     # args.lr =0.00005 
     # args.patience =100 
     # args.resolution =20 
-    # args.augment_points=True
 
     main(args)

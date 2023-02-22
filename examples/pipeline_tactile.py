@@ -281,8 +281,8 @@ def main(args):
                 plt.imsave(os.path.join(image_dir, f'camera_{idx_camera}.png'), rgb_image)
 
         # Save pointclouds
-        points_sdf = torch.hstack((pointclouds_deepsdf.detach().cpu(), sdf_gt.detach().cpu()))
-        points_sdf_dir = os.path.join(test_dir, str(num_sample))
+        points_sdf = [pointclouds_deepsdf.detach().cpu(), sdf_gt.detach().cpu()]
+        points_sdf_dir = os.path.join(test_dir, 'data', str(num_sample))
         if not os.path.isdir(points_sdf_dir):
             os.makedirs(points_sdf_dir)
         torch.save(points_sdf, os.path.join(points_sdf_dir, f'points_sdf.pt'))
