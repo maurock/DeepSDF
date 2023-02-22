@@ -288,6 +288,8 @@ def main(args):
         torch.save(points_sdf, os.path.join(points_sdf_dir, f'points_sdf.pt'))
 
         pb.removeBody(robot.robot_id)
+    
+    return test_dir
 
 
 if __name__=='__main__':
@@ -335,4 +337,4 @@ if __name__=='__main__':
     # args.obj_folder ='lamp/c3277019e57251cfb784faac204319d9' 
     # args.augment_points=True
 
-    main(args)
+    _ = main(args)
