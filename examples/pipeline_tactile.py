@@ -287,6 +287,9 @@ def main(args):
             os.makedirs(points_sdf_dir)
         torch.save(points_sdf, os.path.join(points_sdf_dir, f'points_sdf.pt'))
 
+        # Store tactile image
+        np.save(os.path.join(points_sdf_dir, f'tactile_img.npy'), camera)
+
         pb.removeBody(robot.robot_id)
     
     return test_dir
@@ -332,7 +335,7 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     # args.show_gui =True
-    # args.num_samples = 2
+    # args.num_samples = 3
     # args.folder_touch ='14_02_1521' 
     # args.obj_folder ='lamp/c3277019e57251cfb784faac204319d9' 
     # args.augment_points=True

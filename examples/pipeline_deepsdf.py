@@ -87,11 +87,8 @@ def main(args):
         checkpoint_dict[num_sample]['mesh'] = [vertices_deepsdf, faces_deepsdf]
         checkpoint_dict[num_sample]['pointcloud'] = pointclouds_deepsdf.cpu()
         checkpoint_dict[num_sample]['sdf'] = sdf_gt.cpu()
+        checkpoint_dict[num_sample]['latent_code'] = best_latent_code.cpu()
         np.save(checkpoint_path, checkpoint_dict)
-
-        # Save inferred latent code
-        latent_code_path = os.path.join(sample_dir, 'latent_code.pt')
-        torch.save(best_latent_code.cpu(), latent_code_path)
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
