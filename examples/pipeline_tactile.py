@@ -23,9 +23,7 @@ import matplotlib.pyplot as plt
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-"""
-Demo to reconstruct objects using tactile-gym.
-"""
+"""First step in the pipeline: touch an object, extract tactile images, map them to pointclouds and store them."""
 #@profile
 def main(args):
     # Logging
@@ -38,14 +36,6 @@ def main(args):
         log.write('Settings:\n')
         log.write(json.dumps(args_dict).replace(', ', ',\n'))
         log.write('\n\n')
-
-    # Load sdf model
-    sdf_model = model_sdf.SDFModelMulti(num_layers=8, no_skip_connections=False).float().to(device)
-    
-    # Load weights for sdf model
-    weights_path = os.path.join(os.path.dirname(runs_sdf.__file__), args.folder_sdf, 'weights.pt')
-    sdf_model.load_state_dict(torch.load(weights_path, map_location=device))
-    sdf_model.eval()
 
     # Load touch model
     touch_model = model_touch.Encoder().to(device)
@@ -144,29 +134,24 @@ def main(args):
     vertices_wrld = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy) * args.scale + initial_obj_pos
     mesh = trimesh.Trimesh(vertices=vertices_wrld, faces=mesh_original.faces)
 
+    # Store processed mesh in deepsdf pose
+    verts_deepsdf = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy)
+    trimesh.Trimesh(vertices=verts_deepsdf, faces=mesh_original.faces).export(os.path.join(test_dir, 'mesh_deepsdf.obj'))
+
     # Ray: sqrt( (x1 - xc)**2 + (y1 - yc)**2)
     ray_hemisphere = utils_sample.get_ray_hemisphere(mesh)
 
     # Instantiate pointcloud for DeepSDF prediction
     pointclouds_deepsdf = torch.tensor([]).view(0, 3).to(device)
 
-    # Instantiate grid coordinates for mesh extraction
-    coords, grid_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
-    coords = coords.clone().to(device)
-    coords_batches = torch.split(coords, 500000)
-
-    # Instantiate variables to store checkpoints
-    checkpoint_dict = dict()
-
     # Total signed distance
     sdf_gt = torch.tensor([]).view(0, 1).to(device)
-
-    # Save checkpoint
-    checkpoint_path = os.path.join(test_dir, 'checkpoint_dict.npy')
 
     # For debugging render scene
     time_str = datetime.now().strftime('%d_%m_%H%M%S')
 
+    ##############################################################################################
+    # During the first stage, we collect tactile images, map them to point clouds, and store them.
     for num_sample in range(args.num_samples):
 
         robot = CRIRobotArm(
@@ -285,7 +270,7 @@ def main(args):
             ]
                 
             # Set image directory
-            image_dir = os.path.join( test_dir, 'scene', f'tactile_deepsdf_{time_str}', f'{num_sample}' )
+            image_dir = os.path.join( test_dir, 'scene', f'{num_sample}' )
             # Create image directory
             os.makedirs(image_dir)
             
@@ -296,35 +281,18 @@ def main(args):
                 plt.imsave(os.path.join(image_dir, f'camera_{idx_camera}.png'), rgb_image)
 
         # Save pointclouds
-        points_sdf = torch.hstack((pointclouds_deepsdf.detach().cpu(), sdf_gt.detach().cpu()))
-        np.save(os.path.join(test_dir, f'points_sdf_{num_sample}.npy'), points_sdf)
+        points_sdf = [pointclouds_deepsdf.detach().cpu(), sdf_gt.detach().cpu()]
+        points_sdf_dir = os.path.join(test_dir, 'data', str(num_sample))
+        if not os.path.isdir(points_sdf_dir):
+            os.makedirs(points_sdf_dir)
+        torch.save(points_sdf, os.path.join(points_sdf_dir, f'points_sdf.pt'))
+
+        # Store tactile image
+        np.save(os.path.join(points_sdf_dir, f'tactile_img.npy'), camera)
 
         pb.removeBody(robot.robot_id)
-
-        ########################################################################################################
-
-    if False:
-        # Infer latent code
-        log_tensorboard_path = os.path.join(test_dir, str(num_sample))
-        if not os.path.isdir(log_tensorboard_path):
-            os.makedirs(log_tensorboard_path)
-        writer = SummaryWriter(log_dir=os.path.join(test_dir, str(num_sample)))
-        best_latent_code = sdf_model.infer_latent_code(args, pointclouds_deepsdf, sdf_gt, writer)
-
-        # Predict sdf values from pointcloud
-        # input_deepsdf = torch.cat((pointclouds_deepsdf, best_latent_code.repeat(pointclouds_deepsdf.shape[0], 1)), dim=1)
-        # predicted_coords = sdf_model(input_deepsdf)
-
-        # Extract mesh obtained with the latent code optimised at inference
-        sdf = utils_deepsdf.predict_sdf(best_latent_code, coords_batches, sdf_model)
-        vertices_deepsdf, faces_deepsdf = utils_deepsdf.extract_mesh(grid_size_axis, sdf)
-
-        # Save mesh, pointclouds, and their signed distance
-        checkpoint_dict[num_sample] = dict()
-        checkpoint_dict[num_sample]['mesh'] = [vertices_deepsdf, faces_deepsdf]
-        checkpoint_dict[num_sample]['pointcloud'] = [utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy), pointclouds_deepsdf.cpu()]
-        checkpoint_dict[num_sample]['sdf'] = sdf_gt.cpu()
-        np.save(checkpoint_path, checkpoint_dict)
+    
+    return test_dir
 
 
 if __name__=='__main__':
@@ -347,54 +315,10 @@ if __name__=='__main__':
         "--scale", default=0.2, type=float, help="Scale of the object in simulation wrt the urdf object"
     )
     parser.add_argument(
-        "--folder_sdf", default=0, type=str, help="Folder containing the sdf model weights"
-    )
-    parser.add_argument(
         "--folder_touch", default=0, type=str, help="Folder containing the touch model weights"
     )
     parser.add_argument(
         "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
-    )
-
-    # Argument for inference
-    parser.add_argument(
-        "--latent_size", default=128, type=int, help="Folder containing the touch model weights"
-    )
-    parser.add_argument(
-        "--optimiser", default='Adam', type=str, help="Choose the optimiser out of [Adam, LBFGS]"
-    )
-    parser.add_argument(
-        "--lr", default=0.00001, type=float, help="Learning rate to infer the latent code"
-    )
-    parser.add_argument(
-        "--lr_scheduler", default=False, action='store_true', help="Learning rate to infer the latent code"
-    )
-    parser.add_argument(
-        "--sigma_regulariser", default=0.01, type=float, help="Regulariser for the loss function"
-    )
-    parser.add_argument(
-        "--lr_multiplier", default=0.5, type=float, help="Learning rate multiplier for the scheduler"
-    )
-    parser.add_argument(
-        "--patience", default=50, type=float, help="Patience for latent code inference"
-    )
-    parser.add_argument(
-        "--epochs", default=100, type=int, help="Number of epochs for latent code inference"
-    )
-    parser.add_argument(
-        "--clamp", default=False, action='store_true', help="Clip the network prediction"
-    )
-    parser.add_argument(
-        "--clamp_value", type=float, default=0.1, help="Value of the clip"
-    )
-    parser.add_argument(
-        "--langevin_noise", type=float, default=0, help="If this value is higher than 0, it adds noise to the latent space after every update."
-    )
-    parser.add_argument(
-        "--resolution", type=int, default=50, help="Resolution of the extracted mesh"
-    )
-    parser.add_argument(
-        "--obj_folder", type=str, default='', help="Object to reconstruct as obj_class/obj_category, e.g. 02818832/1aa55867200ea789465e08d496c0420f"
     )
     parser.add_argument(
         "--augment_points", default=False, action='store_true', help="Estimate point cloud normals and sample points along them (negative and positive direction)"
@@ -405,18 +329,15 @@ if __name__=='__main__':
     parser.add_argument(
         "--augment_points_num", default=5, type=int, help="Number of points to sample along normals (if augment_points is True)"
     )
+    parser.add_argument(
+        "--obj_folder", type=str, default='', help="Object to reconstruct as obj_class/obj_category, e.g. 02818832/1aa55867200ea789465e08d496c0420f"
+    )
     args = parser.parse_args()
 
     # args.show_gui =True
-    # args.num_samples =3
-    # args.folder_sdf ='23_01_095414'
+    # args.num_samples = 3
     # args.folder_touch ='14_02_1521' 
     # args.obj_folder ='lamp/c3277019e57251cfb784faac204319d9' 
-    # args.lr_scheduler = True
-    # args.epochs =5 
-    # args.lr =0.00005 
-    # args.patience =100 
-    # args.resolution =20 
     # args.augment_points=True
 
-    main(args)
+    _ = main(args)

@@ -12,3 +12,4 @@ touch results/runs_sdf/__init__.py
 touch results/runs_touch/__init__.py
 touch results/runs_touch_sdf/__init__.py
 touch data/objects/__init__.py
+touch examples/__init__.py
