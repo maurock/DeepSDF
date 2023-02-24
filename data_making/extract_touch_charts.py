@@ -14,6 +14,7 @@ import trimesh
 import results
 import matplotlib.pyplot as plt
 from datetime import datetime
+import sys
 
 def main(args):
     time_step = 1. / 960  # low for small objects
@@ -211,7 +212,12 @@ def main(args):
             data['pointclouds'] = np.vstack((data['pointclouds'], sampled_pointcloud_wrk))
 
             # Store world position of the TCP
-            data['pos_wrld_list'] = np.vstack((data['pos_wrld_list'], robot.coords_at_touch_wrld))
+            try:
+                data['pos_wrld_list'] = np.vstack((data['pos_wrld_list'], robot.coords_at_touch_wrld))
+            except:
+                print(f"data['pos_wrld_list'].shape: {data['pos_wrld_list'].shape}")
+                print(f"robot.coords_at_touch_wrld.shape: {robot.coords_at_touch_wrld.shape}")
+                sys.exit(1)
 
             # Store TCP position in work frame
             pos_wrk = robot.arm.get_current_TCP_pos_vel_workframe()[0]
@@ -297,5 +303,5 @@ if __name__=='__main__':
         "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
     )
     args = parser.parse_args()
-   
+    
     main(args)
