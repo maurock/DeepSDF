@@ -84,11 +84,9 @@ def robot_touch_spherical(robot, robot_sphere_wrld, initial_pos, angles, max_hei
 
     robot.stop_at_touch = True
 
-    # Sample the object
+    # Sample the object. If successful, the robot sets stop_at_touch = False points are stored in robot.results_at_touch_wrld
     move_wrld_to_work(robot, initial_pos, orn_wrld)    # This does not work in DIRECT mode for a problem in the backgroun sensor image
     robot.results_at_touch_wrld = utils_raycasting.get_contact_points(robot.arm.get_current_TCP_pos_vel_worldframe(), robot._pb, robot.t_s_name, robot.nx, robot.ny)
-    
-    robot.stop_at_touch = False
 
     return robot
 

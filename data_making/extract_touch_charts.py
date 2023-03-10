@@ -178,6 +178,12 @@ def main(args):
             # Move robot to random position on the hemisphere
             robot_sphere_wrld = np.array(initial_obj_pos) + np.array(hemisphere_random_pos)
             robot = utils_sample.robot_touch_spherical(robot, robot_sphere_wrld, initial_obj_pos, angles)
+            
+            # Check that the object is correctly sampled by checking that robot.stop_at_touch is not true 
+            if robot.stop_at_touch:
+                print("robot.stop_at_touch is true. Object not correctly sampled.")
+                pb.removeBody(robot.robot_id)
+                continue
 
             # Check on camera and store tactile images
             camera = robot.get_tactile_observation()
