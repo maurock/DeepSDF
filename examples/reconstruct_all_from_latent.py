@@ -39,8 +39,10 @@ def main(args):
 
     for idx, latent in enumerate(latent_codes_list):
         sdf = utils_deepsdf.predict_sdf(latent, coords_batches, model)
-        vertices, faces = utils_deepsdf.extract_mesh(grad_size_axis, sdf)
-
+        try:
+            vertices, faces = utils_deepsdf.extract_mesh(grad_size_axis, sdf)
+        except:
+            continue
         # save mesh using meshplot
         mesh_dir = os.path.join(os.path.dirname(results.__file__), 'runs_sdf', folder, 'meshes_training')
         if not os.path.exists(mesh_dir):
