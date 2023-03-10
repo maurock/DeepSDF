@@ -145,6 +145,10 @@ def main(args):
             samples_dict[obj_idx]['sdf'] = sdf
             samples_dict[obj_idx]['latent_class'] = np.array([obj_idx], dtype=np.int32)
             samples_dict[obj_idx]['samples_latent_class'] = combine_sample_latent(samples_dict[obj_idx]['samples'], samples_dict[obj_idx]['latent_class'])
+
+            # Save the samples and SDFs at regular intervals
+            if obj_idx % 100 == 0:
+                np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy'), samples_dict)
     else: 
         print('Choose a valid method')
         exit()      
@@ -152,8 +156,8 @@ def main(args):
     #_debug_plot(samples_dict[obj_idx])  
     np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy'), samples_dict)
 
-    np.save(os.path.join(os.path.dirname(results.__file__), 'idx_int2str_dict.npy'), idx_str2int_dict)
-    np.save(os.path.join(os.path.dirname(results.__file__), 'idx_str2int_dict.npy'), idx_int2str_dict)
+    #np.save(os.path.join(os.path.dirname(results.__file__), 'idx_int2str_dict.npy'), idx_str2int_dict)
+    #np.save(os.path.join(os.path.dirname(results.__file__), 'idx_str2int_dict.npy'), idx_int2str_dict)
 
 
 if __name__=='__main__':
