@@ -8,6 +8,7 @@ import argparse
 import meshplot as mp
 from utils import utils_deepsdf
 import trimesh
+import time
 mp.offline()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -18,6 +19,19 @@ def get_latent_codes_training(results_dict):
     for i in range(results_dict['train']['best_latent_codes'].shape[0]):
         latent_codes_list.append(torch.from_numpy(results_dict['train']['best_latent_codes'][i]).to(device))
     return latent_codes_list
+
+def get_maximum_batch_size(latent_code_list, coords, model):
+    """Return the maximum batch size that can be used for the model"""
+    max_batch_size = 1000000
+    latent = latent_code_list[0]
+    while True:
+        coords_batches = torch.split(coords, max_batch_size)
+        try:
+            utils_deepsdf.predict_sdf(latent, coords_batches, model)
+            break
+        except RuntimeError:
+            max_batch_size *= 0.8
+    return max_batch_size
 
 def main(args):
     folder = args.folder
@@ -35,7 +49,13 @@ def main(args):
   
     coords, grad_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
     coords = coords.clone().to(device)
-    coords_batches = torch.split(coords, 100000)
+
+    # Select the maximum batch size that can be used for the model
+    time_start = time.time()
+    max_batch_size = get_maximum_batch_size(latent_codes_list, coords, model) if torch.cuda.is_available() else 1000000
+    print(f'Time elapsed to find the maximum batch suze: {time.time() - time_start}')
+    print(f'Max batch size: {max_batch_size}')
+    coords_batches = torch.split(coords, max_batch_size)
 
     for idx, latent in enumerate(latent_codes_list):
         sdf = utils_deepsdf.predict_sdf(latent, coords_batches, model)
