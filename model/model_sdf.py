@@ -94,7 +94,7 @@ class SDFModelMulti(torch.nn.Module):
             scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 
                                                     factor=args.lr_multiplier, 
                                                     patience=args.patience, 
-                                                    threshold=0.0001, threshold_mode='rel')
+                                                    threshold=0.001, threshold_mode='rel')
 
         best_loss = 1000000
 
