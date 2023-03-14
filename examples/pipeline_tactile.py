@@ -199,6 +199,15 @@ def main(args):
         if not check_on_camera:
             pb.removeBody(robot.robot_id)
             continue
+
+        # Check that the robot is touching the object and not other objects by ensuring that there is at least one valid point
+        contact_pointcloud = utils_raycasting.filter_point_cloud(robot.results_at_touch_wrld, obj_id)
+        check_on_contact_pointcloud = utils_sample.check_on_contact_pointcloud(contact_pointcloud, 1)
+        if not check_on_contact_pointcloud:
+            print(f'Point cloud shape is too small: {contact_pointcloud.shape[0]} points')
+            pb.removeBody(robot.robot_id)
+            continue
+        
         # Preprocess and store tactile image
         # Conv2D requires [batch, channels, size1, size2] as input
         tactile_imgs_norm = camera[np.newaxis, np.newaxis, :, :] / 255 
