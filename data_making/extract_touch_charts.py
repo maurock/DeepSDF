@@ -16,6 +16,28 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import sys
 
+# Reload the environment to avoid a silent bug where memory fills and visual rendering fails. 
+def load_environment(args, robot_config, pb):
+    robot = CRIRobotArm(
+        pb,
+        workframe_pos = robot_config['workframe_pos'],
+        workframe_rpy = robot_config['workframe_rpy'],
+        image_size = [256, 256],
+        arm_type = "ur5",
+        t_s_type = robot_config['t_s_type'],
+        t_s_core = robot_config['t_s_core'],
+        t_s_name = robot_config['t_s_name'],
+        t_s_dynamics = robot_config['t_s_dynamics'],
+        show_gui = args.show_gui,
+        show_tactile = args.show_tactile
+    )
+    
+    # Set pointcloud grid
+    robot.nx = robot_config['nx']
+    robot.ny = robot_config['ny']   
+
+    return pb, robot
+
 def main(args):
     time_step = 1. / 960  # low for small objects
 
@@ -85,7 +107,7 @@ def main(args):
     obj_dirs = glob(os.path.join(os.path.dirname(ShapeNetCoreV2.__file__), '*', '*/'))
 
     # Set number of points to consider the touch chart collection valid.
-    num_valid_points = 300
+    num_valid_points = 250
 
     # Initialise dict with arrays to store.
     data = {
@@ -100,6 +122,14 @@ def main(args):
     }
 
     for idx, obj_dir in enumerate(obj_dirs): 
+
+        # Reset simulation and reload the environment to avoid a silent bug where memory fills and visual rendering fails. 
+        if idx > 0:
+            pb.resetSimulation()
+        
+        pb, robot = load_environment(args, robot_config, pb)
+
+
         print(f"Collecting data... Object index: {obj_dir} \t {idx+1}/{len(obj_dirs)} ")
 
         # Load object
@@ -118,8 +148,12 @@ def main(args):
             )
             print(f'PyBullet object ID: {obj_id}')
 
-        #robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
-
+        robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
+        
+        # Deactivate collision between robot and object. Raycasting to extract point cloud still works.
+        for link_idx in range(pb.getNumJoints(robot.robot_id)+1):
+            pb.setCollisionFilterPair(robot.robot_id, obj_id, link_idx, -1, 0)
+        
         # Load object and get world frame coordinates.
         obj_path = os.path.join(obj_dir, "model.obj")
         mesh_original = utils_mesh._as_mesh(trimesh.load(obj_path))
@@ -145,31 +179,6 @@ def main(args):
 
         for sample in range(args.num_samples):
 
-            robot = CRIRobotArm(
-                pb,
-                workframe_pos = robot_config['workframe_pos'],
-                workframe_rpy = robot_config['workframe_rpy'],
-                image_size = [256, 256],
-                arm_type = "ur5",
-                t_s_type = robot_config['t_s_type'],
-                t_s_core = robot_config['t_s_core'],
-                t_s_name = robot_config['t_s_name'],
-                t_s_dynamics = robot_config['t_s_dynamics'],
-                show_gui = args.show_gui,
-                show_tactile = args.show_tactile
-            )
-            
-            # Set pointcloud grid
-            robot.nx = robot_config['nx']
-            robot.ny = robot_config['ny']
-
-            # Deactivate collision between robot and object. Raycasting to extract point cloud still works.
-            for link_idx in range(pb.getNumJoints(robot.robot_id)+1):
-                pb.setCollisionFilterPair(robot.robot_id, obj_id, link_idx, -1, 0)
-
-            # Reach an initial position
-            robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
-
             robot.results_at_touch_wrld = None
 
             # Sample random position on the hemisphere
@@ -182,14 +191,15 @@ def main(args):
             # Check that the object is correctly sampled by checking that robot.stop_at_touch is not true 
             if robot.stop_at_touch:
                 print("robot.stop_at_touch is true. Object not correctly sampled.")
-                pb.removeBody(robot.robot_id)
+
+                #pb.removeBody(robot.robot_id)
                 continue
 
             # Check on camera and store tactile images
             camera = robot.get_tactile_observation()
             check_on_camera = utils_sample.check_on_camera(camera)
             if not check_on_camera:
-                pb.removeBody(robot.robot_id)
+                #pb.removeBody(robot.robot_id)
                 continue
             
             # Filter points with information about contact, make sure there are at least {num_valid_points} valid ones
@@ -197,7 +207,7 @@ def main(args):
             check_on_contact_pointcloud = utils_sample.check_on_contact_pointcloud(contact_pointcloud, num_valid_points)
             if not check_on_contact_pointcloud:
                 print(f'Point cloud shape is too small: {contact_pointcloud.shape[0]} points')
-                pb.removeBody(robot.robot_id)
+                #pb.removeBody(robot.robot_id)
                 continue
          
             # Conv2D requires [batch, channels, size1, size2] as input
@@ -280,7 +290,7 @@ def main(args):
                     # Save image
                     plt.imsave(os.path.join(image_dir, f'camera_{idx_camera}.png'), rgb_image)
 
-            pb.removeBody(robot.robot_id)
+            #pb.removeBody(robot.robot_id)
 
         pb.removeBody(obj_id)
 
@@ -309,5 +319,5 @@ if __name__=='__main__':
         "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
     )
     args = parser.parse_args()
-    
+
     main(args)
