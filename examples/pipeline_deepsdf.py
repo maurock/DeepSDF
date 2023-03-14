@@ -65,6 +65,11 @@ def main(args):
 
         # Sample folder to store tensorboard log and inferred latent code
         num_sample = data_folder.split('/')[-2]
+
+        # If we don't want to reconstruct all, only reconstruct the object with the specified number of samples
+        if (args.mode_reconstruct == 'fixed') and (int(num_sample) != (int(args.num_samples) - 1)):
+            continue
+
         sample_dir = os.path.join(test_dir, num_sample)
         if not os.path.exists(sample_dir):
             os.mkdir(sample_dir)
@@ -135,6 +140,12 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--resolution", type=int, default=50, help="Resolution of the extracted mesh"
+    )
+    parser.add_argument(
+        "--mode_reconstruct", default='all', type=str, help="Choose between 'all' or 'fixed' to choose between reconstructing for all the collected samples, or only for the specified number of samples. E.g. if args.num_samples=10 and args.mode_reconstruct='fixed', then only the file with 10 samples will be used to reconstruct the object. Otherwise, all the files will be used, therefore the script reconstruct up to 10 samples."
+    )
+    parser.add_argument(
+        "--num_samples", type=int, default=10, help="Number of samplings on the objects"
     )
     args = parser.parse_args()
 

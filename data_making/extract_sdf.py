@@ -156,8 +156,8 @@ def main(args):
     #_debug_plot(samples_dict[obj_idx])  
     np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy'), samples_dict)
 
-    #np.save(os.path.join(os.path.dirname(results.__file__), 'idx_int2str_dict.npy'), idx_str2int_dict)
-    #np.save(os.path.join(os.path.dirname(results.__file__), 'idx_str2int_dict.npy'), idx_int2str_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), 'idx_int2str_dict.npy'), idx_str2int_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), 'idx_str2int_dict.npy'), idx_int2str_dict)
 
 
 if __name__=='__main__':
