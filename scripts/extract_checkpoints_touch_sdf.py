@@ -32,7 +32,7 @@ def main(args):
         # Save pointclouds
         fig = go.Figure([
             go.Scatter3d(x=original_vertices[:, 0], y=original_vertices[:, 1],z=original_vertices[:, 2], 
-            mode='markers', marker=dict(size=2)),
+            mode='markers', marker=dict(size=1)),
             go.Scatter3d(x=pointclouds_deepsdf[:, 0], y=pointclouds_deepsdf[:, 1],z=pointclouds_deepsdf[:, 2], 
             mode='markers', marker=dict(size=2, color=signed_distance.ravel(), 
                                 cmin=np.amin(signed_distance), cmax=np.amax(signed_distance), colorscale='rdbu',
