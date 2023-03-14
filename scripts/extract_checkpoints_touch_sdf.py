@@ -29,6 +29,10 @@ def main(args):
         mesh_path = os.path.join(infer_latent_dir, str(num_sample), f'final_mesh.html')
         utils_deepsdf.save_meshplot(vertices, faces, mesh_path)
 
+        # Aave mesh as obj
+        obj_path = os.path.join(infer_latent_dir, str(num_sample), f"final_mesh.obj")
+        trimesh.exchange.export.export_mesh(trimesh.Trimesh(vertices, faces), obj_path, file_type='obj')
+
         # Save pointclouds
         fig = go.Figure([
             go.Scatter3d(x=original_vertices[:, 0], y=original_vertices[:, 1],z=original_vertices[:, 2], 
