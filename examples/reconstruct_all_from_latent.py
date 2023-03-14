@@ -30,7 +30,7 @@ def get_maximum_batch_size(latent_code_list, coords, model):
             utils_deepsdf.predict_sdf(latent, coords_batches, model)
             break
         except RuntimeError:
-            max_batch_size *= 0.8
+            max_batch_size = int(max_batch_size * 0.8)
     return max_batch_size
 
 def main(args):
