@@ -59,7 +59,7 @@ def main(args):
         num_sample = data_folder.split('/')[-2]
 
         # If we don't want to reconstruct all, only reconstruct the object with the specified number of samples
-        if (args.mode_reconstruct == 'fixed') and (int(num_sample) != (int(args.num_samples) - 1)):
+        if (args.mode_reconstruct == 'fixed') and (int(num_sample) + 1 not in args.num_samples_extraction):
             continue
 
         sample_dir = os.path.join(test_dir, num_sample)
@@ -138,10 +138,10 @@ if __name__=='__main__':
         "--resolution", type=int, default=50, help="Resolution of the extracted mesh"
     )
     parser.add_argument(
-        "--mode_reconstruct", default='all', type=str, help="Choose between 'all' or 'fixed' to choose between reconstructing for all the collected samples, or only for the specified number of samples. E.g. if args.num_samples=10 and args.mode_reconstruct='fixed', then only the file with 10 samples will be used to reconstruct the object. Otherwise, all the files will be used, therefore the script reconstruct up to 10 samples."
+        "--mode_reconstruct", default='all', type=str, choices=['fixed', 'all'], help="Select 'all' or 'fixed' to choose between reconstructing for all the collected samples, or only for a specified number of samples. E.g. with args.num_samples_extraction=10 and args.mode_reconstruct='fixed', only the file with 10 samples will be used to reconstruct the object. Otherwise, all the files will be used, therefore the script reconstruct up to 10 samples."
     )
     parser.add_argument(
-        "--num_samples", type=int, default=10, help="Number of samplings on the objects"
+        "--num_samples_extraction", type=int, default=10, nargs='+', help="Number of samples on the objects. It can be a single number or a list of numbers, e.g. 10 20 30."
     )
     parser.add_argument(
         "--no_mesh_extraction", default=False, action='store_true', help="When true, do not extract the resulting mesh as html and obj, as well as the touches point cloud."
@@ -152,10 +152,10 @@ if __name__=='__main__':
     # args.folder_touch_sdf ='14_03_234713' 
     # args.lr_scheduler = True
     # args.epochs = 3
-    # args.lr =0.00005 
-    # args.patience =100 
-    # args.resolution =20 
-    # args.num_samples = 20
+    # args.lr = 0.00005 
+    # args.patience = 100 
+    # args.resolution = 20 
+    # args.num_samples_extraction = 20
     # args.mode_reconstruct = 'fixed'
 
     main(args)

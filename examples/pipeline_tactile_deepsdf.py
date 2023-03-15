@@ -120,6 +120,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--no_mesh_extraction", default=False, action='store_true', help="When true, do not extract the resulting mesh as html and obj, as well as the touches point cloud."
     )
+    parser.add_argument(
+        "--num_samples_extraction", type=int, default=10, nargs='+', help="Number of samples on the objects. It can be a single number or a list of numbers, e.g. 10 20 30."
+    )
     args = parser.parse_args()
 
     main(args)
