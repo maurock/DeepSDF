@@ -155,9 +155,12 @@ class SDFModelMulti(torch.nn.Module):
             # logging
             writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
             # store latent codes and their gradient on tensorboard
-            tag = f"latent_code_0"
-            writer.add_histogram(tag, latent_code, global_step=epoch)
-            tag = f"grad_latent_code_0"
-            writer.add_histogram(tag, latent_code.grad, global_step=epoch)
+            #tag = f"latent_code_0"
+            #writer.add_histogram(tag, latent_code, global_step=epoch)
+            #tag = f"grad_latent_code_0"
+            #writer.add_histogram(tag, latent_code.grad, global_step=epoch)
+            if scheduler_latent._last_lr[0] < 1e-6:
+                print('Learning rate too small, stopping training')
+                break
 
         return best_latent_code
