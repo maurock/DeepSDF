@@ -6,11 +6,7 @@ from utils import utils_deepsdf
 import plotly.graph_objects as go
 import trimesh
 
-def main(args):
-    # Set directories
-    infer_latent_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf, args.folder_infer_latent)
-    touch_sdf_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf)
-
+def main(infer_latent_dir, touch_sdf_dir):
     # Load checkpoint
     checkpoint_path = os.path.join(infer_latent_dir, 'checkpoint_dict.npy')
     checkpoint_dict = np.load(checkpoint_path, allow_pickle=True).item()
@@ -55,4 +51,8 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    main(args)
+    # Set directories
+    infer_latent_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf, args.folder_infer_latent)
+    touch_sdf_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf)
+
+    main(infer_latent_dir, touch_sdf_dir)

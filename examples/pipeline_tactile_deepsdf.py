@@ -117,7 +117,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--mode_reconstruct", default='all', type=str, help="Choose between 'all' or 'fixed' to choose between reconstructing for all the collected samples, or only for the specified number of samples. E.g. if args.num_samples=10 and args.mode_reconstruct='fixed', then only the file with 10 samples will be used to reconstruct the object. Otherwise, all the files will be used, therefore the script reconstruct up to 10 samples."
     )
-    
+    parser.add_argument(
+        "--no_mesh_extraction", default=False, action='store_true', help="When true, do not extract the resulting mesh as html and obj, as well as the touches point cloud."
+    )
     args = parser.parse_args()
 
     main(args)

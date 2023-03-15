@@ -1,24 +1,16 @@
-import pybullet as p
-import pybullet_utils.bullet_client as bc
 import numpy as np
 import os
-from cri_robot_arm import CRIRobotArm
-from tactile_gym.assets import add_assets_path
-from utils import utils_sample, utils_mesh, utils_deepsdf, utils_raycasting
+from utils import utils_mesh, utils_deepsdf
 import argparse
-import data.ShapeNetCoreV2urdf as ShapeNetCore
-from model import model_sdf, model_touch
+from model import model_sdf
 import torch
 import data
-from results import runs_touch, runs_sdf, runs_touch_sdf
-import trimesh
+from results import runs_sdf, runs_touch_sdf
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 import json
-import point_cloud_utils as pcu
-import results
-import matplotlib.pyplot as plt
 from glob import glob
+from scripts import extract_checkpoints_touch_sdf
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -95,6 +87,10 @@ def main(args):
         checkpoint_dict[num_sample]['latent_code'] = best_latent_code.cpu()
         np.save(checkpoint_path, checkpoint_dict)
 
+    if not args.no_mesh_extraction:
+        extract_checkpoints_touch_sdf.main(test_dir, os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf))
+
+
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
 
@@ -147,14 +143,19 @@ if __name__=='__main__':
     parser.add_argument(
         "--num_samples", type=int, default=10, help="Number of samplings on the objects"
     )
+    parser.add_argument(
+        "--no_mesh_extraction", default=False, action='store_true', help="When true, do not extract the resulting mesh as html and obj, as well as the touches point cloud."
+    )
     args = parser.parse_args()
 
-    # args.folder_sdf ='23_01_095414'
-    # args.folder_touch_sdf ='21_02_134102' 
+    # args.folder_sdf ='13_03_202726'
+    # args.folder_touch_sdf ='14_03_234713' 
     # args.lr_scheduler = True
-    # args.epochs =5 
+    # args.epochs = 3
     # args.lr =0.00005 
     # args.patience =100 
     # args.resolution =20 
+    # args.num_samples = 20
+    # args.mode_reconstruct = 'fixed'
 
     main(args)
