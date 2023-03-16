@@ -47,7 +47,7 @@ class Trainer():
         samples_dict = np.load(samples_dict_path, allow_pickle=True).item()
 
         # instantiate model and optimisers
-        self.model = sdf_model.SDFModelMulti(self.args.num_layers, self.args.no_skip_connections).float().to(device)
+        self.model = sdf_model.SDFModelMulti(self.args.num_layers, self.args.no_skip_connections, input_dim=self.args.latent_size + 3).float().to(device)
         if self.args.pretrained:
             self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
         self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)

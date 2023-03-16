@@ -104,7 +104,7 @@ def main(args):
         for obj_idx, obj_path in enumerate(obj_paths):
 
             # Object unique index. Str to int by byte encoding
-            obj_idx_str = obj_path.split(os.sep)[-2]
+            obj_idx_str = os.sep.join(obj_path.split(os.sep)[-3:-1]) # e.g. '02958343/1a2b3c4d5e6f7g8h9i0j'
             idx_str2int_dict[obj_idx_str] = obj_idx
             idx_int2str_dict[obj_idx] = obj_idx_str
 
@@ -141,10 +141,9 @@ def main(args):
             # Comput the SDF of the random points
             sdf, _, _  = pcu.signed_distance_to_mesh(p_total, verts, faces)
 
-            samples_dict[obj_idx]['samples'] = p_total
             samples_dict[obj_idx]['sdf'] = sdf
-            samples_dict[obj_idx]['latent_class'] = np.array([obj_idx], dtype=np.int32)
-            samples_dict[obj_idx]['samples_latent_class'] = combine_sample_latent(samples_dict[obj_idx]['samples'], samples_dict[obj_idx]['latent_class'])
+            # The samples are p_total, while the latent class is [obj_idx]
+            samples_dict[obj_idx]['samples_latent_class'] = combine_sample_latent(p_total, np.array([obj_idx], dtype=np.int32))
 
             # Save the samples and SDFs at regular intervals
             if obj_idx % 100 == 0:
