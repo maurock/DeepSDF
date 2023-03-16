@@ -18,7 +18,7 @@ def main(args):
     latent_code_path = args.latent_code_path
     latent_code = torch.load(latent_code_path, map_location=device)
 
-    model = sdf_model.SDFModelMulti(num_layers=8, no_skip_connections=False).to(device)
+    model = sdf_model.SDFModelMulti(num_layers=8, no_skip_connections=False, input_dim=args.latent_size + 3).to(device)
     model.load_state_dict(torch.load(args.weights_path, map_location=device))
    
     # Extract mesh obtained with the latent code optimised at inference

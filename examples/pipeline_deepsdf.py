@@ -29,7 +29,7 @@ def main(args):
         log.write('\n\n')
 
     # Load sdf model
-    sdf_model = model_sdf.SDFModelMulti(num_layers=8, no_skip_connections=False).float().to(device)
+    sdf_model = model_sdf.SDFModelMulti(num_layers=8, no_skip_connections=False, input_dim=args.latent_size + 3).float().to(device)
     
     # Load weights for sdf model
     weights_path = os.path.join(os.path.dirname(runs_sdf.__file__), args.folder_sdf, 'weights.pt')

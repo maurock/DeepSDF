@@ -112,7 +112,7 @@ def main(args):
         log.write(json.dumps(args_dict).replace(', ', ',\n'))
         log.write('\n\n')
 
-    model = sdf_model.SDFModelMulti(num_layers=8, no_skip_connections=False).to(device)
+    model = sdf_model.SDFModelMulti(num_layers=8, no_skip_connections=False, input_dim=args.latent_size + 3).to(device)
 
     # Load weights
     weights_path = os.path.join(os.path.dirname(results.__file__), 'runs_sdf', folder, 'weights.pt')

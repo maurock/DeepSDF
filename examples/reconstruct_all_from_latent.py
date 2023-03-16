@@ -35,7 +35,7 @@ def get_maximum_batch_size(latent_code_list, coords, model):
 
 def main(args):
     folder = args.folder
-    model = sdf_model.SDFModelMulti(num_layers=args.num_layers, no_skip_connections=args.no_skip_connections).to(device)
+    model = sdf_model.SDFModelMulti(num_layers=args.num_layers, no_skip_connections=args.no_skip_connections, input_dim=args.latent_size + 3).to(device)
 
     # Load weights
     weights_path = os.path.join(os.path.dirname(results.__file__), 'runs_sdf', folder, 'weights.pt')
