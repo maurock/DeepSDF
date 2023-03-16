@@ -123,6 +123,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--num_samples_extraction", type=int, default=10, nargs='+', help="Number of samples on the objects. It can be a single number or a list of numbers, e.g. 10 20 30."
     )
+    parser.add_argument(
+        "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
+    )
     args = parser.parse_args()
 
     main(args)

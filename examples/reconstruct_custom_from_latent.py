@@ -18,7 +18,7 @@ def main(args):
     latent_code_path = args.latent_code_path
     latent_code = torch.load(latent_code_path, map_location=device)
 
-    model = sdf_model.SDFModelMulti(num_layers=8, no_skip_connections=False, input_dim=args.latent_size + 3).to(device)
+    model = sdf_model.SDFModelMulti(num_layers=8, no_skip_connections=False, input_dim=args.latent_size + 3, inner_dim=args.inner_dim).to(device)
     model.load_state_dict(torch.load(args.weights_path, map_location=device))
    
     # Extract mesh obtained with the latent code optimised at inference
@@ -52,6 +52,9 @@ if __name__ == '__main__':
     ) 
     parser.add_argument(
         "--resolution", type=int, default=50, help="Resolution of the extracted mesh"
+    )
+    parser.add_argument(
+        "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
     )
     args = parser.parse_args()
 

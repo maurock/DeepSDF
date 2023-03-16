@@ -112,7 +112,7 @@ def main(args):
         log.write(json.dumps(args_dict).replace(', ', ',\n'))
         log.write('\n\n')
 
-    model = sdf_model.SDFModelMulti(num_layers=8, no_skip_connections=False, input_dim=args.latent_size + 3).to(device)
+    model = sdf_model.SDFModelMulti(num_layers=8, no_skip_connections=False, input_dim=args.latent_size + 3, inner_dim=args.inner_dim).to(device)
 
     # Load weights
     weights_path = os.path.join(os.path.dirname(results.__file__), 'runs_sdf', folder, 'weights.pt')
@@ -205,6 +205,9 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
+    )
+    parser.add_argument(
+        "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
     )
     args = parser.parse_args()
 
