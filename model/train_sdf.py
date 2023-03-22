@@ -110,6 +110,10 @@ class Trainer():
 
     def get_loaders(self):
         data = dataset.SDFDataset(self.args.dataset)
+
+        if args.clamp:
+            data.data['sdf'] = torch.clamp(data.data['sdf'], -args.clamp_value, args.clamp_value)
+
         train_size = int(0.8 * len(data))
         val_size = len(data) - train_size
         train_data, val_data = random_split(data, [train_size, val_size])
@@ -157,8 +161,8 @@ class Trainer():
         latent_codes_batch = self.latent_codes[latent_codes_indices_batch]    # shape (batch_size, 128)
         x = torch.hstack((latent_codes_batch, coords))                  # shape (batch_size, 131)
         y = batch[1]     # (batch_size, 1)
-        if args.clamp:
-            y = torch.clamp(y, -args.clamp_value, args.clamp_value)
+        #if args.clamp:
+        #    y = torch.clamp(y, -args.clamp_value, args.clamp_value)
         return x, y, latent_codes_indices_batch, latent_codes_batch
     
     def train(self, train_loader):
@@ -175,7 +179,7 @@ class Trainer():
             self.optimizer_latent.zero_grad()
 
             x, y, latent_codes_indices_batch, latent_codes_batch = self.generate_xy(batch)
-            unique_latent_indices_batch, counts = self.get_latent_proportions(latent_codes_indices_batch)
+            #unique_latent_indices_batch, counts = self.get_latent_proportions(latent_codes_indices_batch)
 
             predictions = self.model(x)  # (batch_size, 1)
             if args.clamp:
