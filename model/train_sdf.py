@@ -185,7 +185,7 @@ class Trainer():
             if args.clamp:
                 predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
             
-            loss_value = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, x[:, :self.args.latent_size], sigma=self.args.sigma_regulariser)
+            loss_value, l1, l2 = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, x[:, :self.args.latent_size], sigma=self.args.sigma_regulariser)
             loss_value.backward()       
 
             # set gradients of latent codes that were not in the batch to 0     
@@ -229,7 +229,7 @@ class Trainer():
             if args.clamp:
                 predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
 
-            loss_value = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, latent_codes_batch, self.args.sigma_regulariser)          
+            loss_value, l1, l2 = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, latent_codes_batch, self.args.sigma_regulariser)          
             total_loss += loss_value.data.cpu().numpy()   
 
         avg_val_loss = total_loss/iterations

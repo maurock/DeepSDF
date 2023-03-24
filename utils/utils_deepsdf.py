@@ -30,7 +30,7 @@ def SDFLoss_multishape(sdf, prediction, x_latent, sigma):
     l2 = sigma**2 * torch.mean(torch.linalg.norm(x_latent, dim=1, ord=2))
     loss = l1 + l2
     #print(f'Loss prediction: {l1:.3f}, Loss regulariser: {l2:.3f}')
-    return loss
+    return loss, l1, l2
 
 
 def generate_latent_codes(latent_size, samples_dict):

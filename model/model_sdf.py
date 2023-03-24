@@ -113,8 +113,12 @@ class SDFModelMulti(torch.nn.Module):
                 if args.clamp:
                     predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
 
-                loss_value = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
+                loss_value, l1, l2 = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
                 loss_value.backward()
+
+                writer.add_scalar('Reconstruction loss', l1.data.cpu().numpy(), epoch)
+                writer.add_scalar('Latent code loss', l2.data.cpu().numpy(), epoch)
+
                 
                 #  add langevin noise (optional)
                 if args.langevin_noise > 0:
@@ -134,7 +138,7 @@ class SDFModelMulti(torch.nn.Module):
                     if args.clamp:
                         predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
 
-                    loss_value = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
+                    loss_value, l1, l2 = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
                     loss_value.backward()
 
                     return loss_value
