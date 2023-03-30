@@ -1,6 +1,7 @@
 import torch
 import meshplot as mp
 import skimage
+import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -116,8 +117,15 @@ def predict_sdf(latent, coords_batches, model):
 
 
 def extract_mesh(grad_size_axis, sdf):
+    # Extract zero-level set with marching cubes
     grid_sdf = sdf.view(grad_size_axis, grad_size_axis, grad_size_axis).detach().cpu().numpy()
     vertices, faces, normals, _ = skimage.measure.marching_cubes(grid_sdf, level=0.00)
+
+    # Rescale vertices extracted with marching cubes (https://stackoverflow.com/questions/70834443/converting-indices-in-marching-cubes-to-original-x-y-z-space-visualizing-isosu)
+    x_max = np.array([1, 1, 1])
+    x_min = np.array([-1, -1, -1])
+    vertices = vertices * ((x_max-x_min) / grad_size_axis) + x_min
+
     return vertices, faces
 
 
