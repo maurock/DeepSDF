@@ -34,17 +34,34 @@ def main(infer_latent_dir, touch_sdf_dir):
 
         # Save pointclouds
         fig = go.Figure([
-            go.Scatter3d(x=original_vertices[:, 0], y=original_vertices[:, 1],z=original_vertices[:, 2], 
-            mode='markers', marker=dict(size=0.5)),
+            go.Scatter3d(x=original_vertices[:, 0], y=original_vertices[:, 1],z=original_vertices[:, 2], mode='markers', marker=dict(size=1)),
+            go.Scatter3d(x=pointclouds_deepsdf[:, 0], y=pointclouds_deepsdf[:, 1],z=pointclouds_deepsdf[:, 2], 
+            mode='markers', marker=dict(size=2, color=signed_distance.ravel(), 
+                                cmin=np.amin(signed_distance), cmax=np.amax(signed_distance), colorscale='rdbu',
+                                showscale=True))
+            ]         
+        )
+        fig.write_html(os.path.join(infer_latent_dir, str(num_sample), f'original_touch.html'))
+
+        fig = go.Figure([
+            go.Scatter3d(x=original_vertices[:, 0], y=original_vertices[:, 1],z=original_vertices[:, 2], mode='markers', marker=dict(size=1)),
+            go.Scatter3d(x=extracted_pointcloud[:, 0], y=extracted_pointcloud[:, 1], z=extracted_pointcloud[:, 2],
+                mode='markers', marker=dict(size=1, color='red'))
+            ]         
+        )
+        fig.write_html(os.path.join(infer_latent_dir, str(num_sample), f'original_final.html'))
+
+        # Save pointclouds
+        fig = go.Figure([
             go.Scatter3d(x=pointclouds_deepsdf[:, 0], y=pointclouds_deepsdf[:, 1],z=pointclouds_deepsdf[:, 2], 
             mode='markers', marker=dict(size=2, color=signed_distance.ravel(), 
                                 cmin=np.amin(signed_distance), cmax=np.amax(signed_distance), colorscale='rdbu',
                                 showscale=True)),
             go.Scatter3d(x=extracted_pointcloud[:, 0], y=extracted_pointcloud[:, 1], z=extracted_pointcloud[:, 2],
-                mode='markers', marker=dict(size=2, color='red'))
+                mode='markers', marker=dict(size=1, color='red'))
             ]         
         )
-        fig.write_html(os.path.join(infer_latent_dir, str(num_sample), f'original_final_touch.html'))
+        fig.write_html(os.path.join(infer_latent_dir, str(num_sample), f'final_touch.html'))
 
 
 
