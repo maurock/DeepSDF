@@ -191,14 +191,14 @@ def main(args):
         # Check that the object is correctly sampled by checking that robot.stop_at_touch is not true 
         if robot.stop_at_touch:
             print("robot.stop_at_touch is true. Object not correctly sampled.")
-            pb.removeBody(robot.robot_id)
+            #pb.removeBody(robot.robot_id)
             continue
         
         # Check that the robot is touching the object and the avg colour pixel doesn't exceed a threshold
         camera = robot.get_tactile_observation()
         check_on_camera = utils_sample.check_on_camera(camera)
         if not check_on_camera:
-            pb.removeBody(robot.robot_id)
+            #pb.removeBody(robot.robot_id)
             continue
 
         # Check that the robot is touching the object and not other objects by ensuring that there is at least one valid point
@@ -206,7 +206,7 @@ def main(args):
         check_on_contact_pointcloud = utils_sample.check_on_contact_pointcloud(contact_pointcloud, 1)
         if not check_on_contact_pointcloud:
             print(f'Point cloud shape is too small: {contact_pointcloud.shape[0]} points')
-            pb.removeBody(robot.robot_id)
+            #pb.removeBody(robot.robot_id)
             continue
         
         # Preprocess and store tactile image
@@ -354,7 +354,7 @@ if __name__=='__main__':
     # args.show_gui =True
     # args.num_samples = 20
     # args.folder_touch ='14_03_2327' 
-    # args.obj_folder ='02876657/3d758f0c11f01e3e3ddcd369aa279f39' 
+    # args.obj_folder ='02942699/2c0b4e318766e01723cd81bf29b64a1' 
     # args.augment_points=True
 
     _ = main(args)
