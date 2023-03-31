@@ -50,6 +50,14 @@ def main(args):
     checkpoint_dict = dict()
     checkpoint_path = os.path.join(test_dir, 'checkpoint_dict.npy')
 
+    # Get the average optimised latent code
+    results_sdf_path = os.path.join(os.path.dirname(runs_sdf.__file__), args.folder_sdf, 'results.npy')
+    results_sdf = np.load(results_sdf_path, allow_pickle=True).item()
+    latent_code = results_sdf['train']['best_latent_codes']
+    # Get average latent code (across dimensions)
+    latent_code = torch.mean(torch.tensor(latent_code, dtype=torch.float32), dim=0).to(device)
+    latent_code.requires_grad = True
+
     data_folders = glob(os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf, 'data', '*/'))
 
     # Infer latent code
@@ -73,7 +81,7 @@ def main(args):
         sdf_gt = points_sdf[1]
 
         # Infer latent code
-        best_latent_code = sdf_model.infer_latent_code(args, pointclouds_deepsdf, sdf_gt, writer)
+        best_latent_code = sdf_model.infer_latent_code(args, pointclouds_deepsdf, sdf_gt, writer, latent_code)
 
         # Extract mesh obtained with the latent code optimised at inference
         sdf = utils_deepsdf.predict_sdf(best_latent_code, coords_batches, sdf_model)
@@ -151,14 +159,16 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    # args.folder_sdf ='13_03_202726'
-    # args.folder_touch_sdf ='14_03_234713' 
+    # args.folder_sdf ='24_03_190521'
+    # args.folder_touch_sdf ='31_03_121840' 
     # args.lr_scheduler = True
-    # args.epochs = 3
-    # args.lr = 0.00005 
+    # args.epochs = 100
+    # args.lr = 0.0005 
     # args.patience = 100 
     # args.resolution = 20 
-    # args.num_samples_extraction = 20
+    # args.num_samples_extraction = [20]
     # args.mode_reconstruct = 'fixed'
+    #args.langevin_noise = 0.0001
+    
 
     main(args)
