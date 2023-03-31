@@ -150,31 +150,32 @@ def main(args):
     # For debugging render scene
     time_str = datetime.now().strftime('%d_%m_%H%M%S')
 
+    robot = CRIRobotArm(
+        pb,
+        workframe_pos = robot_config['workframe_pos'],
+        workframe_rpy = robot_config['workframe_rpy'],
+        image_size = [256, 256],
+        arm_type = "ur5",
+        t_s_type = robot_config['t_s_type'],
+        t_s_core = robot_config['t_s_core'],
+        t_s_name = robot_config['t_s_name'],
+        t_s_dynamics = robot_config['t_s_dynamics'],
+        show_gui = args.show_gui,
+        show_tactile = args.show_tactile
+    )
+    
+    # Set pointcloud grid
+    robot.nx = robot_config['nx']
+    robot.ny = robot_config['ny']
+
+    # Deactivate collision between robot and object. Raycasting to extract point cloud still works.
+    for link_idx in range(pb.getNumJoints(robot.robot_id)+1):
+        pb.setCollisionFilterPair(robot.robot_id, obj_id, link_idx, -1, 0)
+
     ##############################################################################################
     # During the first stage, we collect tactile images, map them to point clouds, and store them.
-    for num_sample in range(args.num_samples):
-
-        robot = CRIRobotArm(
-            pb,
-            workframe_pos = robot_config['workframe_pos'],
-            workframe_rpy = robot_config['workframe_rpy'],
-            image_size = [256, 256],
-            arm_type = "ur5",
-            t_s_type = robot_config['t_s_type'],
-            t_s_core = robot_config['t_s_core'],
-            t_s_name = robot_config['t_s_name'],
-            t_s_dynamics = robot_config['t_s_dynamics'],
-            show_gui = args.show_gui,
-            show_tactile = args.show_tactile
-        )
-        
-        # Set pointcloud grid
-        robot.nx = robot_config['nx']
-        robot.ny = robot_config['ny']
-
-        # Deactivate collision between robot and object. Raycasting to extract point cloud still works.
-        for link_idx in range(pb.getNumJoints(robot.robot_id)+1):
-            pb.setCollisionFilterPair(robot.robot_id, obj_id, link_idx, -1, 0)
+    num_sample = 0
+    while True:
 
         robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
         
@@ -305,9 +306,10 @@ def main(args):
         # Store tactile image
         np.save(os.path.join(points_sdf_dir, f'tactile_img.npy'), camera)
 
-        pb.removeBody(robot.robot_id)
-    
-    return test_dir
+        # pb.removeBody(robot.robot_id)
+        num_sample += 1
+        if num_sample==args.num_samples:
+            return test_dir
 
 
 if __name__=='__main__':
@@ -350,9 +352,9 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     # args.show_gui =True
-    # args.num_samples = 3
-    # args.folder_touch ='14_02_1521' 
-    # args.obj_folder ='lamp/c3277019e57251cfb784faac204319d9' 
+    # args.num_samples = 20
+    # args.folder_touch ='14_03_2327' 
+    # args.obj_folder ='02876657/3d758f0c11f01e3e3ddcd369aa279f39' 
     # args.augment_points=True
 
     _ = main(args)
