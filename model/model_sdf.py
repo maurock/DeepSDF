@@ -3,6 +3,7 @@ import torch
 import copy
 from tqdm import tqdm
 from utils import utils_deepsdf
+import numpy as np
 """
 Model based on the paper 'DeepSDF'
 """
@@ -30,7 +31,7 @@ class SDFModel(torch.nn.Module):
 
 
 class SDFModelMulti(torch.nn.Module):
-    def __init__(self, num_layers, no_skip_connections, input_dim=131, inner_dim=512, output_dim=1):
+    def __init__(self, num_layers, no_skip_connections, input_dim=131, inner_dim=512, output_dim=1, positional_encoding_embeddings=0):
         """
         SDF model for multiple shapes.
         Args:
@@ -49,10 +50,37 @@ class SDFModelMulti(torch.nn.Module):
         self.net = nn.Sequential(*layers)
         self.final_layer = nn.Sequential(nn.Linear(inner_dim, output_dim), nn.Tanh())
         self.skip_layer = nn.Sequential(nn.Linear(inner_dim, inner_dim - self.skip_tensor_dim), nn.ReLU())
+        self.positional_encoding_embeddings = positional_encoding_embeddings
 
+    # Apply positional encoding to increase the dimensionality of the input
+    def positional_encoding(self, points):
+        embeddings = []
+        embeddings.append(torch.sin(np.pi * points))
+        embeddings.append(torch.cos(np.pi * points))
+        for i in range(1, self.positional_encoding_embeddings):
+            embeddings.append(torch.sin(np.pi * 2 * i * points))
+            embeddings.append(torch.cos(np.pi * 2 * i * points))
+        embeddings.append(points)
+        embeddings = torch.cat(embeddings, dim=-1)
+        return embeddings
 
     def forward(self, x):
+        """
+        Forward pass
+        Args:
+            x: input tensor of shape (batch_size, 131). It contains a stacked tensor [latent_code, samples].
+        Returns:
+            sdf: output tensor of shape (batch_size, 1)
+        """
+        # Add positional encoding
+        if self.positional_encoding_embeddings > 0:
+            # x[:, -3:] contains the samples
+            embeddings = self.positional_encoding(x[:, -3:]).to(device)
+            x = torch.cat((x[:, :-3], embeddings), dim=-1)
+        
         input_data = x.clone().detach()
+
+        # Forward pass
         if self.skip_connections and self.num_layers >= 8:
             for i in range(3):
                 x = self.net[i](x)

@@ -46,13 +46,22 @@ class Trainer():
         samples_dict_path = os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy')
         samples_dict = np.load(samples_dict_path, allow_pickle=True).item()
 
+        # calculate number of coordinates to add to the latent code
+        dim_coords = 3 if self.args.positional_encoding_embeddings == 0 else 3 + 6 * self.args.positional_encoding_embeddings
+
         # instantiate model and optimisers
-        self.model = sdf_model.SDFModelMulti(self.args.num_layers, self.args.no_skip_connections, input_dim=self.args.latent_size + 3, inner_dim=self.args.inner_dim).float().to(device)
+        self.model = sdf_model.SDFModelMulti(
+                self.args.num_layers, 
+                self.args.no_skip_connections, 
+                input_dim=self.args.latent_size + dim_coords, 
+                inner_dim=self.args.inner_dim,
+                positional_encoding_embeddings=self.args.positional_encoding_embeddings
+            ).float().to(device)
         if self.args.pretrained:
             self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
         self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
         # generate a unique random latent code for each shape
-        self.latent_codes, self.dict_latent_codes = utils_deepsdf.generate_latent_codes(self.args.latent_size, samples_dict)
+        self.latent_codes = utils_deepsdf.generate_latent_codes(self.args.latent_size, samples_dict)
         self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
 
         if self.args.lr_scheduler:
@@ -88,6 +97,8 @@ class Trainer():
                     best_loss = np.copy(avg_val_loss)
                     best_weights = self.model.state_dict()
                     best_latent_codes = self.latent_codes.detach().cpu().numpy()
+                    optimizer_model_state = self.optimizer_model.state_dict()
+                    optimizer_latent_state = self.optimizer_latent.state_dict()
 
                 if self.args.lr_scheduler:
                     self.scheduler_model.step(avg_val_loss)
@@ -103,6 +114,8 @@ class Trainer():
             
             np.save(os.path.join(self.run_dir, 'results.npy'), self.results)
             torch.save(best_weights, os.path.join(self.run_dir, 'weights.pt'))
+            torch.save(optimizer_model_state, os.path.join(self.run_dir, 'optimizer_model_state.pt'))
+            torch.save(optimizer_latent_state, os.path.join(self.run_dir, 'optimizer_latent_state.pt'))
             self.results['train']['best_latent_codes'] = best_latent_codes
             
         end = time.time()
@@ -152,18 +165,19 @@ class Trainer():
             - latent_batch_codes: all latent codes per sample, shape (batch_size, latent_size)
         Return ground truth as y, and the latent codes for this batch.
         """
-        latent_classes_batch = batch[0][:, 0].view(-1, 1)               # shape (batch_size, 1)
+        latent_classes_batch = batch[0][:, 0].view(-1, 1).to(torch.long)               # shape (batch_size, 1)
         coords = batch[0][:, 1:]                                  # shape (batch_size, 3)
-        latent_codes_indices_batch = torch.tensor(
-                [self.dict_latent_codes[int(latent_class)] for latent_class in latent_classes_batch],
-                dtype=torch.int64
-            ).to(device)
-        latent_codes_batch = self.latent_codes[latent_codes_indices_batch]    # shape (batch_size, 128)
+        # latent_codes_indices_batch = torch.tensor(
+        #         [self.dict_latent_codes[int(latent_class)] for latent_class in latent_classes_batch],
+        #         dtype=torch.int64
+        #     ).to(device)
+        latent_codes_batch = self.latent_codes[latent_classes_batch.view(-1)]    # shape (batch_size, 128)
+
         x = torch.hstack((latent_codes_batch, coords))                  # shape (batch_size, 131)
         y = batch[1]     # (batch_size, 1)
         #if args.clamp:
         #    y = torch.clamp(y, -args.clamp_value, args.clamp_value)
-        return x, y, latent_codes_indices_batch, latent_codes_batch
+        return x, y, latent_classes_batch.view(-1), latent_codes_batch
     
     def train(self, train_loader):
         total_loss = 0.0
@@ -302,6 +316,9 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
+    )
+    parser.add_argument(
+        "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
     )
     args = parser.parse_args()
 
