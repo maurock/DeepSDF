@@ -63,10 +63,20 @@ class Trainer():
         self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
         
         if self.args.pretrained:
+            # load pretrained weights
             self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
-            self.optimizer_model.load_state_dict(torch.load(self.args.pretrain_optim_model, map_location=device))
-            self.optimizer_model.load_dtate_dict(torch.load(self.args.pretrain_optim_latent, map_location=device))
 
+            # load pretrained optimisers
+            self.optimizer_model.load_state_dict(torch.load(self.args.pretrain_optim_model, map_location=device))
+            # retrieve latent codes from results.npy file
+            results_path = self.args.pretrain_optim_model.split(os.sep)
+            results_path[-1] = 'results.npy'
+            results_path = os.sep.join(results_path)
+            # load latent codes from results.npy file
+            results_latent_codes = np.load(results_path, allow_pickle=True).item()
+            self.latent_codes = torch.tensor(results_latent_codes['train']['best_latent_codes']).float().to(device)
+            self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
+            self.optimizer_latent.load_state_dict(torch.load(self.args.pretrain_optim_latent, map_location=device))
 
         if self.args.lr_scheduler:
             self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.0001, threshold_mode='rel')
@@ -331,6 +341,18 @@ if __name__=='__main__':
         "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
     )
     args = parser.parse_args()
+
+    # args.pretrained = True
+    # args.pretrain_weights = '/Users/ri21540/Documents/PhD/Code/DeepSDF/results/runs_sdf/03_04_010720/weights.pt'
+    # args.pretrain_optim_model = '/Users/ri21540/Documents/PhD/Code/DeepSDF/results/runs_sdf/03_04_010720/optimizer_model_state.pt'
+    # args.pretrain_optim_latent = '/Users/ri21540/Documents/PhD/Code/DeepSDF/results/runs_sdf/03_04_010720/optimizer_latent_state.pt'
+    # args.positional_encoding_embeddings = 5
+    # args.lr_model = 0.00005
+    # args.lr_latent = 0.004
+    # args.lr_scheduler = True
+    # args.batch_size = 20480
+    # args.lr_multiplier = 0.8
+    # args.patience = 5
 
     trainer = Trainer(args)
     trainer()
