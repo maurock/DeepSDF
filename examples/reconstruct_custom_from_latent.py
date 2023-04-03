@@ -41,7 +41,12 @@ def main(args):
 
     latent_size = latent_code.shape[0]
 
-    model = sdf_model.SDFModelMulti(num_layers=8, no_skip_connections=False, input_dim=latent_size + 3, inner_dim=args.inner_dim).to(device)
+    model = sdf_model.SDFModelMulti(
+        num_layers=8, 
+        no_skip_connections=False, 
+        latent_size=latent_size, 
+        inner_dim=args.inner_dim,
+        positional_encoding_embeddings=args.positional_encoding_embeddings).to(device)
     model.load_state_dict(torch.load(weights, map_location=device))
    
     # Extract mesh obtained with the latent code optimised at inference
@@ -88,6 +93,9 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
+    )
+    parser.add_argument(
+        "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
     )
     args = parser.parse_args()
 

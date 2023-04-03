@@ -31,7 +31,7 @@ class SDFModel(torch.nn.Module):
 
 
 class SDFModelMulti(torch.nn.Module):
-    def __init__(self, num_layers, no_skip_connections, input_dim=131, inner_dim=512, output_dim=1, positional_encoding_embeddings=0):
+    def __init__(self, num_layers, no_skip_connections, positional_encoding_embeddings, latent_size, inner_dim=512, output_dim=1):
         """
         SDF model for multiple shapes.
         Args:
@@ -39,10 +39,18 @@ class SDFModelMulti(torch.nn.Module):
         """
         super(SDFModelMulti, self).__init__()
 
-        self.num_layers = num_layers
+        # Num layers of the entire network
+        self.num_layers = num_layers 
+        # If skip connections, add the input to one of the inner layers
         self.skip_connections = not no_skip_connections
+        # Dimension of the input space: when using positional encoding, the input size is 3 + 6 * positional_encoding_embeddings
+        dim_coords = 3 if self.args.positional_encoding_embeddings == 0 else 3 + 6 * positional_encoding_embeddings
+        input_dim = latent_size + dim_coords
+        # Copy input size to calculate the skip tensor size
         self.skip_tensor_dim = copy.copy(input_dim)
+        # Compute how many layers are not Sequential
         num_extra_layers = 2 if (self.skip_connections and self.num_layers >= 8) else 1
+        # Add sequential layers
         layers = []
         for _ in range(num_layers - num_extra_layers):
             layers.append(nn.Sequential(nn.utils.weight_norm(nn.Linear(input_dim, inner_dim)), nn.ReLU()))

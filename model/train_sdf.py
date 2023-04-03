@@ -46,16 +46,13 @@ class Trainer():
         samples_dict_path = os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy')
         samples_dict = np.load(samples_dict_path, allow_pickle=True).item()
 
-        # calculate number of coordinates to add to the latent code
-        dim_coords = 3 if self.args.positional_encoding_embeddings == 0 else 3 + 6 * self.args.positional_encoding_embeddings
-
         # instantiate model and optimisers
         self.model = sdf_model.SDFModelMulti(
                 self.args.num_layers, 
                 self.args.no_skip_connections, 
-                input_dim=self.args.latent_size + dim_coords, 
                 inner_dim=self.args.inner_dim,
-                positional_encoding_embeddings=self.args.positional_encoding_embeddings
+                positional_encoding_embeddings=self.args.positional_encoding_embeddings,
+                latent_size=self.args.latent_size
             ).float().to(device)
         if self.args.pretrained:
             self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
