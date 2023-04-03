@@ -54,12 +54,19 @@ class Trainer():
                 positional_encoding_embeddings=self.args.positional_encoding_embeddings,
                 latent_size=self.args.latent_size
             ).float().to(device)
-        if self.args.pretrained:
-            self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
+
+        # define optimisers
         self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
+        
         # generate a unique random latent code for each shape
         self.latent_codes = utils_deepsdf.generate_latent_codes(self.args.latent_size, samples_dict)
         self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
+        
+        if self.args.pretrained:
+            self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
+            self.optimizer_model.load_state_dict(torch.load(self.args.pretrain_optim_model, map_location=device))
+            self.optimizer_model.load_dtate_dict(torch.load(self.args.pretrain_optim_latent, map_location=device))
+
 
         if self.args.lr_scheduler:
             self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.0001, threshold_mode='rel')
@@ -310,6 +317,12 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--pretrain_weights", type=str, default='', help="Path to pretrain weights"
+    )
+    parser.add_argument(
+        "--pretrain_optim_model", type=str, default='', help="Path to pretrain weights"
+    )
+    parser.add_argument(
+        "--pretrain_optim_latent", type=str, default='', help="Path to pretrain weights"
     )
     parser.add_argument(
         "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
