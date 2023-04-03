@@ -126,6 +126,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
     )
+    parser.add_argument(
+        "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
+    )
     args = parser.parse_args()
 
     main(args)
