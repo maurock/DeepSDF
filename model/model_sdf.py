@@ -44,7 +44,7 @@ class SDFModelMulti(torch.nn.Module):
         # If skip connections, add the input to one of the inner layers
         self.skip_connections = not no_skip_connections
         # Dimension of the input space: when using positional encoding, the input size is 3 + 6 * positional_encoding_embeddings
-        dim_coords = 3 if self.args.positional_encoding_embeddings == 0 else 3 + 6 * positional_encoding_embeddings
+        dim_coords = 3 if positional_encoding_embeddings == 0 else 3 + 6 * positional_encoding_embeddings
         input_dim = latent_size + dim_coords
         # Copy input size to calculate the skip tensor size
         self.skip_tensor_dim = copy.copy(input_dim)
