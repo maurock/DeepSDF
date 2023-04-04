@@ -243,6 +243,8 @@ class Trainer():
 
     def validate(self, val_loader):
         total_loss = 0.0
+        total_loss_rec = 0.0
+        total_loss_latent = 0.0
         iterations = 0.0
         self.model.eval()
 
@@ -257,12 +259,18 @@ class Trainer():
             if args.clamp:
                 predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
 
-            loss_value, l1, l2 = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, latent_codes_batch, self.args.sigma_regulariser)          
+            loss_value, loss_rec, loss_latent = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, latent_codes_batch, self.args.sigma_regulariser)          
             total_loss += loss_value.data.cpu().numpy()   
+            total_loss_rec += loss_rec.data.cpu().numpy() 
+            total_loss_latent += loss_latent.data.cpu().numpy()
 
         avg_val_loss = total_loss/iterations
+        avg_loss_rec = total_loss_rec/iterations
+        avg_loss_latent = total_loss_latent/iterations
         print(f'Validation: loss {avg_val_loss}')
         self.writer.add_scalar('Validation loss', avg_val_loss, self.epoch)
+        self.writer.add_scalar('Reconstruction loss', avg_loss_rec, self.epoch)
+        self.writer.add_scalar('Latent code loss', avg_loss_latent, self.epoch)
 
         return avg_val_loss
 
