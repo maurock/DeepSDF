@@ -183,8 +183,8 @@ class SDFModelMulti(torch.nn.Module):
 
                 loss_value = closure()
 
-            if loss_value.detach().cpu().item() < best_loss:
-                best_loss = loss_value.detach().cpu().item()
+            if l1.detach().cpu().item() < best_loss:
+                best_loss = l1.detach().cpu().item()
                 best_latent_code = latent_code.clone()
 
             # step scheduler and store on tensorboard (optional)
