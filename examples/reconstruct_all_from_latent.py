@@ -35,7 +35,6 @@ def get_maximum_batch_size(latent_code_list, coords, model):
 
 def main(args):
     folder = args.folder
-    model = sdf_model.SDFModelMulti(num_layers=args.num_layers, no_skip_connections=args.no_skip_connections, input_dim=args.latent_size + 3, inner_dim=args.inner_dim).to(device)
 
     # Load weights
     weights_path = os.path.join(os.path.dirname(results.__file__), 'runs_sdf', folder, 'weights.pt')
@@ -46,6 +45,13 @@ def main(args):
     results_dict = np.load(results_dict_path, allow_pickle=True).item()
 
     latent_codes_list = get_latent_codes_training(results_dict)
+
+    model = sdf_model.SDFModelMulti(
+        num_layers=args.num_layers,
+        no_skip_connections=args.no_skip_connections,
+        inner_dim=args.inner_dim,
+        positional_encoding_embeddings=args.positional_encoding_embeddings,
+        latent_size=latent_codes_list[0].shape[0]).to(device)
   
     coords, grad_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
     coords = coords.clone().to(device)
@@ -90,6 +96,9 @@ if __name__=='__main__':
     )   
     parser.add_argument(
         "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
+    )
+    parser.add_argument(
+        "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
     )
     args = parser.parse_args()
 

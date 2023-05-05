@@ -44,13 +44,13 @@ def generate_latent_codes(latent_size, samples_dict):
                                         the 0-th latent code.
     """
     latent_codes = torch.tensor([], dtype=torch.float32).reshape(0, latent_size).to(device)
-    dict_latent_codes = dict()
+    #dict_latent_codes = dict()
     for i, obj_idx in enumerate(list(samples_dict.keys())):
-        dict_latent_codes[obj_idx] = i
+        #dict_latent_codes[obj_idx] = i
         latent_code = torch.normal(0, 0.01, size = (1, latent_size), dtype=torch.float32).to(device)
         latent_codes = torch.vstack((latent_codes, latent_code))
     latent_codes.requires_grad_(True)
-    return latent_codes, dict_latent_codes
+    return latent_codes #, dict_latent_codes
 
 
 def _weight_histograms_linear(writer, step, weights, name_layer):
