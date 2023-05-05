@@ -181,11 +181,10 @@ def main(args):
         
         robot.results_at_touch_wrld = None
 
-        # Sample random position on the hemisphere
         hemisphere_random_pos, angles = utils_sample.sample_sphere(ray_hemisphere)
 
         # Move robot to random position on the hemisphere
-        robot_sphere_wrld = np.array(initial_obj_pos) + np.array(hemisphere_random_pos)
+        robot_sphere_wrld = mesh.bounding_box.centroid + np.array(hemisphere_random_pos)
         robot = utils_sample.robot_touch_spherical(robot, robot_sphere_wrld, initial_obj_pos, angles)
 
         # Check that the object is correctly sampled by checking that robot.stop_at_touch is not true 
@@ -354,7 +353,7 @@ if __name__=='__main__':
     # args.show_gui =True
     # args.num_samples = 20
     # args.folder_touch ='14_03_2327' 
-    # args.obj_folder ='02942699/2c0b4e318766e01723cd81bf29b64a1' 
+    # args.obj_folder ='real_mesh/bottle' 
     # args.augment_points=True
 
     _ = main(args)

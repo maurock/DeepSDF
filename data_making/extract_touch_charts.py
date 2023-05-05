@@ -168,7 +168,7 @@ def main(args):
         # hemisphere_array = np.array([]).reshape(0, 3)
         # for _ in range(1000):
         #     hemisphere_random_pos, angles = utils_sample.sample_hemisphere(ray_hemisphere)
-        #     sphere_wrld = np.array(initial_obj_pos) + np.array(hemisphere_random_pos)
+        #     sphere_wrld = mesh.bounding_box.centroid + np.array(hemisphere_random_pos)
         #     hemisphere_array = np.vstack((hemisphere_array, sphere_wrld))
         # utils_mesh.debug_draw_vertices_on_pb(hemisphere_array, size=5)
         # Debug hemisphere ##################
@@ -185,7 +185,7 @@ def main(args):
             hemisphere_random_pos, angles = utils_sample.sample_sphere(ray_hemisphere)
 
             # Move robot to random position on the hemisphere
-            robot_sphere_wrld = np.array(initial_obj_pos) + np.array(hemisphere_random_pos)
+            robot_sphere_wrld = mesh.bounding_box.centroid + np.array(hemisphere_random_pos)
             robot = utils_sample.robot_touch_spherical(robot, robot_sphere_wrld, initial_obj_pos, angles)
             
             # Check that the object is correctly sampled by checking that robot.stop_at_touch is not true 

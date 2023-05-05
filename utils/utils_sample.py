@@ -142,7 +142,7 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
         hemisphere_random_pos, angles = sample_sphere(ray_hemisphere)
 
         # Move robot to random position on the hemisphere
-        robot_sphere_wrld = np.array(initial_pos) + np.array(hemisphere_random_pos)
+        robot_sphere_wrld = mesh.bounding_box.centroid + np.array(hemisphere_random_pos)
         robot = robot_touch_spherical(robot, robot_sphere_wrld, initial_pos, angles)
 
         # If not contact points, continue. 
