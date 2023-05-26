@@ -114,7 +114,8 @@ def main(args):
         reconstructed_pointcloud, _ = trimesh.sample.sample_surface(reconstructed_mesh, 10000)
         
         # Get chamfer distance
-        cd = chamfer_distance(original_pointcloud, reconstructed_pointcloud)[0]
+        cd = chamfer_distance(torch.tensor([original_pointcloud], dtype=torch.float32),
+                              torch.tensor([reconstructed_pointcloud], dtype=torch.float32))[0]
 
         # Save results in a txt file
         results_path = os.path.join(test_dir, 'chamfer_distance.txt')
@@ -188,9 +189,9 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     # args.folder_sdf ='24_03_190521'
-    # args.folder_touch_sdf ='31_03_121840' 
+    # args.folder_touch_sdf ='26_05_123033' 
     # args.lr_scheduler = True
-    # args.epochs = 100
+    # args.epochs = 5
     # args.lr = 0.0005 
     # args.patience = 100 
     # args.resolution = 20 
