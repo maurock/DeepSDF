@@ -1,12 +1,11 @@
 import pybullet as p
 import pybullet_utils.bullet_client as bc
-import time
 import numpy as np
 import pkgutil
 import os
 from cri_robot_arm import CRIRobotArm
 from tactile_gym.assets import add_assets_path
-from utils import utils_sample, utils_mesh, utils_deepsdf, utils_raycasting
+from utils import utils_sample, utils_mesh, utils_raycasting
 import argparse
 import data.ShapeNetCoreV2urdf as ShapeNetCore
 from model import model_sdf, model_touch
@@ -20,6 +19,7 @@ import json
 import point_cloud_utils as pcu
 import results
 import matplotlib.pyplot as plt
+import random
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -27,7 +27,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #@profile
 def main(args):
     # Logging
-    test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), datetime.now().strftime('%d_%m_%H%M%S'))
+    test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), datetime.now().strftime('%d_%m_%H%M%S_'), str(random.randint(0, 10000)))
     if not os.path.exists(test_dir):
         os.mkdir(test_dir)
     log_path = os.path.join(test_dir, 'settings.txt')
