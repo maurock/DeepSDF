@@ -11,10 +11,13 @@ from datetime import datetime
 import json
 from glob import glob
 from scripts import extract_checkpoints_touch_sdf
+import trimesh
+from pytorch3d.loss import chamfer_distance
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 """Second step of the pipeline: predict the object shape from the touch data"""
+
 #@profile
 def main(args):
     # Logging
@@ -100,9 +103,26 @@ def main(args):
         checkpoint_dict[num_sample]['latent_code'] = best_latent_code.cpu()
         np.save(checkpoint_path, checkpoint_dict)
 
+        # Compute Chamfer Distance
+        # Get original and reconstructed meshes
+        original_mesh_path = os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf, 'mesh_deepsdf.obj')
+        original_mesh = trimesh.load(original_mesh_path)
+        reconstructed_mesh = trimesh.Trimesh(vertices_deepsdf, faces_deepsdf)
+
+        # Sample point cloud from both meshes
+        original_pointcloud, _ = trimesh.sample.sample_surface(original_mesh, 10000)
+        reconstructed_pointcloud, _ = trimesh.sample.sample_surface(reconstructed_mesh, 10000)
+        
+        # Get chamfer distance
+        cd = chamfer_distance(original_pointcloud, reconstructed_pointcloud)[0]
+
+        # Save results in a txt file
+        results_path = os.path.join(test_dir, 'chamfer_distance.txt')
+        with open(results_path, 'a') as log:
+            log.write('Sample: {}, CD: {}\n'.format(num_sample, cd))
+
     if not args.no_mesh_extraction:
         extract_checkpoints_touch_sdf.main(test_dir, os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf))
-
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
@@ -176,7 +196,6 @@ if __name__=='__main__':
     # args.resolution = 20 
     # args.num_samples_extraction = [20]
     # args.mode_reconstruct = 'fixed'
-    #args.langevin_noise = 0.0001
-    
+    # args.langevin_noise = 0.0
 
     main(args)
