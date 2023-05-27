@@ -264,13 +264,14 @@ def get_ray_hemisphere(mesh):
     return ray_hemisphere
 
 
-def sample_along_normals(std_dev, pointcloud, normals, N):
+def sample_along_normals(std_dev, pointcloud, normals, N, augment_multiplier_out):
     """It samples N points along the normal in both directions.
     Args:
         std_dev: standard deviation of the normal distribution
         pointcloud: pointcloud, np.array (n, 3)
         normals: normals, np.array (n, 3)
         N: number of points to sample along the normal
+        multiplier_augment_out: multiplier to augment the positive distances
     Returns:
         sampled_points: np.array (n * N, 3)
         signed_distance: np.array, standard deviation
@@ -281,6 +282,10 @@ def sample_along_normals(std_dev, pointcloud, normals, N):
 
     # Signed distance as sampled standard deviation
     signed_distance = np.random.normal(loc=0, scale=std_dev, size=(pointcloud_tile.shape[0], 1))
+
+    # If the distance is positive, increase it by a multiplier sampled randomly between 1 and a preferred maximum value.
+    # This increases positive signed distances and hopefully increases the model robustness.
+    signed_distance[signed_distance>0] = signed_distance[signed_distance>0] * np.random.uniform(low=1.0, high=augment_multiplier_out, size=(signed_distance[signed_distance>0].shape[0], 1)) 
 
     # Sample points along normals
     samples_along_normals_global = signed_distance * normals_tile + pointcloud_tile
