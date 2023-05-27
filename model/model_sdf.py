@@ -112,9 +112,10 @@ class SDFModelMulti(torch.nn.Module):
         return latent_code
 
 
-    def infer_latent_code(self, args, coords, sdf_gt, writer, latent_code):
+    def infer_latent_code(self, args, coords, sdf_gt, writer, latent_code_initial):
         """Infer latent code from coordinates, their sdf, and a trained model."""
 
+        latent_code = latent_code_initial.clone().detach().requires_grad_(True)
         # Initialise latent code and optimiser
         #latent_code = self.initialise_latent_code(args.latent_size)
         
