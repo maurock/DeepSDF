@@ -285,7 +285,7 @@ def sample_along_normals(std_dev, pointcloud, normals, N, augment_multiplier_out
 
     # If the distance is positive, increase it by a multiplier sampled randomly between 1 and a preferred maximum value.
     # This increases positive signed distances and hopefully increases the model robustness.
-    signed_distance[signed_distance>0] = signed_distance[signed_distance>0] * np.random.uniform(low=1.0, high=augment_multiplier_out, size=(signed_distance[signed_distance>0].shape[0], 1)) 
+    signed_distance[np.where(signed_distance>0)[0]] *= np.random.uniform(low=1.0, high=augment_multiplier_out, size=(signed_distance[signed_distance>0].shape[0], 1)) 
 
     # Sample points along normals
     samples_along_normals_global = signed_distance * normals_tile + pointcloud_tile
