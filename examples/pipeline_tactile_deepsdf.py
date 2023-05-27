@@ -62,13 +62,13 @@ if __name__=='__main__':
         "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
     )
     parser.add_argument(
-        "--augment_points", default=False, action='store_true', help="Estimate point cloud normals and sample points along them (negative and positive direction)"
-    )
-    parser.add_argument(
         "--augment_points_std", default=0.002, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
     )
     parser.add_argument(
-        "--augment_points_num", default=5, type=int, help="Number of points to sample along normals (if augment_points is True)"
+        "--augment_points_num", default=5, type=int, help="Number of points to sample along normals"
+    )
+    parser.add_argument(
+        "--augment_multiplier_out", default=1, type=int, help="multiplier to augment the positive distances"
     )
     parser.add_argument(
         "--obj_folder", type=str, default='', help="Object to reconstruct as obj_class/obj_category, e.g. 02818832/1aa55867200ea789465e08d496c0420f"

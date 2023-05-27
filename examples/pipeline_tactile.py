@@ -239,7 +239,7 @@ def main(args):
         sdf_gt = torch.vstack((sdf_gt, torch.zeros(size=(pointcloud_deepsdf.shape[0], 1)).to(device)))
 
         # Add randomly sampled points from normals
-        if args.augment_points:
+        if args.augment_points_num > 0:
             # The sensor direction is given by the vectors pointing from the pointcloud to the TCP position
             # We need to first convert the TCP position to DeepSDF scale
             rpy_wrld = np.array(robot.arm.get_current_TCP_pos_vel_worldframe()[1]) # TCP orientation
@@ -254,7 +254,9 @@ def main(args):
 
             # Sample along normals and return points and distances
             pointcloud_along_norm_np, signed_distance_np = utils_sample.sample_along_normals(
-                std_dev=args.augment_points_std, pointcloud=pointcloud_deepsdf_np, normals=n, N=args.augment_points_num)
+                std_dev=args.augment_points_std, pointcloud=pointcloud_deepsdf_np, normals=n, N=args.augment_points_num,
+                augment_multiplier_out=args.augment_multiplier_out)
+
             pointcloud_along_norm = torch.from_numpy(pointcloud_along_norm_np).float().to(device)
             sdf_normal_gt = torch.from_numpy(signed_distance_np).float().to(device)
 
@@ -337,13 +339,13 @@ if __name__=='__main__':
         "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
     )
     parser.add_argument(
-        "--augment_points", default=False, action='store_true', help="Estimate point cloud normals and sample points along them (negative and positive direction)"
-    )
-    parser.add_argument(
         "--augment_points_std", default=0.002, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
     )
     parser.add_argument(
-        "--augment_points_num", default=5, type=int, help="Number of points to sample along normals (if augment_points is True)"
+        "--augment_points_num", default=5, type=int, help="Number of points to sample along normals"
+    )
+    parser.add_argument(
+        "--augment_multiplier_out", default=1, type=int, help="multiplier to augment the positive distances"
     )
     parser.add_argument(
         "--obj_folder", type=str, default='', help="Object to reconstruct as obj_class/obj_category, e.g. 02818832/1aa55867200ea789465e08d496c0420f"
