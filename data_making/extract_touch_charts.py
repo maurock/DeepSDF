@@ -138,15 +138,19 @@ def main(args):
         initial_obj_pos = [0.5, 0.0, 0]
 
         with utils_sample.suppress_stdout():          # to suppress b3Warning           
-            obj_id = pb.loadURDF(
-                os.path.join(obj_dir, "model.urdf"),
-                initial_obj_pos,
-                initial_obj_orn,
-                useFixedBase=True,
-                flags=pb.URDF_INITIALIZE_SAT_FEATURES,
-                globalScaling=args.scale
-            )
-            print(f'PyBullet object ID: {obj_id}')
+            try:
+                obj_id = pb.loadURDF(
+                    os.path.join(obj_dir, "model.urdf"),
+                    initial_obj_pos,
+                    initial_obj_orn,
+                    useFixedBase=True,
+                    flags=pb.URDF_INITIALIZE_SAT_FEATURES,
+                    globalScaling=args.scale
+                )
+                print(f'PyBullet object ID: {obj_id}')
+            except:
+                print(f'Error loading object: {obj_dir}')
+                continue
 
         robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
         
