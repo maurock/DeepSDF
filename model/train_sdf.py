@@ -114,6 +114,12 @@ class Trainer():
                     optimizer_model_state = self.optimizer_model.state_dict()
                     optimizer_latent_state = self.optimizer_latent.state_dict()
 
+                    np.save(os.path.join(self.run_dir, 'results.npy'), self.results)
+                    torch.save(best_weights, os.path.join(self.run_dir, 'weights.pt'))
+                    torch.save(optimizer_model_state, os.path.join(self.run_dir, 'optimizer_model_state.pt'))
+                    torch.save(optimizer_latent_state, os.path.join(self.run_dir, 'optimizer_latent_state.pt'))
+                    self.results['train']['best_latent_codes'] = best_latent_codes
+
                 if self.args.lr_scheduler:
                     self.scheduler_model.step(avg_val_loss)
                     self.scheduler_latent.step(avg_val_loss)
@@ -126,11 +132,7 @@ class Trainer():
                     self.writer.add_scalar('Learning rate (model)', self.scheduler_model._last_lr[0], epoch)
                     self.writer.add_scalar('Learning rate (latent)', self.scheduler_latent._last_lr[0], epoch)
             
-            np.save(os.path.join(self.run_dir, 'results.npy'), self.results)
-            torch.save(best_weights, os.path.join(self.run_dir, 'weights.pt'))
-            torch.save(optimizer_model_state, os.path.join(self.run_dir, 'optimizer_model_state.pt'))
-            torch.save(optimizer_latent_state, os.path.join(self.run_dir, 'optimizer_latent_state.pt'))
-            self.results['train']['best_latent_codes'] = best_latent_codes
+            
             
         end = time.time()
         print(f'Time elapsed: {end - start} s')
