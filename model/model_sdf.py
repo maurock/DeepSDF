@@ -153,8 +153,9 @@ class SDFModelMulti(torch.nn.Module):
                 loss_value, l1, l2 = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
                 loss_value.backward()
 
-                writer.add_scalar('Reconstruction loss', l1.data.cpu().numpy(), epoch)
-                writer.add_scalar('Latent code loss', l2.data.cpu().numpy(), epoch)
+                if writer is not None:
+                    writer.add_scalar('Reconstruction loss', l1.data.cpu().numpy(), epoch)
+                    writer.add_scalar('Latent code loss', l2.data.cpu().numpy(), epoch)
 
                 
                 #  add langevin noise (optional)
@@ -191,14 +192,16 @@ class SDFModelMulti(torch.nn.Module):
             # step scheduler and store on tensorboard (optional)
             if args.lr_scheduler:
                 scheduler_latent.step(loss_value.item())
-                writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
+                if writer is not None:
+                    writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
 
                 if scheduler_latent._last_lr[0] < 1e-6:
                     print('Learning rate too small, stopping training')
                     break
 
             # logging
-            writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
+            if writer is not None:
+                writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
             # store latent codes and their gradient on tensorboard
             #tag = f"latent_code_0"
             #writer.add_histogram(tag, latent_code, global_step=epoch)
