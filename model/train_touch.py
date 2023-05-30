@@ -312,12 +312,6 @@ if __name__=='__main__':
         "--patience", type=int, default=20, help="Patience for the learning rate scheduling"
     )    
     args = parser.parse_args()
-
-    args.epochs = 2
-    args.batch_size = 64
-    args.loss_coeff = 1000
-    args.log_info_train = True
-    args.lr_scheduler = True
        
     trainer = Trainer(args)
     trainer()
