@@ -37,7 +37,7 @@ class Trainer():
         self.timestamp_run = datetime.now().strftime('%d_%m_%H%M')   # timestamp to use for logging data
         self.debug_val_path = os.path.join(os.path.dirname(results.__file__), 'touch_val_debug', f'val_dict_{self.timestamp_run}')
 
-        self.results = dict()
+        # self.results = dict()
         self.fold = 0
 
     def __call__(self):
@@ -48,23 +48,23 @@ class Trainer():
 
         # Create log. This will be populated with settings, losses, etc..
         self.log_path = os.path.join(self.log_train_dir, "settings.txt")
-        self.writer = SummaryWriter(log_dir=self.log_train_dir)
+
+        # Create folder to store files
+        self.log_train_dir = os.path.join(os.path.dirname(results.__file__), "runs_touch", f"{self.timestamp_run}")
+        if not os.path.exists(self.log_train_dir):
+            os.mkdir(self.log_train_dir)
+
+        # Create log. This will be populated with settings, losses, etc..
+        self.log_path = os.path.join(self.log_train_dir, "settings.txt")
+        args_dict = vars(self.args)  # convert args to dict to write them as json
+        with open(self.log_path, mode='a') as log:
+            log.write('Settings:\n')
+            log.write(json.dumps(args_dict).replace(', ', ',\n'))
+            log.write('\n\n')        
 
         if self.args.log_info_train:         # log info train
-            # Create folder to store files
-            self.log_train_dir = os.path.join(os.path.dirname(results.__file__), "runs_touch", f"{self.timestamp_run}")
-            if not os.path.exists(self.log_train_dir):
-                os.mkdir(self.log_train_dir)
-
-            # Create log. This will be populated with settings, losses, etc..
-            self.log_path = os.path.join(self.log_train_dir, "settings.txt")
             self.writer = SummaryWriter(log_dir=self.log_train_dir)
-            args_dict = vars(self.args)  # convert args to dict to write them as json
-            with open(self.log_path, mode='a') as log:
-                log.write('Settings:\n')
-                log.write(json.dumps(args_dict).replace(', ', ',\n'))
-                log.write('\n\n')        
-        
+       
         full_dataset = TouchChartDataset(self.touch_chart_path)
 
         self.encoder = model_touch.Encoder().to(device)
@@ -83,9 +83,9 @@ class Trainer():
             for fold, (train_ids, val_ids) in enumerate(kfold.split(full_dataset)):
                 # Set variables to store results
                 self.fold = fold
-                self.results[self.fold] = dict()
-                self.results[self.fold]['train'] = []
-                self.results[self.fold]['val'] = []
+                # self.results[self.fold] = dict()
+                # self.results[self.fold]['train'] = []
+                # self.results[self.fold]['val'] = []
                 print(f'Fold: {self.fold}')
                 train_loader, val_loader = self.get_loaders_cv(full_dataset, train_ids, val_ids)
                 for epoch in range(self.args.epochs):
@@ -96,9 +96,9 @@ class Trainer():
 
         # Single training
         else:
-            self.results[0] = dict()
-            self.results[0]['train'] = []
-            self.results[0]['val'] = []
+            # self.results[0] = dict()
+            # self.results[0]['train'] = []
+            # self.results[0]['val'] = []
             train_loader, val_loader = self.get_loaders(full_dataset)
             for epoch in range(self.args.epochs):
                 print(f'============================ Epoch {epoch} ============================')
@@ -111,12 +111,15 @@ class Trainer():
 
                 if self.args.lr_scheduler:
                     self.scheduler.step(val_loss)
-                    self.writer.add_scalar('Learning rate', self.scheduler._last_lr[0], epoch)
+                    if self.args.log_info_train: 
+                        self.writer.add_scalar('Learning rate', self.scheduler._last_lr[0], epoch)
 
                 if val_loss < best_loss:
                     best_loss = val_loss.item()
                     torch.save(self.encoder.state_dict(), os.path.join(self.log_train_dir, 'weights.pt'))
 
+                if self.args.log_info_train: 
+                    self.writer.add_scalar('Validation loss', self.scheduler._last_lr[0], epoch)
 
     def get_loaders_cv(self, full_dataset, train_ids, val_ids):
         # Sample elements randomly from a given list of ids, no replacement.
@@ -193,11 +196,11 @@ class Trainer():
         print(f'Training: loss {total_loss/iterations}')
         self.writer.add_scalar('Training loss', total_loss/iterations, self.epoch)
 
-        self.results[self.fold]['train'].append(total_loss/iterations)
-        np.save(os.path.join(self.log_train_dir, 'results_dict.npy'), self.results)
+        # self.results[self.fold]['train'].append(total_loss/iterations)
+        # np.save(os.path.join(self.log_train_dir, 'results_dict.npy'), self.results)
+
         if self.args.log_info_train:
-            with open(self.log_path, mode='a') as log:
-                log.write(f'Fold {self.fold}, Epoch {self.epoch}, Train loss: {total_loss / iterations} \n')
+            self.writer.add_scalar('Training loss', total_loss / iterations, self.epoch)
 
 
     def validate(self, valid_loader):
@@ -237,14 +240,12 @@ class Trainer():
         val_loss = total_loss/iterations
 
         print(f'Validation: loss {val_loss}')
-        self.results[self.fold]['val'].append(val_loss)
+        # self.results[self.fold]['val'].append(val_loss)
 
-        self.writer.add_scalar('Validation loss', val_loss, self.epoch)
 
-        np.save(os.path.join(self.log_train_dir, 'results_dict.npy'), self.results)
+        # np.save(os.path.join(self.log_train_dir, 'results_dict.npy'), self.results)
         if self.args.log_info_train:
-            with open(self.log_path, mode='a') as log:
-                log.write(f'Epoch {self.epoch}, Val loss: {val_loss} \n')
+            self.writer.add_scalar('Validation loss', val_loss, self.epoch)
         
         return val_loss
 
@@ -311,6 +312,12 @@ if __name__=='__main__':
         "--patience", type=int, default=20, help="Patience for the learning rate scheduling"
     )    
     args = parser.parse_args()
+
+    args.epochs = 2
+    args.batch_size = 64
+    args.loss_coeff = 1000
+    args.log_info_train = True
+    args.lr_scheduler = True
        
     trainer = Trainer(args)
     trainer()
