@@ -194,7 +194,6 @@ class Trainer():
             total_loss += loss.data.cpu().numpy()      
 
         print(f'Training: loss {total_loss/iterations}')
-        self.writer.add_scalar('Training loss', total_loss/iterations, self.epoch)
 
         # self.results[self.fold]['train'].append(total_loss/iterations)
         # np.save(os.path.join(self.log_train_dir, 'results_dict.npy'), self.results)
