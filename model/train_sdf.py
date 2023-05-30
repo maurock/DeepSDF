@@ -143,7 +143,7 @@ class Trainer():
         if args.clamp:
             data.data['sdf'] = torch.clamp(data.data['sdf'], -args.clamp_value, args.clamp_value)
 
-        train_size = int(0.8 * len(data))
+        train_size = int(0.85 * len(data))
         val_size = len(data) - train_size
         train_data, val_data = random_split(data, [train_size, val_size])
         train_loader = DataLoader(
