@@ -13,6 +13,7 @@ import point_cloud_utils as pcu
 import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
 from glob import glob
 import pybullet as pb
+from datetime import datetime
 
 """
 For each object, sample points and store their distance to the nearest triangle.
@@ -46,6 +47,8 @@ def _debug_plot(samples, dist=True):
     fig.show()
 
 def main(args):
+
+    timestamp_run = datetime.now().strftime('_%d%m')   # timestamp to use for logging data
     
     if args.method == 'mesh_to_sdf':
         # This works with the PartNet-Mobility Dataset. It requires results/objs_dict.npy containing objects for each class.
@@ -95,8 +98,7 @@ def main(args):
         # Full paths to all .obj
         obj_paths = glob(os.path.join(os.path.dirname(ShapeNetCoreV2.__file__), '*', '*', '*.obj'))
 
-        samples_dict = dict()
-        
+        samples_dict = dict()        
         # Store conversion between object index (int) and its folder name (str)
         idx_str2int_dict = dict()
         idx_int2str_dict = dict()
@@ -147,16 +149,16 @@ def main(args):
 
             # Save the samples and SDFs at regular intervals
             if obj_idx % 100 == 0:
-                np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy'), samples_dict)
+                np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}{timestamp_run}.npy'), samples_dict)
     else: 
         print('Choose a valid method')
         exit()      
 
     #_debug_plot(samples_dict[obj_idx])  
-    np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy'), samples_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}{timestamp_run}.npy'), samples_dict)
 
-    np.save(os.path.join(os.path.dirname(results.__file__), 'idx_str2int_dict.npy'), idx_str2int_dict)
-    np.save(os.path.join(os.path.dirname(results.__file__), 'idx_int2str_dict.npy'), idx_int2str_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_str2int_dict{timestamp_run}.npy'), idx_str2int_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_int2str_dict{timestamp_run}.npy'), idx_int2str_dict)
 
 
 if __name__=='__main__':
@@ -186,4 +188,5 @@ if __name__=='__main__':
         '--num_samples_in_volume', default=1000, type=int, help="Num samples within the predefined volume"
     )  
     args = parser.parse_args()
+
     main(args)
