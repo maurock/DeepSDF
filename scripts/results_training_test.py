@@ -153,7 +153,7 @@ def main(args):
     for i in args.num_samples_extraction:
         results[i-1] = []
 
-    for idx, obj_folder in enumerate(obj_folders[:3]):
+    for idx, obj_folder in enumerate(obj_folders):
 
         # Reset simulation and reload the environment to avoid a silent bug where memory fills and visual rendering fails. 
         if idx > 0:
