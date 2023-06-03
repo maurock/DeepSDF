@@ -9,6 +9,7 @@ from tactile_gym.assets import add_assets_path
 from utils import utils_sample, utils_mesh, utils_deepsdf, utils_raycasting
 import argparse
 import data.ShapeNetCoreV2urdf as ShapeNetCore
+import data.ShapeNetCoreV2urdf_test as ShapeNetCore_test
 from model import model_sdf, model_touch
 import torch
 import data
@@ -22,7 +23,6 @@ import results
 import matplotlib.pyplot as plt
 import scripts.pipeline_tactile as pipeline_tactile
 import scripts.pipeline_deepsdf as pipeline_deepsdf
-import data.ShapeNetCoreV2urdf as ShapeNetCoreV2urdf
 from glob import glob
 from pytorch3d.loss import chamfer_distance
 import random
@@ -144,8 +144,13 @@ def main(args):
     initial_obj_orn = p.getQuaternionFromEuler(initial_obj_rpy)
     initial_obj_pos = [0.5, 0.0, 0]
 
-    # All object paths in the training set
-    shapeneturdf_folder = os.path.dirname(ShapeNetCoreV2urdf.__file__)
+    # All object paths in the dataset
+    if args.dataset == 'ShapeNetCore':
+        shapeneturdf_folder = os.path.dirname(ShapeNetCore.__file__)
+    elif args.dataset == 'ShapeNetCore_test':
+        shapeneturdf_folder = os.path.dirname(ShapeNetCore_test.__file__)
+    else:
+        raise ValueError('Dataset not recognised')
     full_paths = glob(os.path.join(shapeneturdf_folder, args.category, '*/'))
     obj_folders = [os.sep.join(full_path.split(os.sep)[-3:-1]) for full_path in full_paths]
 
@@ -352,7 +357,7 @@ if __name__=='__main__':
         "--folder_touch", default=0, type=str, help="Folder containing the touch model weights"
     )
     parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ShapeNetCore_test', or 'PartNetMobility'"
     )
     parser.add_argument(
         "--augment_points_std", default=0.002, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
