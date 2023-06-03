@@ -34,8 +34,20 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 Demo to reconstruct objects using tactile-gym.
 """
 def main(args):
+    # All object paths in the dataset
+    if args.dataset == 'ShapeNetCore':
+        shapeneturdf_folder = os.path.dirname(ShapeNetCore.__file__)
+        suffix = '_train'
+    elif args.dataset == 'ShapeNetCore_test':
+        shapeneturdf_folder = os.path.dirname(ShapeNetCore_test.__file__)
+        suffix = '_test'
+    else:
+        raise ValueError('Dataset not recognised')
+    full_paths = glob(os.path.join(shapeneturdf_folder, args.category, '*/'))
+    obj_folders = [os.sep.join(full_path.split(os.sep)[-3:-1]) for full_path in full_paths]
+
     # Logging
-    test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), datetime.now().strftime('%d_%m_%H%M%S_') + str(random.randint(0, 10000)))
+    test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), datetime.now().strftime('%d_%m_%H%M%S_') + str(random.randint(0, 10000)) + suffix)
     if not os.path.exists(test_dir):
         os.mkdir(test_dir)
     log_path = os.path.join(test_dir, 'settings.txt')
@@ -143,16 +155,6 @@ def main(args):
     initial_obj_rpy = [np.pi/2, 0, -np.pi/2]
     initial_obj_orn = p.getQuaternionFromEuler(initial_obj_rpy)
     initial_obj_pos = [0.5, 0.0, 0]
-
-    # All object paths in the dataset
-    if args.dataset == 'ShapeNetCore':
-        shapeneturdf_folder = os.path.dirname(ShapeNetCore.__file__)
-    elif args.dataset == 'ShapeNetCore_test':
-        shapeneturdf_folder = os.path.dirname(ShapeNetCore_test.__file__)
-    else:
-        raise ValueError('Dataset not recognised')
-    full_paths = glob(os.path.join(shapeneturdf_folder, args.category, '*/'))
-    obj_folders = [os.sep.join(full_path.split(os.sep)[-3:-1]) for full_path in full_paths]
 
     results = dict()    
     for i in args.num_samples_extraction:
