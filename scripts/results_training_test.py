@@ -169,7 +169,7 @@ def main(args):
         pb, robot = load_environment(args, robot_config, pb)
 
         # Load object
-        obj_dir = os.path.join(os.path.dirname(ShapeNetCore.__file__), obj_folder)
+        obj_dir = os.path.join(shapeneturdf_folder, obj_folder)
 
         with utils_sample.suppress_stdout():          # to suppress b3Warning           
             obj_id = pb.loadURDF(
@@ -424,5 +424,18 @@ if __name__=='__main__':
         "--num_samples_extraction", type=int, default=10, nargs='+', help="Number of samples on the objects. It can be a single number or a list of numbers, e.g. 10 20 30."
     )
     args = parser.parse_args()
+
+    # args.folder_sdf ='24_03_190521'
+    # args.folder_touch_sdf ='26_05_123033' 
+    # args.lr_scheduler = True
+    # args.epochs = 3
+    # args.lr = 0.0005 
+    # args.patience = 100 
+    # args.resolution = 20 
+    # args.num_samples_extraction = [10, 20]
+    # args.mode_reconstruct = 'fixed'
+    # args.langevin_noise = 0.0
+    # args.dataset = 'ShapeNetCore_test'
+    # args.folder_touch = '30_05_1633'
 
     main(args)
