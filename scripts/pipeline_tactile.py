@@ -8,6 +8,7 @@ from tactile_gym.assets import add_assets_path
 from utils import utils_sample, utils_mesh, utils_raycasting
 import argparse
 import data.ShapeNetCoreV2urdf as ShapeNetCore
+import data.ShapeNetCoreV2urdf_test as ShapeNetCore_test
 from model import model_sdf, model_touch
 import torch
 import data
@@ -115,7 +116,13 @@ def main(args):
     initial_obj_pos = [0.5, 0.0, 0]
 
     # Load object
-    obj_dir = os.path.join(os.path.dirname(ShapeNetCore.__file__), args.obj_folder)
+    if args.dataset == 'ShapeNetCore':
+        shapeneturdf_folder = os.path.dirname(ShapeNetCore.__file__)
+    elif args.dataset == 'ShapeNetCore_test':
+        shapeneturdf_folder = os.path.dirname(ShapeNetCore_test.__file__)
+    else:
+        raise ValueError('Dataset not recognised')
+    obj_dir = os.path.join(shapeneturdf_folder, args.obj_folder)
     with utils_sample.suppress_stdout():          # to suppress b3Warning           
         obj_id = pb.loadURDF(
             os.path.join(obj_dir, "model.urdf"),
@@ -336,7 +343,7 @@ if __name__=='__main__':
         "--folder_touch", default=0, type=str, help="Folder containing the touch model weights"
     )
     parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ShapeNetCore_test', or 'PartNetMobility'"
     )
     parser.add_argument(
         "--augment_points_std", default=0.002, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
