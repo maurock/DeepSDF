@@ -18,6 +18,8 @@ from model import model_touch
 from results import runs_touch
 import point_cloud_utils as pcu
 
+"""Extracting the data provided by the real robot and creates a folder in results/runs_touch_sdf with the same format as the data collected in simulation. """
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(args):
@@ -81,9 +83,17 @@ def main(args):
     sdf_gt = torch.tensor([]).view(0, 1).to(device)
 
     # Filter out first datapoint from images and poses
-    # images.pop(0)
-    # cameras.pop(0)
-    # poses = poses[1:, :, :]   
+    if args.discard_calibration_image:
+        images.pop(0)
+        cameras.pop(0)
+        poses = poses[1:, :, :]   
+
+    # Shuffle data
+    indices = np.arange(len(images))
+    np.random.shuffle(indices)
+    images = [images[i] for i in indices]
+    cameras = [cameras[i] for i in indices]
+    poses = poses[indices, :, :]    
 
     # Instantiate pointcloud for DeepSDF prediction
     pointclouds_deepsdf = torch.tensor([]).view(0, 3).to(device)
@@ -137,7 +147,7 @@ def main(args):
 
             # Sample along normals and return points and distances
             pointcloud_along_norm_np, signed_distance_np = utils_sample.sample_along_normals(
-                std_dev=args.augment_points_std, pointcloud=pointcloud_deepsdf_np, normals=n, N=args.augment_points_num)
+                std_dev=args.augment_points_std, pointcloud=pointcloud_deepsdf_np, normals=n, N=args.augment_points_num, augment_multiplier_out=args.augment_multiplier_out)
             pointcloud_along_norm = torch.from_numpy(pointcloud_along_norm_np).float().to(device)
             sdf_normal_gt = torch.from_numpy(signed_distance_np).float().to(device)
 
@@ -178,12 +188,21 @@ if __name__=='__main__':
     parser.add_argument(
         "--augment_points_num", default=0, type=int, help="Number of points to sample along normals (if augment_points is True)"
     )
+    parser.add_argument(
+        "--discard_calibration_image", action='store_true',  help="Discard the first image and pose, which is usually used for calibration"
+    )
+    parser.add_argument(
+        "--augment_multiplier_out", default=1, type=int, help="multiplier to augment the positive distances"
+    )
 
     args = parser.parse_args()  
 
-    args.folder_real_data = 'camera_2505'
-    args.obj_folder = '02942699/6d036fd1c70e5a5849493d905c02fa86'
-    args.folder_touch = '14_03_2327' 
-    args.scale = 0.2
-
+    # args.folder_real_data = 'jar'
+    # args.obj_folder = '03797390/ff1a44e1c1785d618bca309f2c51966a'
+    # args.folder_touch = '30_05_1633' 
+    # args.scale = 0.2
+    # args.discard_calibration_image = True
+    # args.augment_points_num = 5
+    # args.augment_points_std = 0.005
+    # args.augment_multiplier_out = 5
     main(args)

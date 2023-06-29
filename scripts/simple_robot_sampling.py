@@ -53,7 +53,13 @@ def main(args):
 
     # load the environment
     plane_id = pb.loadURDF(
-        add_assets_path("shared_assets/environment_objects/plane/plane.urdf")
+        add_assets_path("shared_assets/environment_objects/plane/plane.urdf"),
+        [0.0, 0.0, -0.4],
+    )
+    table_id = pb.loadURDF(
+        add_assets_path("shared_assets/environment_objects/table/table.urdf"),
+        [0.25, 0.0, -0.43],
+        globalScaling=0.7,
     )
 
     # robot configuration
@@ -76,8 +82,9 @@ def main(args):
 
     # Get list of object indices
     #list_objects = ['/Users/ri21540/Documents/PhD/Code/DeepSDF/data/ShapeNetCoreV2/02942699/1ab3abb5c090d9b68e940c4e64a94e1e/']
-    list_objects = ['/Users/ri21540/Documents/PhD/Code/TEMP/STL']
-
+    # list_objects = ['/Users/ri21540/Documents/PhD/Code/TEMP/STL']
+    urdf_path = '/Users/ri21540/Documents/PhD/Code/DeepSDF/data/ShapeNetCoreV2urdf/02942699/6d036fd1c70e5a5849493d905c02fa86/model.urdf'
+    
     # Initialise dict with arrays to store.
     data = {
         "verts": np.array([]).reshape(0, 75), # verts of touch charts (25) flattened
@@ -90,58 +97,58 @@ def main(args):
         "initial_pos": np.array([], dtype=np.float32).reshape(0, 3)
     }
 
-    for idx, obj_index in enumerate(list_objects): 
-        print(f"Collecting data... Object index: {obj_index} \t {idx+1}/{len(list_objects)} ")
+    # for idx, obj_index in enumerate(list_objects): 
+        # print(f"Collecting data... Object index: {obj_index} \t {idx+1}/{len(list_objects)} ")
 
-        # Load object
-        initial_obj_orn = p.getQuaternionFromEuler([np.pi/2, 0, -np.pi/2])
+    # Load object
+    initial_obj_orn = p.getQuaternionFromEuler([np.pi/2, 0, -np.pi/2])
 
-        with utils_sample.suppress_stdout():          # to suppress b3Warning   
-            # Calculate initial z position for object
-            #obj_initial_z = utils_mesh.calculate_initial_z(obj_index, args.scale, args.dataset)
+    with utils_sample.suppress_stdout():          # to suppress b3Warning   
+        # Calculate initial z position for object
+        #obj_initial_z = utils_mesh.calculate_initial_z(obj_index, args.scale, args.dataset)
+    
+        initial_obj_rpy = [np.pi/2, 0, -np.pi/2]
+        initial_obj_orn = p.getQuaternionFromEuler(initial_obj_rpy)
+        initial_obj_pos = [0.5, 0.0, 0.05]
         
-            initial_obj_rpy = [np.pi/2, 0, -np.pi/2]
-            initial_obj_orn = p.getQuaternionFromEuler(initial_obj_rpy)
-            initial_obj_pos = [0.5, 0.0, 0]
-            
-            obj_id = pb.loadURDF(
-                #os.path.join(os.path.dirname(objects.__file__), f"{obj_index}/model.urdf"),
-                os.path.join('/Users/ri21540/Documents/PhD/Code/DeepSDF/data/ShapeNetCoreV2urdf/bowl/c0f57c7f98d2581c744a455c7eef0ae5/model.urdf'),
-                initial_obj_pos,
-                initial_obj_orn,
-                useFixedBase=True,
-                flags=pb.URDF_INITIALIZE_SAT_FEATURES,
-                globalScaling=args.scale
-            )
-            print(f'PyBullet object ID: {obj_id}')
-
-        #robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
-
-        # Store the scaled, rotated, and translated mesh vertices
-        # np.save(os.path.join(os.path.dirname(results.__file__), f'checkpoints/vertices_wrld_{obj_index}.npy'), vertices_wrld)
-
-        robot = CRIRobotArm(
-            pb,
-            workframe_pos = robot_config['workframe_pos'],
-            workframe_rpy = robot_config['workframe_rpy'],
-            image_size = [256, 256],
-            arm_type = "ur5",
-            t_s_type = robot_config['t_s_type'],
-            t_s_core = robot_config['t_s_core'],
-            t_s_name = robot_config['t_s_name'],
-            t_s_dynamics = robot_config['t_s_dynamics'],
-            show_gui = args.show_gui,
-            show_tactile = args.show_tactile
+        obj_id = pb.loadURDF(
+            #os.path.join(os.path.dirname(objects.__file__), f"{obj_index}/model.urdf"),
+            os.path.join(urdf_path),
+            initial_obj_pos,
+            initial_obj_orn,
+            useFixedBase=True,
+            flags=pb.URDF_INITIALIZE_SAT_FEATURES,
+            globalScaling=args.scale
         )
-            
-        # Set pointcloud grid
-        robot.nx = robot_config['nx']
-        robot.ny = robot_config['ny']
+        print(f'PyBullet object ID: {obj_id}')
 
-        # robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
+    #robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
+
+    # Store the scaled, rotated, and translated mesh vertices
+    # np.save(os.path.join(os.path.dirname(results.__file__), f'checkpoints/vertices_wrld_{obj_index}.npy'), vertices_wrld)
+
+    robot = CRIRobotArm(
+        pb,
+        workframe_pos = robot_config['workframe_pos'],
+        workframe_rpy = robot_config['workframe_rpy'],
+        image_size = [256, 256],
+        arm_type = "ur5",
+        t_s_type = robot_config['t_s_type'],
+        t_s_core = robot_config['t_s_core'],
+        t_s_name = robot_config['t_s_name'],
+        t_s_dynamics = robot_config['t_s_dynamics'],
+        show_gui = args.show_gui,
+        show_tactile = args.show_tactile
+    )
         
-        while True:
-            pb.stepSimulation()
+    # Set pointcloud grid
+    robot.nx = robot_config['nx']
+    robot.ny = robot_config['ny']
+
+    robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
+    
+    while True:
+        pb.stepSimulation()
         
         # if args.show_gui:
         #     time.sleep(1)
