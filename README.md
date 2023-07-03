@@ -17,7 +17,7 @@ The installation instructions reported in this file were tested on macOS Montere
 ```
 conda create -n touchsdf python=3.8
 conda activate touchsdf
-conda env update -n touchsdf_try --file environment.yml
+conda env update -n touchsdf --file environment.yml
 ```
 Clone the repository and run the following command from the root directory:
 ```
