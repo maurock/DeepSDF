@@ -1,0 +1,23 @@
+Settings:
+{"dataset": "ShapeNetCore",
+"seed": 42,
+"epochs": 100,
+"lr_model": 0.0005,
+"lr_latent": 0.04,
+"batch_size": 20480,
+"latent_size": 128,
+"sigma_regulariser": 0.01,
+"loss_multiplier": 1,
+"weights_to_tensorboard": false,
+"latent_to_tensorboard": false,
+"lr_multiplier": 0.8,
+"patience": 5,
+"lr_scheduler": true,
+"num_layers": 8,
+"no_skip_connections": false,
+"clamp": true,
+"clamp_value": 0.05,
+"pretrained": false,
+"pretrain_weights": "",
+"inner_dim": 512}
+

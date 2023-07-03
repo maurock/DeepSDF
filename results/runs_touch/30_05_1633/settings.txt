@@ -1,0 +1,16 @@
+Settings:
+{"seed": 42,
+"epochs": 1000,
+"lr": 0.0001,
+"batch_size": 16,
+"num_samples": 500,
+"loss_coeff": 1000.0,
+"analyse_dataset": false,
+"debug_validation": false,
+"log_info_train": true,
+"cross_validation": false,
+"k_folds": 3,
+"lr_scheduler": true,
+"lr_multiplier": 0.8,
+"patience": 20}
+

@@ -4,21 +4,18 @@ import numpy as np
 import pkgutil
 import os
 from cri_robot_arm import CRIRobotArm
-from tactile_gym.assets import add_assets_path
 from utils import utils_sample, utils_mesh, utils_raycasting
 import argparse
 import data.ShapeNetCoreV2urdf as ShapeNetCore
 import data.ShapeNetCoreV2urdf_test as ShapeNetCore_test
-from model import model_sdf, model_touch
+from model import model_touch
 import torch
 import data
-from results import runs_touch, runs_sdf, runs_touch_sdf
+from results import runs_touch, runs_touch_sdf
 import trimesh
-from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 import json
 import point_cloud_utils as pcu
-import results
 import matplotlib.pyplot as plt
 import random
 
@@ -359,10 +356,11 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    # args.show_gui =True
+    # args.show_gui = True
     # args.num_samples = 20
-    # args.folder_touch ='14_03_2327' 
-    # args.obj_folder ='real_mesh/bottle' 
-    # args.augment_multiplier_out=10
+    # args.folder_touch = '14_03_2327' 
+    # args.obj_folder = '02942699/6d036fd1c70e5a5849493d905c02fa86' 
+    # args.augment_multiplier_out = 10
+    # args.augment_points_std = 0.005
 
     _ = main(args)
