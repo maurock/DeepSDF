@@ -1,0 +1,31 @@
+# Config file for training SDF model
+
+dataset = 'ShapeNetCore'   # Dataset used
+seed = 42   # Seed for reproducibility
+
+# training
+epochs = 10
+lr_model = 0.00001   # Initial learning rate (model)
+lr_latent = 0.001    # Initial learning rate (latent vector)
+batch_size = 4
+sigma_regulariser = 0.01   # Sigma value as regulariser in the loss function
+loss_multiplier = 1   # Loss multiplier
+clamp = true  # Clip the network prediction
+clamp_value = 0.1  # Value for clipping
+
+# architecture
+num_layers = 8   # Num network layers
+inner_dim = 512   # Inner dimensions of the network
+latent_size = 128   # Size of the latent vector
+skip_connections = true
+
+# lr_scheduling
+lr_scheduler = false   # Learning rate scheduling
+lr_multiplier = 0.9   # Multiplier for the learning rate scheduling
+patience = 20   # Patience inthe learning rate scheduling
+
+# pretrained
+pretrained = false   # Use pretrain weights
+pretrain_weights = ''   # Path to pretrain weights
+pretrain_optim_model = ''   # Path to pretrain weights (model)
+pretrain_optim_latent = ''   # Path to pretrain weights (latent codes)

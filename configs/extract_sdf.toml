@@ -1,0 +1,7 @@
+# Config file for training SDF model
+
+dataset = 'ShapeNetCore'   # Dataset used
+
+num_samples_on_surface = 5000   # Num samples on object surface
+num_samples_in_bbox = 5000    # Num samples within the object bounding box
+num_samples_in_volume = 1000   # Num samples within the predefined volume"
