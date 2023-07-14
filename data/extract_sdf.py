@@ -7,7 +7,7 @@ import data.ShapeNetCoreV2 as ShapeNetCoreV2
 from glob import glob
 from datetime import datetime
 import configs
-import tomllib
+import yaml
 import pybullet as pb
 import trimesh
 """
@@ -28,9 +28,7 @@ def combine_sample_latent(samples, latent_class):
 
 
 def main(cfg):
-
-    timestamp_run = datetime.now().strftime('_%d%m')   # timestamp to use for logging data
-    
+  
     # Full paths to all .obj
     obj_paths = glob(os.path.join(os.path.dirname(ShapeNetCoreV2.__file__), '*', '*', 'models', '*.obj'))
 
@@ -99,8 +97,8 @@ def main(cfg):
 
 
 if __name__=='__main__':
-    cfg_path = os.path.join(os.path.dirname(configs.__file__), 'extract_sdf.toml')
+    cfg_path = os.path.join(os.path.dirname(configs.__file__), 'extract_sdf.yaml')
     with open(cfg_path, 'rb') as f:
-        cfg = tomllib.load(f)
+        cfg = yaml.load(f, Loader=yaml.FullLoader)
 
     main(cfg)
