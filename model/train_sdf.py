@@ -13,8 +13,7 @@ import time
 from utils import utils_deepsdf
 import results
 from torch.utils.tensorboard import SummaryWriter
-import tomllib
-import tomli_w
+import yaml
 import configs
 
 # Select device. The 'mps' device (macOS M1 architecture) is not supported as it cannot currently handle weith normalisation. 
@@ -35,9 +34,9 @@ class Trainer():
         
         # Logging
         self.writer = SummaryWriter(log_dir=self.run_dir)
-        self.log_path = os.path.join(self.run_dir, 'settings.toml')
-        with open(self.log_path, 'wb') as f:
-            tomli_w.dump(self.train_cfg, f)
+        self.log_path = os.path.join(self.run_dir, 'settings.yaml')
+        with open(self.log_path, 'w') as f:
+            yaml.dump(self.train_cfg, f)
 
         # calculate num objects in samples_dictionary, wich is the number of keys
         samples_dict_path = os.path.join(os.path.dirname(results.__file__), f'samples_dict_{train_cfg["dataset"]}.npy')
@@ -228,9 +227,9 @@ class Trainer():
         return avg_val_loss
 
 if __name__=='__main__':
-    train_cfg_path = os.path.join(os.path.dirname(configs.__file__), 'train_sdf.toml')
+    train_cfg_path = os.path.join(os.path.dirname(configs.__file__), 'train_sdf.yaml')
     with open(train_cfg_path, 'rb') as f:
-        train_cfg = tomllib.load(f)
+        train_cfg = yaml.load(f, Loader=yaml.FullLoader)
 
     trainer = Trainer(train_cfg)
     trainer()
