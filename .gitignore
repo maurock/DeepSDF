@@ -3,3 +3,4 @@ results/*
 __pycache__/
 .DS_Store
 deepsdf.egg-info
+jobs/
