@@ -1,5 +1,6 @@
 results/*
 !results/__init__.py
+!results/runs_sdf/__init__.py
 __pycache__/
 .DS_Store
 deepsdf.egg-info

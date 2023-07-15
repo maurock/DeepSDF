@@ -1,5 +1,5 @@
 import torch
-# import meshplot as mp
+import meshplot as mp
 import skimage
 import numpy as np
 
@@ -50,19 +50,20 @@ def generate_latent_codes(latent_size, samples_dict):
 
 def get_volume_coords(resolution = 50):
     """Get 3-dimensional vector (M, N, P) according to the desired resolutions."""
-    grid_values = torch.arange(-1, 1, float(1/resolution)).to(device) # 50 resolution -> 1/50 
-
+    # Define grid
+    grid_values = torch.arange(-1, 1, float(1/resolution)).to(device) # e.g. 50 resolution -> 1/50 
+    grid = torch.meshgrid(grid_values, grid_values, grid_values)
+    
     grid_size_axis = grid_values.shape[0]
 
-    grid = torch.meshgrid(grid_values, grid_values, grid_values)
-
+    # Reshape grid to (M*N*P, 3)
     coords = torch.vstack((grid[0].ravel(), grid[1].ravel(), grid[2].ravel())).transpose(1, 0).to(device)
 
     return coords, grid_size_axis
 
 
-# def save_meshplot(vertices, faces, path):
-#     mp.plot(vertices, faces, c=vertices[:, 2], filename=path)
+def save_meshplot(vertices, faces, path):
+    mp.plot(vertices, faces, c=vertices[:, 2], filename=path)
 
 
 def predict_sdf(latent, coords_batches, model):

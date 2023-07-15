@@ -42,7 +42,7 @@ def main(cfg):
     for obj_idx, obj_path in enumerate(obj_paths):
 
         # Object unique index. Str to int by byte encoding
-        obj_idx_str = os.sep.join(obj_path.split(os.sep)[-3:-1]) # e.g. '02958343/1a2b3c4d5e6f7g8h9i0j'
+        obj_idx_str = os.sep.join(obj_path.split(os.sep)[-4:-2]) # e.g. '02958343/1a2b3c4d5e6f7g8h9i0j'
         idx_str2int_dict[obj_idx_str] = obj_idx
         idx_int2str_dict[obj_idx] = obj_idx_str
 
