@@ -11,17 +11,26 @@ For the official implementation and citation guidelines, [check here](https://gi
 - [Known Issues](#known-issues)
 
 # Installation
-The installation instructions reported in this file were tested on macOS Monterey - Apple M1. This repository also runs on Ubuntu and CentOS 7, but dependency issues between PyTorch and PyTorch3D need to be manually resolved.
+These installation instructions are tested for macOS (M1) and Linux. 
 ```
-conda create -n deepsdf python=3.11
+conda create -n deepsdf python=3.10
 conda activate deepsdf
-conda env update -n deepsdf --file environment.yml
 ```
-Clone the repository and run the following command from the root directory:
+
+### On MacOS:
 ```
-pip install .
+conda env update -n deepsdf --file environment_mac.yml
+pip install git+https://github.com/fwilliams/point-cloud-utils.git
+pip install "git+https://github.com/facebookresearch/pytorch3d.git"
 ```
-Create the required directories:
+
+### On Linux:
+The correct combination of Python, Pytorch, Pytorch3D, and CUDA versions depends on your system (OS and GPU). Here we install `pytorch=1.11.0, cudatoolkit=11.3, pytorch3d=0.7.4`. 
+```
+conda install pytorch==1.11.0 torchvision==0.12.0 torchaudio==0.11.0 cudatoolkit=11.3 -c pytorch
+conda install pytorch3d==0.7.4 -c pytorch3d
+```
+
 
 
 # Usage
