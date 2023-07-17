@@ -147,3 +147,21 @@ def load_mesh_touch(obj):
     verts = torch.FloatTensor(verts).to(device)
     faces = torch.LongTensor(faces).to(device)
     return verts, faces
+
+
+def shapenet_rotate(mesh_original):
+    '''In Shapenet, the front is the -Z axis with +Y still being the up axis. This function rotates the object to align with the canonical reference frame.
+    Args:
+        mesh_original: trimesh.Trimesh(), mesh from ShapeNet
+    Returns:
+        mesh: trimesh.Trimesh(), rotate mesh so that the front is the +X axis and +Y is the up axis.
+    '''
+    verts_original = np.array(mesh_original.vertices)
+
+    rot_M = pb.getMatrixFromQuaternion(pb.getQuaternionFromEuler([np.pi/2, 0, -np.pi/2]))
+    rot_M = np.array(rot_M).reshape(3, 3)
+    verts = rotate_pointcloud(verts_original, [np.pi/2, 0, -np.pi/2])
+
+    mesh = trimesh.Trimesh(vertices=verts, faces=mesh_original.faces)
+
+    return mesh

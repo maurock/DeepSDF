@@ -4,15 +4,14 @@ import model.model_sdf as sdf_model
 from utils import utils_deepsdf
 import trimesh
 from results import runs_sdf
-import results
 import numpy as np
 import configs
 import yaml
 import data.ShapeNetCoreV2 as ShapeNetCoreV2
 from utils import utils_mesh
-import plotly.graph_objects as go
-from torch.utils.tensorboard import SummaryWriter
+import pybullet as pb
 from datetime import datetime
+from torch.utils.tensorboard import SummaryWriter
 """Infer and reconstruct mesh from a partial point cloud.
 Store the mesh in the same folder where the latent code is located."""
 
@@ -58,7 +57,11 @@ def generate_partial_pointcloud(cfg):
         """
     # Load mesh
     obj_path = os.path.join(os.path.dirname(ShapeNetCoreV2.__file__), cfg['obj_ids'], 'models', 'model_normalized.obj')
-    mesh = utils_mesh._as_mesh(trimesh.load(obj_path))
+    mesh_original = utils_mesh._as_mesh(trimesh.load(obj_path))
+
+    # In Shapenet, the front is the -Z axis with +Y still being the up axis. 
+    # Rotate objects to align with the canonical axis. 
+    mesh = utils_mesh.shapenet_rotate(mesh_original)
 
     # Sample on the object surface
     samples = np.array(trimesh.sample.sample_surface(mesh, 10000)[0])
