@@ -115,13 +115,6 @@ def main(cfg):
     pointcloud_path = os.path.join(inference_dir, 'partial_pointcloud.npy')
     np.save(pointcloud_path, pointcloud)
 
-    fig = go.Figure(
-        [
-            go.Scatter3d(x=pointcloud[:, 0], y=pointcloud[:, 1],z=pointcloud[:, 2], mode='markers', marker=dict(size=2))
-        ]
-    )
-    fig.show()
-
     # Generate torch tensors of zeros that has the same dimension as pointcloud
     pointcloud = torch.tensor(pointcloud, dtype=torch.float32).to(device)
     sdf_gt = torch.zeros_like(pointcloud[:, 0]).view(-1, 1).to(device)
