@@ -1,12 +1,7 @@
 import torch
 import os
-import meshplot as mp
-mp.offline()
 import model.model_sdf as sdf_model
-import argparse
-from tqdm import tqdm 
 from utils import utils_deepsdf
-from datetime import datetime
 import trimesh
 from results import runs_sdf
 import results

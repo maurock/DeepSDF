@@ -24,9 +24,11 @@ class SDFModel(torch.nn.Module):
         # If skip connections, add the input to one of the inner layers
         self.skip_connections = skip_connections
 
+        self.latent_size = latent_size
+
         # Dimension of the input space (3D coordinates)
         dim_coords = 3 
-        input_dim = latent_size + dim_coords
+        input_dim = self.latent_size + dim_coords
 
         # Copy input size to calculate the skip tensor size
         self.skip_tensor_dim = copy.copy(input_dim)
@@ -71,34 +73,34 @@ class SDFModel(torch.nn.Module):
         return sdf
 
 
-    def infer_latent_code(self, cfg, coords, sdf_gt, writer, latent_code_initial):
+    def infer_latent_code(self, cfg, pointcloud, sdf_gt, writer, latent_code_initial):
         """Infer latent code from coordinates, their sdf, and a trained model."""
 
         latent_code = latent_code_initial.clone().detach().requires_grad_(True)
         
-        optim = torch.optim.Adam([latent_code], lr=cfg.lr)
+        optim = torch.optim.Adam([latent_code], lr=cfg['lr'])
 
-        if cfg.lr_scheduler:
+        if cfg['lr_scheduler']:
             scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 
-                                                    factor=cfg.lr_multiplier, 
-                                                    patience=cfg.patience, 
+                                                    factor=cfg['lr_multiplier'], 
+                                                    patience=cfg['patience'], 
                                                     threshold=0.001, threshold_mode='rel')
 
         best_loss = 1000000
 
-        for epoch in tqdm(range(0, cfg.epochs)):
+        for epoch in tqdm(range(0, cfg['epochs'])):
 
-            latent_code_tile = torch.tile(latent_code, (coords.shape[0], 1))
-            x = torch.hstack((latent_code_tile, coords))
+            latent_code_tile = torch.tile(latent_code, (pointcloud.shape[0], 1))
+            x = torch.hstack((latent_code_tile, pointcloud))
 
             optim.zero_grad()
 
             predictions = self(x)
 
-            if cfg.clamp:
-                predictions = torch.clamp(predictions, -cfg.clamp_value, cfg.clamp_value)
+            if cfg['clamp']:
+                predictions = torch.clamp(predictions, -cfg['clamp_value'], cfg['clamp_value'])
 
-            loss_value, l1, l2 = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :cfg.latent_size], sigma=cfg.sigma_regulariser)
+            loss_value, l1, l2 = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :self.latent_size], sigma=cfg['sigma_regulariser'])
             loss_value.backward()
 
             if writer is not None:
@@ -112,7 +114,7 @@ class SDFModel(torch.nn.Module):
                 best_latent_code = latent_code.clone()
 
             # step scheduler and store on tensorboard (optional)
-            if cfg.lr_scheduler:
+            if cfg['lr_scheduler']:
                 scheduler_latent.step(loss_value.item())
                 if writer is not None:
                     writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
@@ -123,6 +125,6 @@ class SDFModel(torch.nn.Module):
 
             # logging
             if writer is not None:
-                writer.add_scalar('Training loss', loss_value.detach().cpu().item(), epoch)
+                writer.add_scalar('Inference loss', loss_value.detach().cpu().item(), epoch)
 
         return best_latent_code
