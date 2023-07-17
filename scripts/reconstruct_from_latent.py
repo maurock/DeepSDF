@@ -6,7 +6,7 @@ import trimesh
 from results import runs_sdf
 import results
 import numpy as np
-import configs
+import config_files
 import yaml
 """Extract mesh from an already optimised latent code and network. 
 Store the mesh in the same folder where the latent code is located."""
@@ -84,7 +84,7 @@ def main(cfg):
 
 if __name__ == '__main__':
 
-    cfg_path = os.path.join(os.path.dirname(configs.__file__), 'reconstruct_from_latent.yaml')
+    cfg_path = os.path.join(os.path.dirname(config_files.__file__), 'reconstruct_from_latent.yaml')
     with open(cfg_path, 'rb') as f:
         cfg = yaml.load(f, Loader=yaml.FullLoader)
 

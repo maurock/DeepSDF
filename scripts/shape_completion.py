@@ -5,7 +5,7 @@ from utils import utils_deepsdf
 import trimesh
 from results import runs_sdf
 import numpy as np
-import configs
+import config_files
 import yaml
 import data.ShapeNetCoreV2 as ShapeNetCoreV2
 from utils import utils_mesh
@@ -144,7 +144,7 @@ def main(cfg):
 
 if __name__ == '__main__':
 
-    cfg_path = os.path.join(os.path.dirname(configs.__file__), 'shape_completion.yaml')
+    cfg_path = os.path.join(os.path.dirname(config_files.__file__), 'shape_completion.yaml')
     with open(cfg_path, 'rb') as f:
         cfg = yaml.load(f, Loader=yaml.FullLoader)
 

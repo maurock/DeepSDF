@@ -14,7 +14,7 @@ from utils import utils_deepsdf
 import results
 from torch.utils.tensorboard import SummaryWriter
 import yaml
-import configs
+import config_files
 
 # Select device. The 'mps' device (macOS M1 architecture) is not supported as it cannot currently handle weith normalisation. 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -227,7 +227,7 @@ class Trainer():
         return avg_val_loss
 
 if __name__=='__main__':
-    train_cfg_path = os.path.join(os.path.dirname(configs.__file__), 'train_sdf.yaml')
+    train_cfg_path = os.path.join(os.path.dirname(config_files.__file__), 'train_sdf.yaml')
     with open(train_cfg_path, 'rb') as f:
         train_cfg = yaml.load(f, Loader=yaml.FullLoader)
 

@@ -6,7 +6,7 @@ import point_cloud_utils as pcu
 import data.ShapeNetCoreV2 as ShapeNetCoreV2
 from glob import glob
 from datetime import datetime
-import configs
+import config_files
 import yaml
 import pybullet as pb
 import trimesh
@@ -96,7 +96,7 @@ def main(cfg):
 
 
 if __name__=='__main__':
-    cfg_path = os.path.join(os.path.dirname(configs.__file__), 'extract_sdf.yaml')
+    cfg_path = os.path.join(os.path.dirname(config_files.__file__), 'extract_sdf.yaml')
     with open(cfg_path, 'rb') as f:
         cfg = yaml.load(f, Loader=yaml.FullLoader)
 
