@@ -5,3 +5,6 @@ __pycache__/
 .DS_Store
 deepsdf.egg-info
 jobs/
+!results/runs_sdf/17_07_172540/weights.pt
+!results/runs_sdf/17_07_172540/results.npy
+!results/runs_sdf/17_07_172540/settings.yaml

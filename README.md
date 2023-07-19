@@ -1,91 +1,156 @@
 # DeepSDF
-Implementation of the paper [DeepSDF: Learning Continuous Signed Distance Functions for Shape Representation](https://openaccess.thecvf.com/content_CVPR_2019/html/Park_DeepSDF_Learning_Continuous_Signed_Distance_Functions_for_Shape_Representation_CVPR_2019_paper.html). The goal if this repository is to provide a simple and intuitive implementation of the DeepSDF model. Step-to-step instructions on data extraction, training, reconstruction and shape completion are also provided.
+Implementation of the paper [DeepSDF: Learning Continuous Signed Distance Functions for Shape Representation](https://openaccess.thecvf.com/content_CVPR_2019/html/Park_DeepSDF_Learning_Continuous_Signed_Distance_Functions_for_Shape_Representation_CVPR_2019_paper.html). The goal if this repository is to provide a simple and intuitive implementation of the DeepSDF model that can be installed with just a single line of code. Step-to-step instructions on data extraction, training, reconstruction and shape completion are provided. Please note: this is not the official implementation. For the official implementation and citation guidelines, please refer to the [original repository](https://github.com/facebookresearch/DeepSDF).
 
-For the official implementation and citation guidelines, [check here](https://github.com/facebookresearch/DeepSDF).
+<img title="a title" alt="Reconstructed objects: a camera, guitar, bottle, and a mug represented with a yellow-red gradient." src="imgs/objs.png">
 
 # Content
 - [Installation](#installation)
 - [Usage](#usage)
-- [Data making](#data-making)
-- [Training](#training)
+    - [Data making](#data-making)
+    - [Training](#training-deepsdf)
+    - [Reconstructing shapes](#reconstructing-shapes)
+    - [Shape completion](#shape_completion)
 - [Known Issues](#known-issues)
+- [License](#license)
 
-# Installation
+# Installation (Mac and Linux)
 These installation instructions are tested for macOS (M1) and Linux. 
 ```
 conda create -n deepsdf python=3.10
 conda activate deepsdf
 ```
-
-### On MacOS:
+To install all the required libraries, go to the root directory of this repository and simply run:
 ```
-conda env update -n deepsdf --file environment_mac.yml
-pip install git+https://github.com/fwilliams/point-cloud-utils.git
-pip install "git+https://github.com/facebookresearch/pytorch3d.git"
+bash install.sh deepsdf
 ```
+This script detects your OS and installs the correct dependencies. 
 
-### On Linux:
-The correct combination of Python, Pytorch, Pytorch3D, and CUDA versions depends on your system (OS and GPU). Here we install `pytorch=1.11.0, cudatoolkit=11.3, pytorch3d=0.7.4`. 
-```
-conda install pytorch==1.11.0 torchvision==0.12.0 torchaudio==0.11.0 cudatoolkit=11.3 -c pytorch
-conda install pytorch3d==0.7.4 -c pytorch3d
-```
+Please note: on macOS, the current stable pytorch3d package will be installed. On Linux this is not possible, as the correct combination of Python, Pytorch, Pytorch3D, and CUDA versions depends on your system (OS and GPU). Therefore, the `install.sh` downloads the following combination: `pytorch=1.11.0, cudatoolkit=11.3, pytorch3d=0.7.4`. If you prefer a different combination, or this combination of dependencies does not work on your system, please edit `install.sh` accordingly, or manually install your preferred libraries.
 
-
+# Installation (Windows)
+Currently the installation script does not support Windows. Please install the dependencies manually.
 
 # Usage
-This section provides an example of usage to predict the shape of an object using pretrained models.
+## Quick example with a pretrained model
+The next sections explain how to create a dataset, train a model, and reconstruct or complete shapes. Here we just provide a minimal example with a small pretrained model:
 
-To collect touches and predict the geometry of an object, run:
+**Reconstruct shapes with latent code optimised at training time**
+
+Set **`config_files/reconstruct_from_latent.yaml`** as follows:
 ```
-python scripts/pipeline_tactile_deepsdf.py --show_gui --num_samples 20 --obj_folder '02942699/6d036fd1c70e5a5849493d905c02fa86' --folder_sdf '24_03_190521' --lr_scheduler --folder_touch '30_05_1633' --mode_reconstruct 'fixed' --epochs 5000 --lr 0.0005 --patience 100 --resolution 256 --lr_multiplier 0.95 --num_samples_extraction 20 --positional_encoding_embeddings 0 --augment_points_std 0.0005 --augment_multiplier_out 5 --clamp --clamp_value 0.1
+# Config file for reconstructing objects from latent code
+
+folder_sdf: '17_07_172540'
+obj_ids: ['02942699/5d42d432ec71bfa1d5004b533b242ce6']
+resolution: 256
 ```
-To speed up the simulation press `G`. Collisions between the arm and the object during sampling are expected, as the collision between the two elements is set to False for speed purposes. This does not affect the resulting contact geometry. The script creates a new folder `results/runs_touch_sdf/<FOLDER_RESULT>`. Please note: as some operations (e.g. weight_norm) do not work on the M1 architecture, inference will run on the CPU. As a result, inference is very slow (up to 1hr for 20 touches and 5000 epochs). On a RTX 3090 GPU, inference takes approx. 5 minutes for the same data points. To change the object to reconstruct, please modify the argument `--obj_folder` by choosing among the objects under the folder `ShapeNetCoreV2urdf`. Additional information regarding these objects can be found in the section `Data making`.
+Run:
+```
+python scripts/reconstruct_from_latent.py
+```
+In `results/runs_sdf/<TIMESTAMP>/meshes_training/` you should see your reconstructed `.obj` file. Visualise it with any graphics library or [Online 3D Viewer](https://3dviewer.net/).
 
-The output is stored in the directory shown at the end of the inference procedure, e.g. `08_06_221924_7367/infer_latent_08_06_223240/19/..`:
-- `final_mesh.obj`: the predicted mesh.
-- `original_touch.html`: interactive plot showing point clouds of the predicted local surfaces and original object mesh.
-- `original_final.html`: interactive plot showing point clouds of the predicted object mesh and original object mesh.
-- `final_touch.html`: interactive plot showing point clouds of the predicted local surfaces and predicted object mesh.
+<img title="a title" alt="Partial pointcloud and reconstructed mesh (a camera)" src="imgs/mesh_reconstructed.png" style="width: 40%">
 
-Additionally, a file containing the predicted chamfer distance `chamfer_distance.txt` is stored in `results/runs_touch_sdf/<FOLDER_RESULT>`.
+**Shape completion**
+Set **`config_files/shape_completion.yaml`** as follows:
+```
+folder_sdf: '17_07_172540'   
+obj_ids: '02942699/5d42d432ec71bfa1d5004b533b242ce6'
+resolution: 256
 
-# Data making
-In this repository, we used the objects from the [ShapeNet](https://shapenet.org/) dataset. The ShapeNetCore.V2 dataset only contains non-watertight `.obj` meshes. However, (1) the PyBullet simulator requires `.urdf` meshes and (2) DeepSDF works best on watertight meshes. Therefore, the `obj` files need to be converted into watertight `urdf` and `obj` meshes for this approach to work. The current repository provides a few examples of shapes in their correct format. Due to the double blind review process, libraries used to process additional shapes cannot be linked here. Further instructions will be added once the review process is complete. 
-The required data structure for the `urdf` and `obj` watertight meshes is the following:
+# Visible bounding box for shape completion
+x_axis_ratio_bbox: 1
+y_axis_ratio_bbox: 0.5
+z_axis_ratio_bbox: 1
+
+# Inference parameters
+epochs: 10000 
+lr: 0.00001
+lr_scheduler: True   
+lr_multiplier: 0.9
+patience: 100
+sigma_regulariser: 0.01
+clamp: True
+clamp_value: 0.1
+```
+Run:
+```
+python scripts/shape_completion.py
+```
+The result is stored in `results/runs_sdf/<TIMESTAMP>/infer_latent_<TIMESTAMP>/`
+<img title="a title" alt="Partial pointcloud and reconstructed mesh (a camera)" src="imgs/mesh_completed.png" style="width: 70%">
+
+## Data making
+The dataset in this repository already contains three shapes from ShapeNetCoreV2. To train on more shapes, please download the ShapeNetCoreV2 datset from the [official website](https://shapenet.org/) and copy its content under `data/ShapeNetCoreV2`. The following format is required:
 ```
 root
  ├── data
- │   ├── ShapeNetCoreV2urdf
+ │   ├── ShapeNetCoreV2
  │   │   ├── 02942699 
  |   |   |   ├── 1ab3abb5c090d9b68e940c4e64a94e1e
- |   |   |   |   ├── model.urdf
- |   |   |   |   ├── model.obj
+ |   |   |   |   ├── models
+ |   |   |   |   |   ├── model_normalized.obj
+ ...
 ```
+To extract the SDF values required to train DeepSDF, simply set the number of samples to generate in `config_files/extract_sdf.yaml` and run:
+```
+python data/extract_sdf.py
+```
+This script automatically converts the mesh into a watertight mesh prior to data collection. Moreover, in Shapenet the front of the object is aligned with -Z axis. Before extracting the samples, we rotate the object to align it with the canonical reference frame using `utils_mesh.shapenet_rotate()`.
 
-SDF values need to be extracted to train the DeepSDF model:
-```
-python data_making/extract_sdf.py --num_samples_on_surface 20000 --num_samples_in_bbox 10000 --num_samples_in_volume 5000
-```
+The collected data is stored in:
+- `results/samples_dict_ShapeNetCore.npy`: dictionary containing collected samples and corresponding SDF values per shape.
+- `idx_int2str_dict.npy`: dictionary mapping object numerical indexes to corresponding ShapeNet category/synset.
+- `idx_str2int_dict.npy`: dictionary mapping ShapeNet category/synset to object numerical indexes.
 
-Data necessary to train the local surface prediciton model is extracted as follows:
-```
-python extract_touch_charts.py --num_samples 10
-```
 
-# Training
-To train the local surface prediction model:
+## Training DeepSDF
+Configure the training parameters in `config_files/train_sdf.py` and run:
 ```
-python model/train_touch.py --epochs 1000 --batch_size 16  --loss_coeff 1000 --lr_scheduler --lr_multiplier 0.8
+python model/train_sdf.py
 ```
-The train the DeepSDF model:
+This trains the surface prediction model. The model weights and additional results are stored under `results/runs_sdf/<TIMESTAMP>`.
+
+To visualise the training curves, use Tensorboard:
 ```
-python model/train_sdf.py --epochs 150 --lr_model 5e-4 --lr_latent 4e-2 --sigma_regulariser 0.01 --num_layers 8 --batch_size 20480 --lr_multiplier 0.9 --patience 5 --lr_scheduler --latent_size 128 --inner_dim 512 --clamp --clamp_value 0.05 --positional_encoding_embeddings 0
+cd results
+tensorboard --logdir `runs_sdf`
 ```
-The batch size needs to be adjusted to the dataset dimension. For 1300 shapes, a batch size of 20480 results in a 15 hours training (RTX 3090).
+<img title="a title" alt="Training and Validation curves" src="imgs/training_loss.png">
+
+
+## Reconstructing shapes
+The latent codes optimised at training time are stored in `results/runs_sdf/<TIMESTAMP>/results.npy`. If you want to reconstruct the shapes using the trained DeepSDF model and the latent codes optimised at training time, set `config_files/reconstruct_from_latent.yaml`. The possible `obj_ids` to reconstruct are those available in `data/ShapeNetCoreV2`, e.g. `02942699/6d036fd1c70e5a5849493d905c02fa86`. 
+
+Then, simply run:
+```
+python scripts/reconstruct_from_latent.py
+```
+The folder `meshes_training` is created under the corresponding `results/runs_sdf/<TIMESTAMP>/` and the reconstructed `.obj` files are stored. You can visualise `.obj` files using [Online 3D Viewer](https://3dviewer.net/), Blender, Trimesh, or any graphics library.
+
+## Shape Completion
+DeepSDF can reconstruct shapes when provided with partial pointclouds of the object's surface. This is achieved by leveraging the auto-decoder framework, which infers the latent code that best describes the provided pointcloud at test-time. 
+
+To extract and predict the mesh geometry from a partial pointcloud, set `config_files/shape_completion.yaml`. Here' an example of parameters for pointcloud extraction:
+```
+x_axis_ratio_bbox: 0.5   
+y_axis_ratio_bbox: 1
+z_axis_ratio_bbox: 1
+```
+This configuration selects points along 50% of the x-axis, the entire y-axis, and the entire z-axis.
+
+Additionally, you can configure the hyperparameters for latent code inference.
+
+Please note: before extracting the pointcloud, remember to rotate the mesh using the provided method `utils_mesh.shapenet_rotate(original_mesh)`. This method makes sure to align the object to our canonical reference frame. The partial pointcloud generation is handled by the method `scripts/shape_completion.py -> generate_partial_pointcloud(cfg)`. Edit this function for custom data extraction. 
 
 # Known issues
-- If `--show_gui` is not passed as argument on macOS M1, the collected touches are empty. This can be solved by recalibrating the sensors. On Ubuntu and CentOS 7, `show_gui` can be safely set as False to speed up the data collection procedure.
-- Set `PYOPENGL_PLATFORM=egl` before running scripts requiring rendering when using Ubuntu. Example: `PYOPENGL_PLATFORM=egl python scripts/pipeline_tactile_deepsdf.py`.
-- Compatibility issues between PyTorch and PyTorch3D on Ubuntu. Please refer to `https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md` for instructions.
-- CPU inference is very slow.
+- Finding a matching combination of Pytorch, Pytorch3D, CUDA version, and hardware is tricky. If you encounter compatibility issues when installing Pytorch3D on Linux, please refer to `https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md`.
+
+# TODO
+
+- [ ] Upload pretrained model for quick testing
+- [ ] Add support fo quick install on Windows
+
+# License
+DeepSDF is relased under the MIT License. See the [LICENSE file](LICENSE) for more details.
