@@ -3,6 +3,34 @@ Implementation of the paper [DeepSDF: Learning Continuous Signed Distance Functi
 
 <img title="a title" alt="Reconstructed objects: a camera, guitar, bottle, and a mug represented with a yellow-red gradient." src="imgs/objs.png">
 
+### Why yet another repository on DeepSDF?
+In comparison to other excellent repositories, this offers a few advantages:
+- Minimalistic and simple implementation
+- Effortless installation with a single line of code.
+- Shape completion functionality
+
+Kudos the authors of DeepSDF for their work:
+```
+@inproceedings{park2019deepsdf,
+  title={Deepsdf: Learning continuous signed distance functions for shape representation},
+  author={Park, Jeong Joon and Florence, Peter and Straub, Julian and Newcombe, Richard and Lovegrove, Steven},
+  booktitle={Proceedings of the IEEE/CVF conference on computer vision and pattern recognition},
+  pages={165--174},
+  year={2019}
+}
+```
+If you find this repository useful, please consider citing:
+```
+@misc{comi2023deepsdf,
+  title={DeepSDF-minimal},
+  author={Comi, Mauro},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished={\url{https://github.com/maurock/DeepSDF/}},
+  year={2023}
+}
+```
+
 # Content
 - [Installation](#installation)
 - [Usage](#usage)
@@ -14,7 +42,7 @@ Implementation of the paper [DeepSDF: Learning Continuous Signed Distance Functi
 - [License](#license)
 
 # Installation (Mac and Linux)
-These installation instructions are tested for macOS (M1) and Linux. 
+These installation instructions are tested for macOS (M1) and Linux (GPU). 
 ```
 conda create -n deepsdf python=3.10
 conda activate deepsdf
@@ -28,7 +56,7 @@ This script detects your OS and installs the correct dependencies.
 Please note: on macOS, the current stable pytorch3d package will be installed. On Linux this is not possible, as the correct combination of Python, Pytorch, Pytorch3D, and CUDA versions depends on your system (OS and GPU). Therefore, the `install.sh` downloads the following combination: `pytorch=1.11.0, cudatoolkit=11.3, pytorch3d=0.7.4`. If you prefer a different combination, or this combination of dependencies does not work on your system, please edit `install.sh` accordingly, or manually install your preferred libraries.
 
 # Installation (Windows)
-Currently the installation script does not support Windows. Please install the dependencies manually.
+COMING SOON. Currently the installation script does not support Windows, please install the dependencies manually.
 
 # Usage
 ## Quick example with a pretrained model
@@ -149,7 +177,6 @@ Please note: before extracting the pointcloud, remember to rotate the mesh using
 
 # TODO
 
-- [ ] Upload pretrained model for quick testing
 - [ ] Add support fo quick install on Windows
 
 # License
