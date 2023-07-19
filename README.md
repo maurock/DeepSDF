@@ -32,6 +32,7 @@ If you find this repository useful, please consider citing:
 ```
 
 # Content
+- [Learning resources](#learning-resources)
 - [Installation](#installation)
 - [Usage](#usage)
     - [Data making](#data-making)
@@ -40,6 +41,13 @@ If you find this repository useful, please consider citing:
     - [Shape completion](#shape_completion)
 - [Known Issues](#known-issues)
 - [License](#license)
+
+# Learning resources
+There are many great resources to learn about DeepSDF and Neural Fields. 
+- [Original DeepSDF paper](https://arxiv.org/pdf/1901.05103.pdf)
+- [This notebook](https://colab.research.google.com/drive/1eWUP6g5-A0p1e6xhJYzU5dC9kegoTLwL?usp=sharing) I wrote to learn the basics of the auto-decoder framework.
+- [Machine Learning for 3D Data](https://mhsung.github.io/kaist-cs492a-spring-2022/): course on Machine Learning for 3D data organised by Minhyuk Sung. DeepSDF is covered in Week 4.
+- [ML for Inverse Graphics](): course taught by Vincent Sitzmann. DeepSDF is covered in Module 3.
 
 # Installation (Mac and Linux)
 These installation instructions are tested for macOS (M1) and Linux (GPU). 
