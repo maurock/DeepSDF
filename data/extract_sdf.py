@@ -55,11 +55,12 @@ def main(cfg):
             # Convert to watertight mesh
             mesh_original = utils_mesh._as_mesh(trimesh.load(obj_path))
             
-            if not mesh.is_watertight:
+            if not mesh_original.is_watertight:
                 verts, faces = pcu.make_mesh_watertight(mesh_original.vertices, mesh_original.faces, 50000)
                 mesh_original = trimesh.Trimesh(vertices=verts, faces=faces)
 
-        except:
+        except Exception as e:
+            print(e)
             continue
 
         # In Shapenet, the front is the -Z axis with +Y still being the up axis. Rotate objects to align with the canonical axis. 
