@@ -10,6 +10,7 @@ from utils import utils_sample, utils_mesh, utils_raycasting
 import argparse
 from glob import glob
 import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
+import data.ABCurdf as ABC
 import trimesh
 import results
 import matplotlib.pyplot as plt
@@ -97,14 +98,10 @@ def main(args):
         'nx': 50,
         'ny': 50
     }
-
-    # Get list of object indices (PartNet-Mobility)
-    # list_objects = [filepath.split('/')[-2] for filepath in glob(os.path.join(os.path.dirname(objects.__file__), '*/'))]  
-    # if '__pycache__' in list_objects:
-    #     list_objects.remove('__pycache__')
-    
+       
     # Directories that contain all .obj and urdf folders
-    obj_dirs = glob(os.path.join(os.path.dirname(ShapeNetCoreV2.__file__), '*', '*/'))
+    dataset_module = ShapeNetCoreV2 if args.dataset == 'ShapeNetCore' else ABC
+    obj_dirs = glob(os.path.join(os.path.dirname(dataset_module.__file__), '*', '*/'))
 
     # Set number of points to consider the touch chart collection valid.
     num_valid_points = 250
@@ -128,7 +125,6 @@ def main(args):
             pb.resetSimulation()
         
         pb, robot = load_environment(args, robot_config, pb)
-
 
         print(f"Collecting data... Object index: {obj_dir} \t {idx+1}/{len(obj_dirs)} ")
 
@@ -294,8 +290,6 @@ def main(args):
                     # Save image
                     plt.imsave(os.path.join(image_dir, f'camera_{idx_camera}.png'), rgb_image)
 
-            #pb.removeBody(robot.robot_id)
-
         pb.removeBody(obj_id)
 
         if args.show_gui:
@@ -320,7 +314,7 @@ if __name__=='__main__':
         "--scale", default=0.2, type=float, help="Scale of the object in simulation wrt the urdf object"
     )
     parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'ABC'"
     )
     args = parser.parse_args()
 

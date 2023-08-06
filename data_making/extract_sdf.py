@@ -6,6 +6,7 @@ import argparse
 import plotly.graph_objects as go
 import point_cloud_utils as pcu
 import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
+import data.ABCurdf as ABC
 from glob import glob
 import pybullet as pb
 from datetime import datetime
@@ -45,7 +46,9 @@ def main(args):
     timestamp_run = datetime.now().strftime('_%d%m')   # timestamp to use for logging data
     
     # Full paths to all .obj
-    obj_paths = glob(os.path.join(os.path.dirname(ShapeNetCoreV2.__file__), '*', '*', '*.obj'))
+    dataset_module = ShapeNetCoreV2 if args.dataset == 'ShapeNetCore' else ABC
+
+    obj_paths = glob(os.path.join(os.path.dirname(dataset_module.__file__), '*', '*', '*.obj'))
 
     samples_dict = dict()        
     # Store conversion between object index (int) and its folder name (str)
@@ -103,14 +106,14 @@ def main(args):
     #_debug_plot(samples_dict[obj_idx])  
     np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}{timestamp_run}.npy'), samples_dict)
 
-    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_str2int_dict{timestamp_run}.npy'), idx_str2int_dict)
-    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_int2str_dict{timestamp_run}.npy'), idx_int2str_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_str2int_dict_{args.dataset}{timestamp_run}.npy'), idx_str2int_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_int2str_dict_{args.dataset}{timestamp_run}.npy'), idx_int2str_dict)
 
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'ABC'"
     )
     # Point-cloud-utils
     parser.add_argument(
@@ -123,5 +126,5 @@ if __name__=='__main__':
         '--num_samples_in_volume', default=1000, type=int, help="Num samples within the predefined volume"
     )  
     args = parser.parse_args()
-
+    
     main(args)

@@ -279,7 +279,7 @@ class Trainer():
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'ABC'"
     )
     parser.add_argument(
         "--seed", type=int, default=42, help="Setting for the random seed"
@@ -360,9 +360,11 @@ if __name__=='__main__':
     # args.lr_model = 0.00005
     # args.lr_latent = 0.004
     # args.lr_scheduler = True
-    # args.batch_size = 20480
-    # args.lr_multiplier = 0.8
+    # args.batch_size = 100
+    # args.lr_multiplier = 0.9
     # args.patience = 5
+    # args.epochs = 50
+    # args.dataset = 'ABC'
 
     trainer = Trainer(args)
     trainer()

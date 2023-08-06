@@ -9,6 +9,7 @@ results/runs_sdf/
 results/runs_touch_sdf/
 .DS_Store
 deep_sdf.egg-info
+touchsdf.egg-info
 notebooks/.ipynb_checkpoints
 .vscode
 *.out
@@ -28,3 +29,6 @@ results/samples_dict_ShapeNetCore.npy
 data/ShapeNetCoreV2urdf
 notebooks/*.ipynb
 results/checkpoints/*
+jobs/
+notebooks/
+.ipynb_checkpoints

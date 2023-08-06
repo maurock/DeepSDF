@@ -5,7 +5,6 @@ import os
 import meshplot as mp
 import model.model_sdf as sdf_model
 import argparse
-import meshplot as mp
 from utils import utils_deepsdf
 import trimesh
 import time
