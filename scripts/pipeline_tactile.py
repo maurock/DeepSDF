@@ -8,6 +8,7 @@ from utils import utils_sample, utils_mesh, utils_raycasting
 import argparse
 import data.ShapeNetCoreV2urdf as ShapeNetCore
 import data.ShapeNetCoreV2urdf_test as ShapeNetCore_test
+import data.ABCurdf as ABC
 from model import model_touch
 import torch
 import data
@@ -112,14 +113,16 @@ def main(args):
     initial_obj_orn = p.getQuaternionFromEuler(initial_obj_rpy)
     initial_obj_pos = [0.5, 0.0, 0]
 
-    # Load object
+    # Load object\
     if args.dataset == 'ShapeNetCore':
-        shapeneturdf_folder = os.path.dirname(ShapeNetCore.__file__)
+        dataset_module = os.path.dirname(ShapeNetCore.__file__)
     elif args.dataset == 'ShapeNetCore_test':
-        shapeneturdf_folder = os.path.dirname(ShapeNetCore_test.__file__)
+        dataset_module = os.path.dirname(ShapeNetCore_test.__file__)
+    elif args.dataset == 'ABC':
+        dataset_module = os.path.dirname(ABC.__file__)
     else:
         raise ValueError('Dataset not recognised')
-    obj_dir = os.path.join(shapeneturdf_folder, args.obj_folder)
+    obj_dir = os.path.join(dataset_module, args.obj_folder)
     with utils_sample.suppress_stdout():          # to suppress b3Warning           
         obj_id = pb.loadURDF(
             os.path.join(obj_dir, "model.urdf"),
@@ -340,7 +343,7 @@ if __name__=='__main__':
         "--folder_touch", default=0, type=str, help="Folder containing the touch model weights"
     )
     parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ShapeNetCore_test', or 'PartNetMobility'"
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ShapeNetCore_test', or 'ABC'"
     )
     parser.add_argument(
         "--augment_points_std", default=0.002, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
@@ -358,9 +361,11 @@ if __name__=='__main__':
 
     # args.show_gui = True
     # args.num_samples = 20
-    # args.folder_touch = '14_03_2327' 
-    # args.obj_folder = '02942699/6d036fd1c70e5a5849493d905c02fa86' 
-    # args.augment_multiplier_out = 10
+    # args.folder_touch = '30_05_1633' 
+    # # args.obj_folder = '02942699/6d036fd1c70e5a5849493d905c02fa86' 
+    # args.obj_folder = 'data/9' 
+    # args.augment_multiplier_out = 5
     # args.augment_points_std = 0.005
+    # args.dataset = "ABC"
 
     _ = main(args)

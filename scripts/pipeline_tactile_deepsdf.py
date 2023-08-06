@@ -9,6 +9,7 @@ from tactile_gym.assets import add_assets_path
 from utils import utils_sample, utils_mesh, utils_deepsdf, utils_raycasting
 import argparse
 import data.ShapeNetCoreV2urdf as ShapeNetCore
+import data.ABCurdf as ABC
 from model import model_sdf, model_touch
 import torch
 import data
@@ -59,7 +60,7 @@ if __name__=='__main__':
         "--folder_touch", default=0, type=str, help="Folder containing the touch model weights"
     )
     parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ShapeNetCore_test', or 'PartNetMobility'"
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ShapeNetCore_test', or 'ABC'"
     )
     parser.add_argument(
         "--augment_points_std", default=0.002, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
