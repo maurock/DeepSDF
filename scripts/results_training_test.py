@@ -319,8 +319,8 @@ def main(args):
                 reconstructed_pointcloud, _ = trimesh.sample.sample_surface(reconstructed_mesh, 10000)
                 
                 # Get chamfer distance
-                cd = chamfer_distance(torch.tensor([original_pointcloud], dtype=torch.float32),
-                                    torch.tensor([reconstructed_pointcloud], dtype=torch.float32))[0]
+                cd = chamfer_distance(torch.tensor(original_pointcloud[None,...], dtype=torch.float32),
+                                    torch.tensor(reconstructed_pointcloud[None,...], dtype=torch.float32))[0]
                 
                 results[num_sample].append(cd.item())
                 
@@ -430,17 +430,18 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
+    # args.show_gui = True
     # args.folder_sdf ='24_03_190521'
-    # args.folder_touch_sdf ='26_05_123033' 
     # args.lr_scheduler = True
     # args.epochs = 3
     # args.lr = 0.0005 
     # args.patience = 100 
-    # args.resolution = 20 
-    # args.num_samples_extraction = [10, 20]
+    # args.resolution = 10 
+    # args.num_samples_extraction = [10]
     # args.mode_reconstruct = 'fixed'
     # args.langevin_noise = 0.0
     # args.dataset = 'ShapeNetCore_test'
     # args.folder_touch = '30_05_1633'
+    # args.category = 'category'
 
     main(args)
