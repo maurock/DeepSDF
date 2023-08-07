@@ -68,7 +68,7 @@ def main(args):
     # If we pass a string describing the object id, e.g. 02942699/6d036fd1c70e5a5849493d905c02fa86
     else:
         # Load paths
-        str2int_path = os.path.join(os.path.dirname(results.__file__), 'idx_str2int_dict.npy')
+        str2int_path = os.path.join(os.path.dirname(results.__file__), f'idx_str2int_dict_{args.dataset}.npy')
         results_dict_path = os.path.join(os.path.dirname(runs_sdf.__file__), args.folder_sdf, 'results.npy')
         
         # Load dictionaries
@@ -111,6 +111,13 @@ if __name__ == '__main__':
     parser.add_argument(
         "--latent_size", type=int, default=128, help="Size of the latent code"
     )
+    parser.add_argument(
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'ABC'"
+    )
     args = parser.parse_args()
+
+    # args.dataset = 'ABC'
+    # args.obj_ids = ['data/9']
+    # args.folder_sdf = '06_08_134333'
 
     main(args)

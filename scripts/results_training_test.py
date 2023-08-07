@@ -45,6 +45,8 @@ def main(args):
         raise ValueError('Dataset not recognised')
     full_paths = glob(os.path.join(shapeneturdf_folder, args.category, '*/'))
     obj_folders = [os.sep.join(full_path.split(os.sep)[-3:-1]) for full_path in full_paths]
+    # For consistency:
+    obj_folders = sorted(obj_folders)
 
     # Logging
     test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), datetime.now().strftime('%d_%m_%H%M%S_') + str(random.randint(0, 10000)) + suffix)
@@ -152,7 +154,7 @@ def main(args):
     }
     
     # Set initial object pose
-    initial_obj_rpy = [np.pi/2, 0, -np.pi/2]
+    initial_obj_rpy = [np.pi/2 + args.change_orn[0], 0 + args.change_orn[1], -np.pi/2 + args.change_orn[2]]
     initial_obj_orn = p.getQuaternionFromEuler(initial_obj_rpy)
     initial_obj_pos = [0.5, 0.0, 0]
 
@@ -422,6 +424,9 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--num_samples_extraction", type=int, default=10, nargs='+', help="Number of samples on the objects. It can be a single number or a list of numbers, e.g. 10 20 30."
+    )
+    parser.add_argument(
+        "--change_orn", type=float, default=[0, 0, 0], nargs='+', help="Number of samples on the objects. It can be a single number or a list of numbers, e.g. 10 20 30."
     )
     args = parser.parse_args()
 
