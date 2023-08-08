@@ -145,6 +145,11 @@ class Trainer():
 
         train_size = int(0.85 * len(data))
         val_size = len(data) - train_size
+
+        if self.args.limit_data:
+            train_size = int(train_size/2)
+            val_size = int(val_size/2)
+        
         train_data, val_data = random_split(data, [train_size, val_size])
         train_loader = DataLoader(
                 train_data,
@@ -159,16 +164,6 @@ class Trainer():
             drop_last=True
             )
         return train_loader, val_loader
-
-    def get_latent_proportions(self, latent_codes_indices_batch):
-        """
-        The gradient is averaged across the entire batch, but every latent code only appears in a fraction of this batch.
-        Therefore, the gradients wrt latent vectors are underestimated - because each latent vector only contributes
-        to a proportion of the average gradient computed across the entire batch size.
-        Solution: compute the proportion of samples per latent classes, and ajust the gradient accordingly.
-        """
-        unique_latent_indices_batch, counts = latent_codes_indices_batch.unique(return_counts=True)
-        return unique_latent_indices_batch, counts 
 
     def generate_xy(self, batch):
         """
@@ -209,7 +204,6 @@ class Trainer():
             self.optimizer_latent.zero_grad()
 
             x, y, latent_codes_indices_batch, latent_codes_batch = self.generate_xy(batch)
-            #unique_latent_indices_batch, counts = self.get_latent_proportions(latent_codes_indices_batch)
 
             predictions = self.model(x)  # (batch_size, 1)
             if args.clamp:
@@ -217,15 +211,6 @@ class Trainer():
             
             loss_value, l1, l2 = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, x[:, :self.args.latent_size], sigma=self.args.sigma_regulariser)
             loss_value.backward()       
-
-            # set gradients of latent codes that were not in the batch to 0     
-            #unique_latent_indices_batch = torch.unique(latent_codes_indices_batch, dim=0).to(device)
-            # for i in range(0, self.latent_codes.shape[0]):
-            #     if i not in unique_latent_indices_batch:
-            #         self.latent_codes.grad[i, :].data.zero_()      
-            #     else:
-            #         count = counts[unique_latent_indices_batch == i]
-            #         self.latent_codes.grad[i, :] = self.latent_codes.grad[i, :] * (self.args.batch_size / count)
 
             self.optimizer_latent.step()
             self.optimizer_model.step()
@@ -350,6 +335,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
     )
+    parser.add_argument(
+        "--limit_data", default=False, action='store_true', help="Limit data to half the size of the entire dataset"
+    )    
     args = parser.parse_args()
 
     # args.pretrained = True
@@ -364,7 +352,7 @@ if __name__=='__main__':
     # args.lr_multiplier = 0.9
     # args.patience = 5
     # args.epochs = 50
-    # args.dataset = 'ABC'
-
+    # args.dataset = 'ShapeNetCore'
+    
     trainer = Trainer(args)
     trainer()
