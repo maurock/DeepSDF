@@ -6,7 +6,7 @@ import argparse
 import plotly.graph_objects as go
 import point_cloud_utils as pcu
 import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
-import data.ABC_train_urdf as ABC_train
+import data.ABC_train as ABC_train
 from glob import glob
 import pybullet as pb
 from datetime import datetime
@@ -43,7 +43,7 @@ def _debug_plot(samples, dist=True):
 
 def main(args):
 
-    timestamp_run = datetime.now().strftime('_%d%m')   # timestamp to use for logging data
+    timestamp_run = datetime.now().strftime('%d%m')   # timestamp to use for logging data
     
     # Full paths to all .obj
     dataset_module = ShapeNetCoreV2 if args.dataset == 'ShapeNetCore' else ABC_train if args.dataset == 'ABC' else exit('Dataset not supported')
