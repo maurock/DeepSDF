@@ -7,7 +7,6 @@ import plotly.graph_objects as go
 import point_cloud_utils as pcu
 import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
 import data.ABC_train_urdf as ABC_train
-import data.ABC_test_urdf as ABC_test
 from glob import glob
 import pybullet as pb
 from datetime import datetime
@@ -47,7 +46,7 @@ def main(args):
     timestamp_run = datetime.now().strftime('_%d%m')   # timestamp to use for logging data
     
     # Full paths to all .obj
-    dataset_module = ShapeNetCoreV2 if args.dataset == 'ShapeNetCore' else ABC_train if args.dataset == 'ABC_train' else ABC_test
+    dataset_module = ShapeNetCoreV2 if args.dataset == 'ShapeNetCore' else ABC_train if args.dataset == 'ABC' else exit('Dataset not supported')
     print(f'Using dataset {dataset_module.__name__}')
 
     obj_paths = glob(os.path.join(os.path.dirname(dataset_module.__file__), '*', '*', '*.obj'))
@@ -115,7 +114,7 @@ def main(args):
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'ABC_train' or 'ABC_test'"
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'ABC'"
     )
     # Point-cloud-utils
     parser.add_argument(
