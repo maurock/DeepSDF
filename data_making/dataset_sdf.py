@@ -10,10 +10,17 @@ class SDFDataset(Dataset):
     """
     TODO: adapting to handle multiple objects
     """
-    def __init__(self, dataset_name):
+    def __init__(self, dataset_name, limit_data=1):
         samples_dict = np.load(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{dataset_name}.npy'), allow_pickle=True).item()
+
+        obs_idxs = list(samples_dict.keys())
+        # Limit the number of objects to use for training
+        if limit_data<1:
+            np.random.shuffle(obs_idxs)
+            obs_idxs = obs_idxs[:int(limit_data*len(obs_idxs))]
+
         self.data = dict()
-        for obj_idx in list(samples_dict.keys()):  # samples_dict.keys() for all the objects
+        for obj_idx in obs_idxs:  # samples_dict.keys() for all the objects
             for key in samples_dict[obj_idx].keys():   # keys are ['samples', 'sdf', 'latent_class', 'samples_latent_class']
                 value = torch.from_numpy(samples_dict[obj_idx][key]).float().to(device)
                 if len(value.shape) == 1:    # increase dim if monodimensional, needed to vstack

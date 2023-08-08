@@ -132,24 +132,18 @@ class Trainer():
                     self.writer.add_scalar('Learning rate (model)', self.scheduler_model._last_lr[0], epoch)
                     self.writer.add_scalar('Learning rate (latent)', self.scheduler_latent._last_lr[0], epoch)
             
-            
-            
         end = time.time()
         print(f'Time elapsed: {end - start} s')
 
     def get_loaders(self):
-        data = dataset.SDFDataset(self.args.dataset)
+        data = dataset.SDFDataset(self.args.dataset, args.limit_data)
 
         if args.clamp:
             data.data['sdf'] = torch.clamp(data.data['sdf'], -args.clamp_value, args.clamp_value)
 
         train_size = int(0.85 * len(data))
         val_size = len(data) - train_size
-
-        if self.args.limit_data:
-            train_size = int(train_size/2)
-            val_size = int(val_size/2)
-        
+       
         train_data, val_data = random_split(data, [train_size, val_size])
         train_loader = DataLoader(
                 train_data,
@@ -336,7 +330,7 @@ if __name__=='__main__':
         "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
     )
     parser.add_argument(
-        "--limit_data", default=False, action='store_true', help="Limit data to half the size of the entire dataset"
+        "--limit_data", default=1, type=float, help="Ratio of the original dataset used for training. If 1, the full dataset is used. Values can be between 0 and 1."
     )    
     args = parser.parse_args()
 
@@ -353,6 +347,7 @@ if __name__=='__main__':
     # args.patience = 5
     # args.epochs = 50
     # args.dataset = 'ShapeNetCore'
+    # args.limit_data = 0.2
     
     trainer = Trainer(args)
     trainer()
