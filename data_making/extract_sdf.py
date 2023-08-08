@@ -6,7 +6,8 @@ import argparse
 import plotly.graph_objects as go
 import point_cloud_utils as pcu
 import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
-import data.ABCurdf as ABC
+import data.ABC_train_urdf as ABC_train
+import data.ABC_test_urdf as ABC_test
 from glob import glob
 import pybullet as pb
 from datetime import datetime
@@ -46,7 +47,8 @@ def main(args):
     timestamp_run = datetime.now().strftime('_%d%m')   # timestamp to use for logging data
     
     # Full paths to all .obj
-    dataset_module = ShapeNetCoreV2 if args.dataset == 'ShapeNetCore' else ABC
+    dataset_module = ShapeNetCoreV2 if args.dataset == 'ShapeNetCore' else ABC_train if args.dataset == 'ABC_train' else ABC_test
+    print(f'Using dataset {dataset_module.__name__}')
 
     obj_paths = glob(os.path.join(os.path.dirname(dataset_module.__file__), '*', '*', '*.obj'))
 
@@ -101,19 +103,19 @@ def main(args):
 
         # Save the samples and SDFs at regular intervals
         if obj_idx % 100 == 0:
-            np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}{timestamp_run}.npy'), samples_dict)  
+            np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}_{timestamp_run}.npy'), samples_dict)  
 
     #_debug_plot(samples_dict[obj_idx])  
-    np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}{timestamp_run}.npy'), samples_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}_{timestamp_run}.npy'), samples_dict)
 
-    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_str2int_dict_{args.dataset}{timestamp_run}.npy'), idx_str2int_dict)
-    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_int2str_dict_{args.dataset}{timestamp_run}.npy'), idx_int2str_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_str2int_dict_{args.dataset}_{timestamp_run}.npy'), idx_str2int_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_int2str_dict_{args.dataset}_{timestamp_run}.npy'), idx_int2str_dict)
 
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'ABC'"
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'ABC_train' or 'ABC_test'"
     )
     # Point-cloud-utils
     parser.add_argument(
