@@ -59,7 +59,7 @@ class Trainer():
         self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
         
         # generate a unique random latent code for each shape
-        self.latent_codes = utils_deepsdf.generate_latent_codes(self.args.latent_size, samples_dict)
+        self.latent_codes = utils_deepsdf.generate_latent_codes(self.args.latent_size, samples_dict, self.args.limit_data)
         self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
         
         if self.args.pretrained:
@@ -335,19 +335,19 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     # args.pretrained = True
-    # args.pretrain_weights = '/Users/ri21540/Documents/PhD/Code/DeepSDF/results/runs_sdf/03_04_010720/weights.pt'
-    # args.pretrain_optim_model = '/Users/ri21540/Documents/PhD/Code/DeepSDF/results/runs_sdf/03_04_010720/optimizer_model_state.pt'
-    # args.pretrain_optim_latent = '/Users/ri21540/Documents/PhD/Code/DeepSDF/results/runs_sdf/03_04_010720/optimizer_latent_state.pt'
-    # args.positional_encoding_embeddings = 5
+    # args.pretrain_weights = '/Users/ri21540/Documents/PhD/Code/TouchSDF/results/runs_sdf/08_08_195730/weights.pt'
+    # args.pretrain_optim_model = '/Users/ri21540/Documents/PhD/Code/TouchSDF/results/runs_sdf/08_08_195730/optimizer_model_state.pt'
+    # args.pretrain_optim_latent = '/Users/ri21540/Documents/PhD/Code/TouchSDF/results/runs_sdf/08_08_195730/optimizer_latent_state.pt'
+    # args.positional_encoding_embeddings = 0
     # args.lr_model = 0.00005
     # args.lr_latent = 0.004
     # args.lr_scheduler = True
-    # args.batch_size = 100
+    # args.batch_size = 20480
     # args.lr_multiplier = 0.9
     # args.patience = 5
     # args.epochs = 50
-    # args.dataset = 'ShapeNetCore'
-    # args.limit_data = 0.2
+    # args.dataset = 'ABC'
+    # args.limit_data = 0.25
     
     trainer = Trainer(args)
     trainer()

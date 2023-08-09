@@ -34,7 +34,7 @@ def SDFLoss_multishape(sdf, prediction, x_latent, sigma):
     return loss, l1, l2
 
 
-def generate_latent_codes(latent_size, samples_dict):
+def generate_latent_codes(latent_size, samples_dict, limit_data=1):
     """Generate a random latent codes for each shape form a Gaussian distribution
     Returns:
         - latent_codes: np.array, shape (num_shapes, latent_size)
@@ -45,11 +45,19 @@ def generate_latent_codes(latent_size, samples_dict):
     """
     latent_codes = torch.tensor([], dtype=torch.float32).reshape(0, latent_size).to(device)
     #dict_latent_codes = dict()
-    for i, obj_idx in enumerate(list(samples_dict.keys())):
+
+    obs_idxs = list(samples_dict.keys())
+
+    # Limit the number of latent codes when the dataset is limited
+    if limit_data<1:
+        obs_idxs = obs_idxs[:int(limit_data*len(obs_idxs))]
+
+    for i, obj_idx in enumerate(obs_idxs):
         #dict_latent_codes[obj_idx] = i
         latent_code = torch.normal(0, 0.01, size = (1, latent_size), dtype=torch.float32).to(device)
         latent_codes = torch.vstack((latent_codes, latent_code))
     latent_codes.requires_grad_(True)
+    
     return latent_codes #, dict_latent_codes
 
 

@@ -16,7 +16,6 @@ class SDFDataset(Dataset):
         obs_idxs = list(samples_dict.keys())
         # Limit the number of objects to use for training
         if limit_data<1:
-            np.random.shuffle(obs_idxs)
             obs_idxs = obs_idxs[:int(limit_data*len(obs_idxs))]
 
         self.data = dict()
