@@ -10,7 +10,7 @@ from utils import utils_sample, utils_mesh, utils_raycasting
 import argparse
 from glob import glob
 import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
-import data.ABCurdf as ABC
+import data.ABC_train as ABC
 import trimesh
 import results
 import matplotlib.pyplot as plt

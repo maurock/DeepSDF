@@ -10,6 +10,7 @@ from utils import utils_sample, utils_mesh, utils_deepsdf, utils_raycasting
 import argparse
 import data.ShapeNetCoreV2urdf as ShapeNetCore
 import data.ShapeNetCoreV2urdf_test as ShapeNetCore_test
+import data.ABC_test as ABC_test
 from model import model_sdf, model_touch
 import torch
 import data
@@ -21,8 +22,6 @@ import json
 import point_cloud_utils as pcu
 import results
 import matplotlib.pyplot as plt
-import scripts.pipeline_tactile as pipeline_tactile
-import scripts.pipeline_deepsdf as pipeline_deepsdf
 from glob import glob
 from pytorch3d.loss import chamfer_distance
 import random
@@ -37,10 +36,13 @@ def main(args):
     # All object paths in the dataset
     if args.dataset == 'ShapeNetCore':
         shapeneturdf_folder = os.path.dirname(ShapeNetCore.__file__)
-        suffix = '_train'
+        suffix = '_ShapeNetCore_train'
     elif args.dataset == 'ShapeNetCore_test':
         shapeneturdf_folder = os.path.dirname(ShapeNetCore_test.__file__)
-        suffix = '_test'
+        suffix = '_ShapeNetCore_test'
+    elif args.dataset == 'ABC_test':
+        shapeneturdf_folder = os.path.dirname(ABC_test.__file__)
+        suffix = '_ABC_test'
     else:
         raise ValueError('Dataset not recognised')
     full_paths = glob(os.path.join(shapeneturdf_folder, args.category, '*/'))
@@ -431,17 +433,18 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     # args.show_gui = True
-    # args.folder_sdf ='24_03_190521'
+    # args.folder_sdf ='08_08_195730'
     # args.lr_scheduler = True
-    # args.epochs = 3
+    # args.epochs = 1000
     # args.lr = 0.0005 
     # args.patience = 100 
-    # args.resolution = 10 
-    # args.num_samples_extraction = [10]
+    # args.resolution = 132 
+    # args.num_samples = 20
+    # args.num_samples_extraction = [20]
     # args.mode_reconstruct = 'fixed'
     # args.langevin_noise = 0.0
-    # args.dataset = 'ShapeNetCore_test'
+    # args.dataset = 'ABC_test'
     # args.folder_touch = '30_05_1633'
-    # args.category = 'category'
+    # args.category = 'data'
 
     main(args)
