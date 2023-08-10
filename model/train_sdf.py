@@ -62,21 +62,23 @@ class Trainer():
         self.latent_codes = utils_deepsdf.generate_latent_codes(self.args.latent_size, samples_dict, self.args.limit_data)
         self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
         
+        # Load pretrained weights and optimisers to continue training
         if self.args.pretrained:
+            pretrained_folder = os.path.join(self.runs_dir, self.args.pretrained_folder)
+
             # load pretrained weights
-            self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
+            self.model.load_state_dict(torch.load(os.path.join(pretrained_folder, 'weights.pt'), map_location=device))
 
             # load pretrained optimisers
-            self.optimizer_model.load_state_dict(torch.load(self.args.pretrain_optim_model, map_location=device))
+            self.optimizer_model.load_state_dict(torch.load(os.path.join(pretrained_folder, 'optimizer_model_state.pt'), map_location=device))
+
             # retrieve latent codes from results.npy file
-            results_path = self.args.pretrain_optim_model.split(os.sep)
-            results_path[-1] = 'results.npy'
-            results_path = os.sep.join(results_path)
+            results_path = os.path.join(pretrained_folder, 'results.npy')
             # load latent codes from results.npy file
             results_latent_codes = np.load(results_path, allow_pickle=True).item()
             self.latent_codes = torch.tensor(results_latent_codes['train']['best_latent_codes']).float().to(device)
             self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
-            self.optimizer_latent.load_state_dict(torch.load(self.args.pretrain_optim_latent, map_location=device))
+            self.optimizer_latent.load_state_dict(torch.load(os.path.join(pretrained_folder, 'optimizer_latent_state.pt'), map_location=device))
 
         if self.args.lr_scheduler:
             self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.0001, threshold_mode='rel')
@@ -315,13 +317,7 @@ if __name__=='__main__':
         "--pretrained", default=False, action='store_true', help="Use pretrain weights"
     )
     parser.add_argument(
-        "--pretrain_weights", type=str, default='', help="Path to pretrain weights"
-    )
-    parser.add_argument(
-        "--pretrain_optim_model", type=str, default='', help="Path to pretrain weights"
-    )
-    parser.add_argument(
-        "--pretrain_optim_latent", type=str, default='', help="Path to pretrain weights"
+        "--pretrained_folder", type=str, default='', help="Name of the folder under runs_sdf containing weights and optimizer states, e.g. 09_08_125850"
     )
     parser.add_argument(
         "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
@@ -335,9 +331,7 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     # args.pretrained = True
-    # args.pretrain_weights = '/Users/ri21540/Documents/PhD/Code/TouchSDF/results/runs_sdf/08_08_195730/weights.pt'
-    # args.pretrain_optim_model = '/Users/ri21540/Documents/PhD/Code/TouchSDF/results/runs_sdf/08_08_195730/optimizer_model_state.pt'
-    # args.pretrain_optim_latent = '/Users/ri21540/Documents/PhD/Code/TouchSDF/results/runs_sdf/08_08_195730/optimizer_latent_state.pt'
+    # args.pretrained_folder = '09_08_125850'
     # args.positional_encoding_embeddings = 0
     # args.lr_model = 0.00005
     # args.lr_latent = 0.004
