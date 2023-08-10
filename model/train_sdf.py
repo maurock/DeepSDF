@@ -77,6 +77,7 @@ class Trainer():
             # load latent codes from results.npy file
             results_latent_codes = np.load(results_path, allow_pickle=True).item()
             self.latent_codes = torch.tensor(results_latent_codes['train']['best_latent_codes']).float().to(device)
+            self.latent_codes.requires_grad_(True)
             self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
             self.optimizer_latent.load_state_dict(torch.load(os.path.join(pretrained_folder, 'optimizer_latent_state.pt'), map_location=device))
 
