@@ -8,7 +8,8 @@ from utils import utils_sample, utils_mesh, utils_raycasting
 import argparse
 import data.ShapeNetCoreV2urdf as ShapeNetCore
 import data.ShapeNetCoreV2urdf_test as ShapeNetCore_test
-import data.ABCurdf as ABC
+import data.ABC_train as ABC_train
+import data.ABC_test as ABC_test
 from model import model_touch
 import torch
 import data
@@ -118,8 +119,10 @@ def main(args):
         dataset_module = os.path.dirname(ShapeNetCore.__file__)
     elif args.dataset == 'ShapeNetCore_test':
         dataset_module = os.path.dirname(ShapeNetCore_test.__file__)
-    elif args.dataset == 'ABC':
-        dataset_module = os.path.dirname(ABC.__file__)
+    elif args.dataset == 'ABC_train':
+        dataset_module = os.path.dirname(ABC_train.__file__)
+    elif args.dataset == 'ABC_test':
+        dataset_module = os.path.dirname(ABC_test.__file__)
     else:
         raise ValueError('Dataset not recognised')
     obj_dir = os.path.join(dataset_module, args.obj_folder)
