@@ -9,7 +9,6 @@ from tactile_gym.assets import add_assets_path
 from utils import utils_sample, utils_mesh, utils_deepsdf, utils_raycasting
 import argparse
 import data.ShapeNetCoreV2urdf as ShapeNetCore
-import data.ABCurdf as ABC
 from model import model_sdf, model_touch
 import torch
 import data
