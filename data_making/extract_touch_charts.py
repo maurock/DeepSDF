@@ -9,13 +9,16 @@ from tactile_gym.assets import add_assets_path
 from utils import utils_sample, utils_mesh, utils_raycasting
 import argparse
 from glob import glob
-import data.ShapeNetCoreV2urdf as ShapeNetCoreV2
-import data.ABC_train as ABC
+import data.ShapeNetCoreV2urdf as ShapeNetCore
+import data.ShapeNetCoreV2urdf_test as ShapeNetCore_test
+import data.ABC_train as ABC_train
+import data.ABC_test as ABC_test
 import trimesh
 import results
 import matplotlib.pyplot as plt
 from datetime import datetime
 import sys
+from tqdm import tqdm
 
 # Reload the environment to avoid a silent bug where memory fills and visual rendering fails. 
 def load_environment(args, robot_config, pb):
@@ -99,12 +102,23 @@ def main(args):
         'ny': 50
     }
        
+    # Load object\
+    if args.dataset == 'ShapeNetCore':
+        dataset_module = os.path.dirname(ShapeNetCore.__file__)
+    elif args.dataset == 'ShapeNetCore_test':
+        dataset_module = os.path.dirname(ShapeNetCore_test.__file__)
+    elif args.dataset == 'ABC_train':
+        dataset_module = os.path.dirname(ABC_train.__file__)
+    elif args.dataset == 'ABC_test':
+        dataset_module = os.path.dirname(ABC_test.__file__)
+    else:
+        raise ValueError('Dataset not recognised')
+
     # Directories that contain all .obj and urdf folders
-    dataset_module = ShapeNetCoreV2 if args.dataset == 'ShapeNetCore' else ABC
-    obj_dirs = glob(os.path.join(os.path.dirname(dataset_module.__file__), '*', '*/'))
+    obj_dirs = glob(os.path.join(dataset_module, '*', '*/'))
 
     # Set number of points to consider the touch chart collection valid.
-    num_valid_points = 250
+    num_valid_points = 200
 
     # Initialise dict with arrays to store.
     data = {
@@ -118,7 +132,7 @@ def main(args):
         "initial_pos": np.array([], dtype=np.float32).reshape(0, 3)
     }
 
-    for idx, obj_dir in enumerate(obj_dirs): 
+    for idx, obj_dir in enumerate(tqdm(obj_dirs)): 
 
         # Reset simulation and reload the environment to avoid a silent bug where memory fills and visual rendering fails. 
         if idx > 0:
@@ -252,7 +266,7 @@ def main(args):
             data['initial_pos'] = np.vstack((data['initial_pos'], initial_obj_pos))
 
             # Save all
-            utils_sample.save_touch_charts(data)
+            utils_sample.save_touch_charts(data, args)
 
             # Save picture for debugging
             if args.render_scene:
@@ -314,7 +328,7 @@ if __name__=='__main__':
         "--scale", default=0.2, type=float, help="Scale of the object in simulation wrt the urdf object"
     )
     parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'ABC'"
+        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ABC_train', 'ABC_test"
     )
     args = parser.parse_args()
 

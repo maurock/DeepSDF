@@ -200,7 +200,7 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
     return data
 
 
-def save_touch_charts(data):
+def save_touch_charts(data, args):
     """
     Receives a dictionary of data and stores it.
     The dictionary contains the following keys:
@@ -223,7 +223,7 @@ def save_touch_charts(data):
     
     touch_charts_data_dir = os.path.dirname(results.__file__)
 
-    touch_charts_data_path = os.path.join(touch_charts_data_dir, 'touch_charts_gt.npy')
+    touch_charts_data_path = os.path.join(touch_charts_data_dir, f'touch_charts_gt_{args.dataset}.npy')
 
     np.save(touch_charts_data_path, data)
 
