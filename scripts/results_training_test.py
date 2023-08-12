@@ -316,6 +316,14 @@ def main(args):
                 # Get reconstructed meshes                
                 reconstructed_mesh = trimesh.Trimesh(vertices_deepsdf, faces_deepsdf)
 
+                if args.save_reconstruction:
+                    # Create mesh folder if necessary
+                    if not os.path.exists(os.path.join(test_dir, 'meshes')):
+                        os.makedirs(os.path.join(test_dir, 'meshes'))
+                    # Save reconstructed mesh
+                    mesh_path = os.path.join(test_dir, 'meshes', f'mesh_{obj_folder.split(os.sep)[-1]}.obj')
+                    trimesh.exchange.export.export_mesh(reconstructed_mesh, mesh_path, file_type='obj')                                    
+
                 # Sample point cloud from both meshes
                 original_pointcloud, _ = trimesh.sample.sample_surface(mesh_deepsdf, 10000)
                 reconstructed_pointcloud, _ = trimesh.sample.sample_surface(reconstructed_mesh, 10000)
@@ -428,7 +436,10 @@ if __name__=='__main__':
         "--num_samples_extraction", type=int, default=10, nargs='+', help="Number of samples on the objects. It can be a single number or a list of numbers, e.g. 10 20 30."
     )
     parser.add_argument(
-        "--change_orn", type=float, default=[0, 0, 0], nargs='+', help="Number of samples on the objects. It can be a single number or a list of numbers, e.g. 10 20 30."
+        "--change_orn", type=float, default=[0, 0, 0], nargs='+', help="Change orientation of the object for ablation analysis."
+    )
+    parser.add_argument(
+        "--save_reconstruction", default=False, action='store_true', help="Store reconstructed mesh"
     )
     args = parser.parse_args()
 
