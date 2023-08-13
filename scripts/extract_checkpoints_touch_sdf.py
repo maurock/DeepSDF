@@ -21,10 +21,6 @@ def main(infer_latent_dir, touch_sdf_dir):
         pointclouds_deepsdf = checkpoint_dict[num_sample]['pointcloud']
         signed_distance = checkpoint_dict[num_sample]['sdf'].numpy().ravel()
 
-        # Save mesh
-        mesh_path = os.path.join(infer_latent_dir, str(num_sample), f'final_mesh.html')
-        utils_deepsdf.save_meshplot(vertices, faces, mesh_path)
-
         # Aave mesh as obj
         obj_path = os.path.join(infer_latent_dir, str(num_sample), f"final_mesh.obj")
         extracted_mesh = trimesh.Trimesh(vertices, faces)      
