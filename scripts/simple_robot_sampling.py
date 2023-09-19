@@ -9,7 +9,6 @@ from tactile_gym.assets import add_assets_path
 from utils import utils_sample, utils_mesh, utils_raycasting
 import argparse
 from glob import glob
-import data.objects as objects
 import results 
 import matplotlib.pyplot as plt
 import trimesh
@@ -83,7 +82,8 @@ def main(args):
     # Get list of object indices
     #list_objects = ['/Users/ri21540/Documents/PhD/Code/DeepSDF/data/ShapeNetCoreV2/02942699/1ab3abb5c090d9b68e940c4e64a94e1e/']
     # list_objects = ['/Users/ri21540/Documents/PhD/Code/TEMP/STL']
-    urdf_path = '/Users/ri21540/Documents/PhD/Code/DeepSDF/data/ShapeNetCoreV2urdf/02942699/6d036fd1c70e5a5849493d905c02fa86/model.urdf'
+    # urdf_path = '/Users/ri21540/Documents/PhD/Code/DeepSDF/data/ShapeNetCoreV2urdf/02942699/6d036fd1c70e5a5849493d905c02fa86/model.urdf'
+    urdf_path = '/Users/ri21540/Documents/PhD/Code/pybullet-object-models/pybullet_object_models/abc_data/ABCurdf/13.urdf'
     
     # Initialise dict with arrays to store.
     data = {
@@ -170,9 +170,6 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--scale", default=0.4, type=float, help="Scale of the object in simulation wrt the urdf object"
-    )
-    parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'PartNetMobility'"
     )
     args = parser.parse_args()
 

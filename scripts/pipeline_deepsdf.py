@@ -188,15 +188,18 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    # args.folder_sdf ='24_03_190521'
-    # args.folder_touch_sdf ='26_05_123033' 
+    # args.folder_sdf ='12_08_135223'
+    # args.folder_touch_sdf ='14_08_114309_4580' 
     # args.lr_scheduler = True
-    # args.epochs = 3
-    # args.lr = 0.0005 
+    # args.epochs = 1000
+    # args.lr = 0.0001
     # args.patience = 100 
-    # args.resolution = 20 
-    # args.num_samples_extraction = [10, 20]
+    # args.resolution = 50 
+    # args.num_samples_extraction = [20]
     # args.mode_reconstruct = 'fixed'
     # args.langevin_noise = 0.0
+    # args.num_samples = 20
+    # args.clamp = 0.05
+    # args.clamp = True
 
     main(args)

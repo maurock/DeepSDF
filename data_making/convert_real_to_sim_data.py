@@ -18,6 +18,39 @@ from model import model_touch
 from results import runs_touch
 import point_cloud_utils as pcu
 
+def rotate_points_3d_with_respect_to_point(points, angle, center):
+    """Rotate point cloud converted from depth image to align with the object's orientation in case the object's pose is altered. This is needed for the ablation analysis on the rotation of real world objects. """
+
+    angle_x = -angle[0]
+    angle_y = angle[1]
+    angle_z = angle[2]
+    # Translate the points so that the center becomes the origin
+    translated_points = points - center
+    
+    # Calculate the rotation matrix based on the specified axis
+    rotation_matrix_x = np.array([[np.cos(angle_x), 0, np.sin(angle_x)],
+                                    [0, 1, 0],
+                                    [-np.sin(angle_x), 0, np.cos(angle_x)]])
+        
+    rotation_matrix_y = np.array([[1, 0, 0],
+                                    [0, np.cos(angle_y), -np.sin(angle_y)],
+                                    [0, np.sin(angle_y), np.cos(angle_y)]])
+        
+
+    rotation_matrix_z = np.array([[np.cos(angle_z), -np.sin(angle_z), 0],
+                                    [np.sin(angle_z), np.cos(angle_z), 0],
+                                    [0, 0, 1]])
+
+    # Apply rotation to the translated points
+    rotated_translated_points = np.dot(translated_points, rotation_matrix_x.T)
+    rotated_translated_points = np.dot(rotated_translated_points, rotation_matrix_y.T)
+    rotated_translated_points = np.dot(rotated_translated_points, rotation_matrix_z.T)
+
+        # Translate the rotated points back to the original position
+    rotated_points = rotated_translated_points + center
+    
+    return rotated_points
+
 """Extracting the data provided by the real robot and creates a folder in results/runs_touch_sdf with the same format as the data collected in simulation. """
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -36,7 +69,6 @@ def main(args):
 
     # Set initial object pose
     initial_obj_rpy = [np.pi/2, 0, -np.pi/2]
-    initial_obj_orn = pb.getQuaternionFromEuler(initial_obj_rpy)
     initial_obj_pos = [0.5, 0.0, 0]
 
     # Load DeepSDF object
@@ -44,6 +76,13 @@ def main(args):
     # Load object and get world frame coordinates.
     obj_path = os.path.join(obj_dir, "model.obj")
     mesh_original = utils_mesh._as_mesh(trimesh.load(obj_path))
+
+    # Rotate mesh further in case we need to for ablation analysis
+    if args.change_orn != [0.0, 0.0, 0.0]:
+        vertices_wrld_before_change_orn = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy) * args.scale + initial_obj_pos
+        mesh_before_change_orn = trimesh.Trimesh(vertices=vertices_wrld_before_change_orn, faces=mesh_original.faces)
+        initial_obj_rpy = [initial_obj_rpy[i] + args.change_orn[i] for i in range(0, len(initial_obj_rpy))]
+
     # Process object vertices to match the real object
     vertices_wrld = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy) * args.scale + initial_obj_pos
     mesh = trimesh.Trimesh(vertices=vertices_wrld, faces=mesh_original.faces)
@@ -115,21 +154,21 @@ def main(args):
         # Sample pointcloud from predicted mesh in Sim coordinates (TCP frame, Sim scale)
         predicted_pointcloud = utils_mesh.mesh_to_pointcloud(predicted_mesh, 500)
 
-         # Translate to world frame
+        # Translate to world frame
         pos_wrld = np.array([poses[i, 0, :]])
         rot_Q_wrld = pb.getQuaternionFromEuler(poses[i, 1, :])
         rot_M_wrld = np.array(pb.getMatrixFromQuaternion(rot_Q_wrld)).reshape(1, 3, 3)
+
         predicted_pointcloud_wrld = utils_mesh.translate_rotate_mesh(pos_wrld, rot_M_wrld, predicted_pointcloud[None, :, :], initial_obj_pos)
 
         # Rescale from Sim scale to DeepSDF scale
         pointcloud_deepsdf_np = (predicted_pointcloud_wrld / args.scale)[0]  # shape (n, 3)
 
-        # Concatenate predicted pointclouds of the touch charts from all samples
-        pointcloud_deepsdf = torch.from_numpy(pointcloud_deepsdf_np).float().to(device)  # shape (n, 3)
-        pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_deepsdf))   
-        
-        # The sdf of points on the object surface is 0.
-        sdf_gt = torch.vstack((sdf_gt, torch.zeros(size=(pointcloud_deepsdf.shape[0], 1)).to(device)))
+        # # If necessary for ablation analysis, we slightly perturb the orientation of the predicted point cloud
+        # if args.change_orn != [0.0, 0.0, 0.0]:
+        #     centre = mesh_original.centroid    
+        #     pointcloud_deepsdf_np = rotate_points_3d_with_respect_to_point(pointcloud_deepsdf_np, args.change_orn, centre)
+
 
         # Add randomly sampled points from normals
         if args.augment_points_num > 0:
@@ -138,6 +177,7 @@ def main(args):
             rpy_wrld = np.array(poses[i, 1, :]) # TCP orientation
             normal_wrk = np.array([[0, 0, 1]])
             normal_wrld = utils_mesh.rotate_pointcloud(normal_wrk, rpy_wrld)[0]
+
             TCP_pos_deepsdf = (pos_wrld -  0.01 * normal_wrld)  # move it slightly away from the object
             TCP_pos_deepsdf = (TCP_pos_deepsdf -  initial_obj_pos)/ args.scale # convert to DeepSDF scale
             sensor_dirs = TCP_pos_deepsdf - pointcloud_deepsdf_np
@@ -148,12 +188,26 @@ def main(args):
             # Sample along normals and return points and distances
             pointcloud_along_norm_np, signed_distance_np = utils_sample.sample_along_normals(
                 std_dev=args.augment_points_std, pointcloud=pointcloud_deepsdf_np, normals=n, N=args.augment_points_num, augment_multiplier_out=args.augment_multiplier_out)
+            
+            # If necessary for ablation analysis, we slightly perturb the orientation of the predicted point cloud
+            if args.change_orn != [0.0, 0.0, 0.0]:
+                centre = mesh_original.centroid    
+                pointcloud_along_norm_np = rotate_points_3d_with_respect_to_point(pointcloud_along_norm_np, args.change_orn, centre)
+                pointcloud_deepsdf_np = rotate_points_3d_with_respect_to_point(pointcloud_deepsdf_np, args.change_orn, centre)
+            
             pointcloud_along_norm = torch.from_numpy(pointcloud_along_norm_np).float().to(device)
             sdf_normal_gt = torch.from_numpy(signed_distance_np).float().to(device)
 
             pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_along_norm))
             sdf_gt = torch.vstack((sdf_gt, sdf_normal_gt))
 
+        # Concatenate predicted pointclouds of the touch charts from all samples
+        pointcloud_deepsdf = torch.from_numpy(pointcloud_deepsdf_np).float().to(device)  # shape (n, 3)
+        pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_deepsdf))   
+        
+        # The sdf of points on the object surface is 0.
+        sdf_gt = torch.vstack((sdf_gt, torch.zeros(size=(pointcloud_deepsdf.shape[0], 1)).to(device)))
+            
         # Save pointclouds
         points_sdf = [pointclouds_deepsdf.detach().cpu(), sdf_gt.detach().cpu()]
         points_sdf_dir = os.path.join(test_dir, 'data', str(num_sample))
@@ -194,15 +248,20 @@ if __name__=='__main__':
     parser.add_argument(
         "--augment_multiplier_out", default=1, type=int, help="multiplier to augment the positive distances"
     )
+    parser.add_argument(
+        "--change_orn", type=float, default=[0, 0, 0], nargs='+', help="Change orientation of the object for ablation analysis."
+    )
 
     args = parser.parse_args()  
 
-    # args.folder_real_data = 'jar'
-    # args.obj_folder = '03797390/ff1a44e1c1785d618bca309f2c51966a'
+    # args.folder_real_data = 'new_bottle'
+    # args.obj_folder = '02876657/3d758f0c11f01e3e3ddcd369aa279f39'
     # args.folder_touch = '30_05_1633' 
     # args.scale = 0.2
     # args.discard_calibration_image = True
     # args.augment_points_num = 5
     # args.augment_points_std = 0.005
     # args.augment_multiplier_out = 5
+    # args.change_orn = [0.0, 0.0, 0.2]
+
     main(args)
