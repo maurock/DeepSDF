@@ -445,6 +445,12 @@ if __name__=='__main__':
     parser.add_argument(
         "--save_reconstruction", default=False, action='store_true', help="Store reconstructed mesh"
     )
+    parser.add_argument(
+        "--epochs_finetuning", default=100, type=int, help="Number of epochs for latent code inference"
+    )
+    parser.add_argument(
+        "--finetuning", default=False, action='store_true', help="Finetune the network after latent code inference."
+    )
     args = parser.parse_args()
 
     # args.show_gui = True

@@ -129,6 +129,12 @@ if __name__=='__main__':
     parser.add_argument(
         "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
     )
+    parser.add_argument(
+        "--epochs_finetuning", default=100, type=int, help="Number of epochs for latent code inference"
+    )
+    parser.add_argument(
+        "--finetuning", default=False, action='store_true', help="Finetune the network after latent code inference."
+    )
     args = parser.parse_args()
 
     main(args)
