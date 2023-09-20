@@ -314,7 +314,13 @@ def main(args):
                 with torch.no_grad():
                     # Extract mesh obtained with the latent code optimised at inference
                     sdf = utils_deepsdf.predict_sdf(best_latent_code, coords_batches, sdf_model)
-                vertices_deepsdf, faces_deepsdf = utils_deepsdf.extract_mesh(grid_size_axis, sdf)
+                
+                try:
+                    vertices_deepsdf, faces_deepsdf = utils_deepsdf.extract_mesh(grid_size_axis, sdf)
+                except:
+                    print('Mesh extraction failed')
+                    num_sample += 1
+                    continue
 
                 # Compute Chamfer Distance
                 # Get reconstructed meshes                
