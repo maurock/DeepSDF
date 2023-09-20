@@ -195,7 +195,8 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--finetuning", default=False, action='store_true', help="Finetune the network after latent code inference."
-
+    )
+    
     args = parser.parse_args()
 
     # args.folder_sdf ='12_08_135223'
