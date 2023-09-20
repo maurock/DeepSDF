@@ -209,3 +209,54 @@ class SDFModelMulti(torch.nn.Module):
             #writer.add_histogram(tag, latent_code.grad, global_step=epoch)
 
         return best_latent_code
+    
+
+    def finetune(self, args, best_latent_code, pointclouds_deepsdf, sdf_gt, writer):
+        """Infer latent code from coordinates, their sdf, and a trained model."""
+        
+        optim = torch.optim.Adam(params=self.parameters(), lr=args.lr)
+
+        if args.lr_scheduler:
+            scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 
+                                                    factor=args.lr_multiplier, 
+                                                    patience=args.patience, 
+                                                    threshold=0.001, threshold_mode='rel')
+
+        best_loss = 1000000
+
+        for epoch in tqdm(range(0, args.epochs)):
+
+            latent_code_tile = torch.tile(best_latent_code, (pointclouds_deepsdf.shape[0], 1))
+            x = torch.hstack((latent_code_tile, pointclouds_deepsdf))
+
+            # Adam 
+            optim.zero_grad()
+
+            predictions = self(x)
+
+            if args.clamp:
+                predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+
+            loss_value, l1, l2 = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
+            loss_value.backward()
+
+            if writer is not None:
+                writer.add_scalar('Finetuning reconstruction loss', l1.data.cpu().numpy(), epoch)
+
+            optim.step()
+
+            if l1.detach().cpu().item() < best_loss:
+                best_loss = l1.detach().cpu().item()
+                best_weights = self.state_dict().copy()
+
+            # step scheduler and store on tensorboard (optional)
+            if args.lr_scheduler:
+                scheduler_latent.step(loss_value.item())
+                if writer is not None:
+                    writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
+
+                if scheduler_latent._last_lr[0] < 1e-6:
+                    print('Learning rate too small, stopping training')
+                    break
+            
+        return best_weights

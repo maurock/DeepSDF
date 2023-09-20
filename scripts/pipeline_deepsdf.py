@@ -91,6 +91,10 @@ def main(args):
         # Infer latent code
         best_latent_code = sdf_model.infer_latent_code(args, pointclouds_deepsdf, sdf_gt, writer, latent_code)
 
+        if args.finetuning:
+            best_weights = sdf_model.finetune(args, best_latent_code, pointclouds_deepsdf, sdf_gt, writer)
+            sdf_model.load_state_dict(best_weights)
+
         # Extract mesh obtained with the latent code optimised at inference
         sdf = utils_deepsdf.predict_sdf(best_latent_code, coords_batches, sdf_model)
         vertices_deepsdf, faces_deepsdf = utils_deepsdf.extract_mesh(grid_size_axis, sdf)
@@ -160,6 +164,9 @@ if __name__=='__main__':
         "--epochs", default=100, type=int, help="Number of epochs for latent code inference"
     )
     parser.add_argument(
+        "--epochs_finetuning", default=100, type=int, help="Number of epochs for latent code inference"
+    )
+    parser.add_argument(
         "--clamp", default=False, action='store_true', help="Clip the network prediction"
     )
     parser.add_argument(
@@ -186,15 +193,19 @@ if __name__=='__main__':
     parser.add_argument(
         "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
     )
+    parser.add_argument(
+        "--finetuning", default=False, action='store_true', help="Finetune the network after latent code inference."
+
     args = parser.parse_args()
 
     # args.folder_sdf ='12_08_135223'
-    # args.folder_touch_sdf ='14_08_114309_4580' 
+    # args.folder_touch_sdf ='14_08_115842_9668' 
     # args.lr_scheduler = True
-    # args.epochs = 1000
-    # args.lr = 0.0001
+    # args.epochs = 3
+    # args.epochs_finetuning = 3
+    # args.lr = 0.001
     # args.patience = 100 
-    # args.resolution = 50 
+    # args.resolution = 256 
     # args.num_samples_extraction = [20]
     # args.mode_reconstruct = 'fixed'
     # args.langevin_noise = 0.0
