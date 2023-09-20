@@ -253,7 +253,7 @@ class SDFModelMulti(torch.nn.Module):
             if args.lr_scheduler:
                 scheduler_latent.step(loss_value.item())
                 if writer is not None:
-                    writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
+                    writer.add_scalar('Learning rate finetuning', scheduler_latent._last_lr[0], epoch)
 
                 if scheduler_latent._last_lr[0] < 1e-6:
                     print('Learning rate too small, stopping training')

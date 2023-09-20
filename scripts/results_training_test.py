@@ -305,6 +305,10 @@ def main(args):
                 # Infer latent code
                 sdf_model.train()
                 best_latent_code = sdf_model.infer_latent_code(args, pointclouds_deepsdf, sdf_gt,  None, latent_code)
+
+                if args.finetuning:
+                    best_weights = sdf_model.finetune(args, best_latent_code, pointclouds_deepsdf, sdf_gt, None)
+                    sdf_model.load_state_dict(best_weights)
                 
                 sdf_model.eval()
                 with torch.no_grad():
@@ -446,7 +450,7 @@ if __name__=='__main__':
     # args.show_gui = True
     # args.folder_sdf ='08_08_195730'
     # args.lr_scheduler = True
-    # args.epochs = 1000
+    # args.epochs = 10
     # args.lr = 0.0005 
     # args.patience = 100 
     # args.resolution = 132 
@@ -457,5 +461,7 @@ if __name__=='__main__':
     # args.dataset = 'ABC_test'
     # args.folder_touch = '30_05_1633'
     # args.category = 'data'
+    # args.finetuning = True
+    # args.epochs_finetuning = 10
 
     main(args)
