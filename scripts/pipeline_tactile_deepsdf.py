@@ -135,6 +135,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--finetuning", default=False, action='store_true', help="Finetune the network after latent code inference."
     )
+    parser.add_argument(
+        "--lr_finetuning", type=float, default=0.0001, help="Learning rate for finetune"
+    )
     args = parser.parse_args()
 
     main(args)

@@ -214,7 +214,7 @@ class SDFModelMulti(torch.nn.Module):
     def finetune(self, args, best_latent_code, pointclouds_deepsdf, sdf_gt, writer):
         """Infer latent code from coordinates, their sdf, and a trained model."""
         
-        optim = torch.optim.Adam(params=self.parameters(), lr=args.lr)
+        optim = torch.optim.Adam(params=self.parameters(), lr=args.lr_finetuning)
 
         if args.lr_scheduler:
             scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 
