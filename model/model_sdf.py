@@ -237,8 +237,8 @@ class SDFModelMulti(torch.nn.Module):
             if args.clamp:
                 predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
 
-            loss_value, l1, l2 = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
-            loss_value.backward()
+            l1 = torch.mean(torch.abs(predictions - sdf_gt))
+            l1.backward()
 
             if writer is not None:
                 writer.add_scalar('Finetuning reconstruction loss', l1.data.cpu().numpy(), epoch)
@@ -251,7 +251,7 @@ class SDFModelMulti(torch.nn.Module):
 
             # step scheduler and store on tensorboard (optional)
             if args.lr_scheduler:
-                scheduler_latent.step(loss_value.item())
+                scheduler_latent.step(l1.item())
                 if writer is not None:
                     writer.add_scalar('Learning rate finetuning', scheduler_latent._last_lr[0], epoch)
 
