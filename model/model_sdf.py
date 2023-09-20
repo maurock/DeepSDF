@@ -224,7 +224,7 @@ class SDFModelMulti(torch.nn.Module):
 
         best_loss = 1000000
 
-        for epoch in tqdm(range(0, args.epochs)):
+        for epoch in tqdm(range(0, args.epochs_finetuning)):
 
             latent_code_tile = torch.tile(best_latent_code, (pointclouds_deepsdf.shape[0], 1))
             x = torch.hstack((latent_code_tile, pointclouds_deepsdf))

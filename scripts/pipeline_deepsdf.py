@@ -13,6 +13,7 @@ from glob import glob
 from scripts import extract_checkpoints_touch_sdf
 import trimesh
 from pytorch3d.loss import chamfer_distance
+import random 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -21,7 +22,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #@profile
 def main(args):
     # Logging
-    test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf, f"infer_latent_{datetime.now().strftime('%d_%m_%H%M%S')}")
+    test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf, f"infer_latent_{datetime.now().strftime('%d_%m_%H%M%S')}_{random.randint(0, 10000)}")
     if not os.path.exists(test_dir):
         os.mkdir(test_dir)
     log_path = os.path.join(test_dir, 'settings.txt')
@@ -196,7 +197,7 @@ if __name__=='__main__':
     parser.add_argument(
         "--finetuning", default=False, action='store_true', help="Finetune the network after latent code inference."
     )
-    
+
     args = parser.parse_args()
 
     # args.folder_sdf ='12_08_135223'
