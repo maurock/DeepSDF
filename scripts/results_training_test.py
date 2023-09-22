@@ -26,6 +26,7 @@ from glob import glob
 from pytorch3d.loss import chamfer_distance
 import random
 from data_making.extract_touch_charts import load_environment
+from utils.utils_metrics import earth_mover_distance
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -35,17 +36,17 @@ Demo to reconstruct objects using tactile-gym.
 def main(args):
     # All object paths in the dataset
     if args.dataset == 'ShapeNetCore':
-        shapeneturdf_folder = os.path.dirname(ShapeNetCore.__file__)
+        dataset_folder = os.path.dirname(ShapeNetCore.__file__)
         suffix = '_ShapeNetCore_train'
     elif args.dataset == 'ShapeNetCore_test':
-        shapeneturdf_folder = os.path.dirname(ShapeNetCore_test.__file__)
+        dataset_folder = os.path.dirname(ShapeNetCore_test.__file__)
         suffix = '_ShapeNetCore_test'
     elif args.dataset == 'ABC_test':
-        shapeneturdf_folder = os.path.dirname(ABC_test.__file__)
+        dataset_folder = os.path.dirname(ABC_test.__file__)
         suffix = '_ABC_test'
     else:
         raise ValueError('Dataset not recognised')
-    full_paths = glob(os.path.join(shapeneturdf_folder, args.category, '*/'))
+    full_paths = glob(os.path.join(dataset_folder, args.category, '*/'))
     obj_folders = [os.sep.join(full_path.split(os.sep)[-3:-1]) for full_path in full_paths]
     # For consistency:
     obj_folders = sorted(obj_folders)
@@ -61,7 +62,8 @@ def main(args):
         log.write(json.dumps(args_dict).replace(', ', ',\n'))
         log.write('\n\n')
 
-    results_path = os.path.join(test_dir, 'chamfer_distance.txt')
+    metrics_path = os.path.join(test_dir, 'metrics.txt')  # log metrics in human readable format
+    results_path = os.path.join(test_dir, 'results.npy')  # log metrics in numpy format
 
     # Load touch model
     touch_model = model_touch.Encoder().to(device)
@@ -162,7 +164,9 @@ def main(args):
 
     results = dict()    
     for i in args.num_samples_extraction:
-        results[i-1] = []
+        results[i-1] = dict()
+        results[i-1]['CD'] = []
+        results[i-1]['EMD'] = []
 
     for idx, obj_folder in enumerate(obj_folders):
 
@@ -173,7 +177,7 @@ def main(args):
         pb, robot = load_environment(args, robot_config, pb)
 
         # Load object
-        obj_dir = os.path.join(shapeneturdf_folder, obj_folder)
+        obj_dir = os.path.join(dataset_folder, obj_folder)
 
         with utils_sample.suppress_stdout():          # to suppress b3Warning           
             obj_id = pb.loadURDF(
@@ -335,26 +339,26 @@ def main(args):
                     trimesh.exchange.export.export_mesh(reconstructed_mesh, mesh_path, file_type='obj')                                    
 
                 # Sample point cloud from both meshes
-                original_pointcloud, _ = trimesh.sample.sample_surface(mesh_deepsdf, 10000)
-                reconstructed_pointcloud, _ = trimesh.sample.sample_surface(reconstructed_mesh, 10000)
+                original_pointcloud, _ = trimesh.sample.sample_surface(mesh_deepsdf, 2048)
+                reconstructed_pointcloud, _ = trimesh.sample.sample_surface(reconstructed_mesh, 2048)
                 
                 # Get chamfer distance
-                cd = chamfer_distance(torch.tensor(original_pointcloud[None,...], dtype=torch.float32),
-                                    torch.tensor(reconstructed_pointcloud[None,...], dtype=torch.float32))[0]
+                cd = chamfer_distance(torch.tensor(np.array([original_pointcloud]), dtype=torch.float32),torch.tensor(np.array([reconstructed_pointcloud]), dtype=torch.float32))[0]
                 
-                results[num_sample].append(cd.item())
+                emd = earth_mover_distance(original_pointcloud, reconstructed_pointcloud)
+
+                results[num_sample]['CD'].append(cd.item())
+                results[num_sample]['EMD'].append(emd.item())
                 
                 # Save results in a txt file
-                with open(results_path, 'a') as log:
-                    log.write('Obj id: {}, Sample: {}, CD: {}\n'.format(obj_folder, num_sample, cd))
-                
+                with open(metrics_path, 'a') as log:
+                    log.write('Obj id: {}, Sample: {}, CD: {}, EMD: {}\n'.format(obj_folder, num_sample, cd, emd))
+
+                # Save results
+                np.save(results_path, results)
 
             # pb.removeBody(robot.robot_id)
             num_sample += 1
-    
-    # Save results
-    results_path = os.path.join(test_dir, 'results.npy')
-    np.save(results_path, results)
 
 
 if __name__=='__main__':
@@ -463,20 +467,22 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     # args.show_gui = True
-    # args.folder_sdf ='08_08_195730'
+    # args.folder_sdf ='10_08_181018'
     # args.lr_scheduler = True
-    # args.epochs = 10
+    # args.epochs = 100
     # args.lr = 0.0005 
     # args.patience = 100 
-    # args.resolution = 132 
-    # args.num_samples = 20
-    # args.num_samples_extraction = [20]
+    # args.resolution = 20 
+    # args.num_samples = 5
+    # args.num_samples_extraction = [5]
     # args.mode_reconstruct = 'fixed'
     # args.langevin_noise = 0.0
     # args.dataset = 'ABC_test'
-    # args.folder_touch = '30_05_1633'
+    # args.folder_touch = '12_08_1122'
     # args.category = 'data'
-    # args.finetuning = True
+    # args.finetuning = False
     # args.epochs_finetuning = 10
+    # args.clamp = True
+    # args.clamp_valur = 0.5
 
     main(args)

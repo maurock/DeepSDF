@@ -14,6 +14,7 @@ from scripts import extract_checkpoints_touch_sdf
 import trimesh
 from pytorch3d.loss import chamfer_distance
 import random 
+from utils.utils_metrics import earth_mover_distance
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -115,17 +116,19 @@ def main(args):
         reconstructed_mesh = trimesh.Trimesh(vertices_deepsdf, faces_deepsdf)
 
         # Sample point cloud from both meshes
-        original_pointcloud, _ = trimesh.sample.sample_surface(original_mesh, 10000)
-        reconstructed_pointcloud, _ = trimesh.sample.sample_surface(reconstructed_mesh, 10000)
+        original_pointcloud, _ = trimesh.sample.sample_surface(original_mesh, 2048)
+        reconstructed_pointcloud, _ = trimesh.sample.sample_surface(reconstructed_mesh, 2048)
         
         # Get chamfer distance
-        cd = chamfer_distance(torch.tensor([original_pointcloud], dtype=torch.float32),
-                              torch.tensor([reconstructed_pointcloud], dtype=torch.float32))[0]
+        cd = chamfer_distance(torch.tensor(np.array([original_pointcloud]), dtype=torch.float32),
+                              torch.tensor(np.array([reconstructed_pointcloud]), dtype=torch.float32))[0]
+        emd = earth_mover_distance(original_pointcloud, reconstructed_pointcloud)
 
         # Save results in a txt file
-        results_path = os.path.join(test_dir, 'chamfer_distance.txt')
+        results_path = os.path.join(test_dir, 'metrics.txt')
         with open(results_path, 'a') as log:
             log.write('Sample: {}, CD: {}\n'.format(num_sample, cd))
+            log.write('Sample: {}, EMD: {}\n'.format(num_sample, emd))
 
     if not args.no_mesh_extraction:
         extract_checkpoints_touch_sdf.main(test_dir, os.path.join(os.path.dirname(runs_touch_sdf.__file__), args.folder_touch_sdf))
@@ -200,17 +203,17 @@ if __name__=='__main__':
     parser.add_argument(
         "--lr_finetuning", type=float, default=0.0001, help="Learning rate for finetune"
     )
-    
+
     args = parser.parse_args()
 
     # args.folder_sdf ='12_08_135223'
     # args.folder_touch_sdf ='14_08_115842_9668' 
     # args.lr_scheduler = True
-    # args.epochs = 3
+    # args.epochs = 100
     # args.epochs_finetuning = 3
-    # args.lr = 0.001
+    # args.lr = 0.0005
     # args.patience = 100 
-    # args.resolution = 256 
+    # args.resolution = 20 
     # args.num_samples_extraction = [20]
     # args.mode_reconstruct = 'fixed'
     # args.langevin_noise = 0.0
