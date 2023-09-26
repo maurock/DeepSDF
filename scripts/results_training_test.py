@@ -26,7 +26,7 @@ from glob import glob
 from pytorch3d.loss import chamfer_distance
 import random
 from data_making.extract_touch_charts import load_environment
-from utils.utils_metrics import earth_mover_distance
+from utils.utils_metrics import earth_mover_distance, calculate_error_area
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -347,12 +347,15 @@ def main(args):
                 
                 emd = earth_mover_distance(original_pointcloud, reconstructed_pointcloud)
 
+                error_area = calculate_error_area(reconstructed_mesh.vertices, reconstructed_mesh.faces, mesh_deepsdf.area)
+
                 results[num_sample]['CD'].append(cd.item())
                 results[num_sample]['EMD'].append(emd.item())
+                results[num_sample]['area'].append(error_area)
                 
                 # Save results in a txt file
                 with open(metrics_path, 'a') as log:
-                    log.write('Obj id: {}, Sample: {}, CD: {}, EMD: {}\n'.format(obj_folder, num_sample, cd, emd))
+                    log.write('Obj id: {}, Sample: {}, CD: {}, EMD: {}, Error area: {}\n'.format(obj_folder, num_sample, cd, emd, error_area))
 
                 # Save results
                 np.save(results_path, results)
