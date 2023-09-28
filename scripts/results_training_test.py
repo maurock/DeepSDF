@@ -26,7 +26,7 @@ from glob import glob
 from pytorch3d.loss import chamfer_distance
 import random
 from data_making.extract_touch_charts import load_environment
-from utils.utils_metrics import earth_mover_distance, calculate_error_area
+from utils.utils_metrics import earth_mover_distance, calculate_error_area, hausdorff_distance, calculate_fscore
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -167,6 +167,9 @@ def main(args):
         results[i-1] = dict()
         results[i-1]['CD'] = []
         results[i-1]['EMD'] = []
+        results[i-1]['area'] = []
+        results[i-1]['F1'] = []
+        results[i-1]['HD'] = []
 
     for idx, obj_folder in enumerate(obj_folders):
 
@@ -342,20 +345,26 @@ def main(args):
                 original_pointcloud, _ = trimesh.sample.sample_surface(mesh_deepsdf, 2048)
                 reconstructed_pointcloud, _ = trimesh.sample.sample_surface(reconstructed_mesh, 2048)
                 
-                # Get chamfer distance
+                # Get metrics
                 cd = chamfer_distance(torch.tensor(np.array([original_pointcloud]), dtype=torch.float32),torch.tensor(np.array([reconstructed_pointcloud]), dtype=torch.float32))[0]
                 
                 emd = earth_mover_distance(original_pointcloud, reconstructed_pointcloud)
 
                 error_area = calculate_error_area(reconstructed_mesh.vertices, reconstructed_mesh.faces, mesh_deepsdf.area)
 
+                hd = hausdorff_distance(original_pointcloud, reconstructed_pointcloud)
+
+                f1, _, _ = calculate_fscore(original_pointcloud, reconstructed_pointcloud, args.threshold_f1)
+
                 results[num_sample]['CD'].append(cd.item())
                 results[num_sample]['EMD'].append(emd.item())
                 results[num_sample]['area'].append(error_area)
+                results[num_sample]['HD'].append(hd)
+                results[num_sample]['F1'].append(f1)
                 
                 # Save results in a txt file
                 with open(metrics_path, 'a') as log:
-                    log.write('Obj id: {}, Sample: {}, CD: {}, EMD: {}, Error area: {}\n'.format(obj_folder, num_sample, cd, emd, error_area))
+                    log.write(f'Obj id: {obj_folder}, Sample: {num_sample}, CD: {cd}, EMD: {emd}, Error area: {error_area}, HD: {hd}, F1: {f1}\n')
 
                 # Save results
                 np.save(results_path, results)
@@ -466,6 +475,9 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--lr_finetuning", type=float, default=0.0001, help="Learning rate for finetune"
+    )
+    parser.add_argument(
+        "--threshold_f1", type=float, default=0.005, help="Threshold for computation of F-1 score"
     )
     args = parser.parse_args()
 
