@@ -342,8 +342,8 @@ def main(args):
                     trimesh.exchange.export.export_mesh(reconstructed_mesh, mesh_path, file_type='obj')                                    
 
                 # Sample point cloud from both meshes
-                original_pointcloud, _ = trimesh.sample.sample_surface(mesh_deepsdf, 2048)
-                reconstructed_pointcloud, _ = trimesh.sample.sample_surface(reconstructed_mesh, 2048)
+                original_pointcloud, _ = trimesh.sample.sample_surface(mesh_deepsdf, 4096)
+                reconstructed_pointcloud, _ = trimesh.sample.sample_surface(reconstructed_mesh, 4096)
                 
                 # Get metrics
                 cd = chamfer_distance(torch.tensor(np.array([original_pointcloud]), dtype=torch.float32),torch.tensor(np.array([reconstructed_pointcloud]), dtype=torch.float32))[0]
