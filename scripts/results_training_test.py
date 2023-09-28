@@ -354,7 +354,10 @@ def main(args):
 
                 hd = hausdorff_distance(original_pointcloud, reconstructed_pointcloud)
 
-                f1, _, _ = calculate_fscore(original_pointcloud, reconstructed_pointcloud, args.threshold_f1)
+                # For F1, we increase the number of points to 20000 as this is a measure of surface coverage
+                original_pointcloud_f1, _ = trimesh.sample.sample_surface(mesh_deepsdf, 20000)
+                reconstructed_pointcloud_f1, _ = trimesh.sample.sample_surface(reconstructed_mesh, 20000)
+                f1, _, _ = calculate_fscore(original_pointcloud_f1, reconstructed_pointcloud_f1, args.threshold_f1)
 
                 results[num_sample]['CD'].append(cd.item())
                 results[num_sample]['EMD'].append(emd.item())
