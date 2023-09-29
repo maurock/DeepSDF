@@ -26,7 +26,7 @@ from glob import glob
 from pytorch3d.loss import chamfer_distance
 import random
 from data_making.extract_touch_charts import load_environment
-from utils.utils_metrics import earth_mover_distance, calculate_error_area, hausdorff_distance, calculate_fscore
+from utils.utils_metrics import earth_mover_distance, calculate_error_area, hausdorff_distance, calculate_fscore_point2surface
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -355,9 +355,7 @@ def main(args):
                 hd = hausdorff_distance(original_pointcloud, reconstructed_pointcloud)
 
                 # For F1, we increase the number of points to 20000 as this is a measure of surface coverage
-                original_pointcloud_f1, _ = trimesh.sample.sample_surface(mesh_deepsdf, 20000)
-                reconstructed_pointcloud_f1, _ = trimesh.sample.sample_surface(reconstructed_mesh, 20000)
-                f1, _, _ = calculate_fscore(original_pointcloud_f1, reconstructed_pointcloud_f1, args.threshold_f1)
+                f1, _, _ = calculate_fscore_point2surface(mesh_deepsdf, reconstructed_mesh, args.threshold_f1)
 
                 results[num_sample]['CD'].append(cd.item())
                 results[num_sample]['EMD'].append(emd.item())
@@ -480,7 +478,7 @@ if __name__=='__main__':
         "--lr_finetuning", type=float, default=0.0001, help="Learning rate for finetune"
     )
     parser.add_argument(
-        "--threshold_f1", type=float, default=0.005, help="Threshold for computation of F-1 score"
+        "--threshold_f1", type=float, default=0.01, help="Threshold for computation of F-1 score, e.g. 0.01 is 1\% of the maximum size of the object"
     )
     args = parser.parse_args()
 
@@ -491,8 +489,8 @@ if __name__=='__main__':
     # args.lr = 0.0005 
     # args.patience = 100 
     # args.resolution = 20 
-    # args.num_samples = 5
-    # args.num_samples_extraction = [5]
+    # args.num_samples = 2
+    # args.num_samples_extraction = [2]
     # args.mode_reconstruct = 'fixed'
     # args.langevin_noise = 0.0
     # args.dataset = 'ABC_test'
