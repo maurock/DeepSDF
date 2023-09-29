@@ -72,8 +72,8 @@ def calculate_fscore_point2surface(mesh_gt, mesh_pred, th: float=0.01):
     sdf_pred_point_to_gt_mesh, _, _  = pcu.signed_distance_to_mesh(points_pred, mesh_gt.vertices, mesh_gt.faces)
     sdf_gt_point_to_pred_mesh, _, _  = pcu.signed_distance_to_mesh(points_gt, mesh_pred.vertices, mesh_pred.faces)
 
-    recall = len(sdf_gt_point_to_pred_mesh[sdf_gt_point_to_pred_mesh < th_value]) / len(sdf_gt_point_to_pred_mesh)
-    precision = len(sdf_pred_point_to_gt_mesh[sdf_pred_point_to_gt_mesh < th_value]) / len(sdf_pred_point_to_gt_mesh)
+    recall = sum(abs(sdf_gt_point_to_pred_mesh) < th_value) / len(sdf_gt_point_to_pred_mesh)
+    precision = sum(abs(sdf_pred_point_to_gt_mesh < th_value)) / len(sdf_pred_point_to_gt_mesh)
 
     if recall + precision > 0:
         fscore = 2 * recall * precision / (recall + precision)
