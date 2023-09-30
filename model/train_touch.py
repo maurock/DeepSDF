@@ -24,7 +24,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Trainer():
     def __init__(self, args):
         utils_misc.set_seeds(41)
-        self.touch_chart_path = os.path.join(os.path.dirname(results.__file__), 'touch_charts_gt.npy')
+        self.touch_chart_path = os.path.join(os.path.dirname(results.__file__), f'{args.dataset_name}.npy')
         self.args = args
         # load initial mesh sheet to deform using the Encoder
         chart_location = os.path.join(os.path.dirname(data.__file__), 'touch_chart.obj')
@@ -119,7 +119,7 @@ class Trainer():
                     torch.save(self.encoder.state_dict(), os.path.join(self.log_train_dir, 'weights.pt'))
 
                 if self.args.log_info_train: 
-                    self.writer.add_scalar('Validation loss', self.scheduler._last_lr[0], epoch)
+                    self.writer.add_scalar('Validation loss', val_loss.item(), epoch)
 
     def get_loaders_cv(self, full_dataset, train_ids, val_ids):
         # Sample elements randomly from a given list of ids, no replacement.
@@ -148,7 +148,7 @@ class Trainer():
     def get_loaders(self, full_dataset):
         if self.args.analyse_dataset:
             full_dataset._analyse_dataset()    # print info about dataset
-        train_size = int(0.8 * len(full_dataset))
+        train_size = int(0.85 * len(full_dataset))
         val_size = len(full_dataset) - train_size
         train_data, val_data = random_split(full_dataset, [train_size, val_size])
         train_loader = DataLoader(
@@ -186,8 +186,8 @@ class Trainer():
             # backprop
             loss.backward()
             # clip gradient to avoid grad explosion
-            clip_value=0.05
-            torch.nn.utils.clip_grad_norm_(self.encoder.parameters(), clip_value)
+            # clip_value=0.05
+            # torch.nn.utils.clip_grad_norm_(self.encoder.parameters(), clip_value)
             # step
             self.optimizer.step()
 
@@ -265,7 +265,7 @@ if __name__=='__main__':
     parser.add_argument(
         "--num_samples",
         type=int,
-        default=500,
+        default=1000,
         help="Number of points in the predicted point cloud.",
     )
     parser.add_argument(
@@ -310,6 +310,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--patience", type=int, default=20, help="Patience for the learning rate scheduling"
     )    
+    parser.add_argument(
+        "--dataset_name", type=str, default='', help="Name of the numpy array where touches are stored"
+    )   
     args = parser.parse_args()
        
     trainer = Trainer(args)
