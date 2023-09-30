@@ -34,7 +34,7 @@ class Trainer():
             args.batch_size, 1, 1
         )
         # Path debug
-        self.timestamp_run = datetime.now().strftime('%d_%m_%H%M')   # timestamp to use for logging data
+        self.timestamp_run = datetime.now().strftime('%d_%m_%H%M%S')   # timestamp to use for logging data
         self.debug_val_path = os.path.join(os.path.dirname(results.__file__), 'touch_val_debug', f'val_dict_{self.timestamp_run}')
 
         # self.results = dict()
