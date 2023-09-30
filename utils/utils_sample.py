@@ -223,7 +223,7 @@ def save_touch_charts(data, args):
     
     touch_charts_data_dir = os.path.dirname(results.__file__)
 
-    touch_charts_data_path = os.path.join(touch_charts_data_dir, f'touch_charts_gt_{args.dataset}.npy')
+    touch_charts_data_path = os.path.join(touch_charts_data_dir, f'touch_charts_gt_{args.name_output}.npy')
 
     np.save(touch_charts_data_path, data)
 

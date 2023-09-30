@@ -330,6 +330,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ABC_train', 'ABC_test"
     )
+    parser.add_argument(
+        "--name_output", default='', type=str, help="The output name is 'touch_charts_gt_<name_output>.npy'"
+    )
     args = parser.parse_args()
 
     main(args)
