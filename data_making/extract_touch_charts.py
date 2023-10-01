@@ -120,17 +120,13 @@ def main(args):
     # Set number of points to consider the touch chart collection valid.
     num_valid_points = 200
 
-    # Initialise dict with arrays to store.
-    data = {
-        "verts": np.array([]).reshape(0, 75), # verts of touch charts (25) flattened
-        "tactile_imgs": np.array([], dtype=np.float32).reshape(0, 1, 256, 256),
-        "pointclouds": np.array([], dtype=np.float32).reshape(0, num_valid_points, 3),   # fixed dimension touch chart pointcloud (workframe)
-        "rot_M_wrld_list": np.array([], dtype=np.float32).reshape(0, 3, 3),      # rotation matrix (work wrt worldframe)
-        "pos_wrld_list": np.array([]).reshape(0, 3) , # TCP pos (worldframe)
-        "pos_wrk_list": np.array([], dtype=np.float32).reshape(0, 3),   # TCP pos (worldframe)
-        "obj_index": np.array([], dtype=np.float32).reshape(0, 1),
-        "initial_pos": np.array([], dtype=np.float32).reshape(0, 3)
-    }
+    # Saving
+    iteration = 0
+    # If folder 'args.output_name' does not exists, create it
+    output_dir = os.path.join(os.path.dirname(results.__file__), f'touch_charts_gt_{args.name_output}')
+    # Check if the directory exists and create it if it doesn't
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     for idx, obj_dir in enumerate(tqdm(obj_dirs)): 
 
@@ -192,6 +188,17 @@ def main(args):
         counter_render_scene = 0
 
         for sample in range(args.num_samples):
+
+            # Initialise dict with arrays to store.
+            data = {
+                "tactile_imgs": np.array([], dtype=np.float32).reshape(0, 1, 256, 256),
+                "pointclouds": np.array([], dtype=np.float32).reshape(0, num_valid_points, 3),   # fixed dimension touch chart pointcloud (workframe)
+                "rot_M_wrld_list": np.array([], dtype=np.float32).reshape(0, 3, 3),      # rotation matrix (work wrt worldframe)
+                "pos_wrld_list": np.array([]).reshape(0, 3) , # TCP pos (worldframe)
+                "pos_wrk_list": np.array([], dtype=np.float32).reshape(0, 3),   # TCP pos (worldframe)
+                "obj_index": np.array([], dtype=np.float32).reshape(0, 1),
+                "initial_pos": np.array([], dtype=np.float32).reshape(0, 3)
+            }
 
             robot.results_at_touch_wrld = None
 
@@ -266,7 +273,8 @@ def main(args):
             data['initial_pos'] = np.vstack((data['initial_pos'], initial_obj_pos))
 
             # Save all
-            utils_sample.save_touch_charts(data, args)
+            utils_sample.save_touch_charts(data, iteration, output_dir)
+            iteration+=1
 
             # Save picture for debugging
             if args.render_scene:
@@ -331,7 +339,7 @@ if __name__=='__main__':
         "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ABC_train', 'ABC_test"
     )
     parser.add_argument(
-        "--name_output", default='', type=str, help="The output name is 'touch_charts_gt_<name_output>.npy'"
+        "--name_output", default='', type=str, help="The folder where the touch charts are stored, e.g. 'results/touch_charts_gt_<name_output>'"
     )
     args = parser.parse_args()
 

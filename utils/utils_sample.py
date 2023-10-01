@@ -200,7 +200,7 @@ def spherical_sampling(robot, obj_id, initial_pos, initial_orn, args, obj_index,
     return data
 
 
-def save_touch_charts(data, args):
+def save_touch_charts(data, iteration, output_dir):
     """
     Receives a dictionary of data and stores it.
     The dictionary contains the following keys:
@@ -221,9 +221,7 @@ def save_touch_charts(data, args):
             - 'pos_wrk': position of the sensor in world frame collected from PyBullet.
     """
     
-    touch_charts_data_dir = os.path.dirname(results.__file__)
-
-    touch_charts_data_path = os.path.join(touch_charts_data_dir, f'touch_charts_gt_{args.name_output}.npy')
+    touch_charts_data_path = os.path.join(output_dir, f'{iteration}.npy')
 
     np.save(touch_charts_data_path, data)
 
