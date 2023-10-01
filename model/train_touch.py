@@ -24,7 +24,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Trainer():
     def __init__(self, args):
         utils_misc.set_seeds(41)
-        self.touch_chart_path = os.path.join(os.path.dirname(results.__file__), f'{args.dataset_name}.npy')
+        self.touch_chart_path = os.path.join(os.path.dirname(results.__file__), f'{args.dataset_name}.pkl')
         self.args = args
         # load initial mesh sheet to deform using the Encoder
         chart_location = os.path.join(os.path.dirname(data.__file__), 'touch_chart.obj')
@@ -314,6 +314,6 @@ if __name__=='__main__':
         "--dataset_name", type=str, default='', help="Name of the numpy array where touches are stored"
     )   
     args = parser.parse_args()
-       
+     
     trainer = Trainer(args)
     trainer()

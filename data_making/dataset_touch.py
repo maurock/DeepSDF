@@ -11,7 +11,7 @@ class TouchChartDataset(Dataset):
         """
         Check self.get_total_data() for details on touch_charts_dir and the required file tree.
         """
-        self.data = np.load(touch_charts_path, allow_pickle=True).item()
+        self.data = np.load(touch_charts_path, allow_pickle=True)
         for key in ['pointclouds', 'tactile_imgs']:
             self.data[key] = torch.tensor(self.data[key], dtype=torch.float32, device=device)
         return

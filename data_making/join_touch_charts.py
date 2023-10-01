@@ -5,6 +5,7 @@ from glob import glob
 import argparse
 import numpy as np
 import results
+import pickle
 
 def main(args):
     touch_charts_dir = os.path.join(os.path.dirname(results.__file__), args.name_folder)
@@ -44,7 +45,8 @@ def main(args):
 
     output_path = f'{touch_charts_dir}.npy'
 
-    np.save(output_path, data)
+    with open(f'{touch_charts_dir}.pkl', 'wb') as file:
+        pickle.dump(data, file, protocol=4)
 
 
 if __name__=='__main__':
