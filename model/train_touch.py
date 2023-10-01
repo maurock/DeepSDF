@@ -311,7 +311,7 @@ if __name__=='__main__':
         "--patience", type=int, default=20, help="Patience for the learning rate scheduling"
     )    
     parser.add_argument(
-        "--dataset_name", type=str, default='', help="Name of the numpy array where touches are stored"
+        "--dataset_name", type=str, default='', help="Name of the pickle file where touches are stored"
     )   
     args = parser.parse_args()
      
