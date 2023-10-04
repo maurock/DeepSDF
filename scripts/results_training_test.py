@@ -362,6 +362,8 @@ def main(args):
                 results[num_sample]['area'].append(error_area)
                 results[num_sample]['HD'].append(hd)
                 results[num_sample]['F1'].append(f1)
+                results[num_sample]['id'].append(obj_folder)
+
                 
                 # Save results in a txt file
                 with open(metrics_path, 'a') as log:
