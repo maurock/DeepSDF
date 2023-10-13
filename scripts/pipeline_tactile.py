@@ -20,6 +20,8 @@ import json
 import point_cloud_utils as pcu
 import matplotlib.pyplot as plt
 import random
+import config_files
+import yaml
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -31,16 +33,13 @@ def main(args):
     if not os.path.exists(test_dir):
         os.mkdir(test_dir)
     log_path = os.path.join(test_dir, 'settings.txt')
-    args_dict = vars(args)  # convert args to dict to write them as json
-    with open(log_path, mode='a') as log:
-        log.write('Settings:\n')
-        log.write(json.dumps(args_dict).replace(', ', ',\n'))
-        log.write('\n\n')
+    with open(log_path, 'w') as f:
+        yaml.dump(args, f)
 
     # Load touch model
     touch_model = model_touch.Encoder().to(device)
     # Load weights for sdf model
-    weights_path = os.path.join(os.path.dirname(runs_touch.__file__),  args.folder_touch, 'weights.pt')
+    weights_path = os.path.join(os.path.dirname(runs_touch.__file__),  args['folder_touch'], 'weights.pt')
     touch_model.load_state_dict(torch.load(weights_path, map_location=torch.device(device)))
     touch_model.eval()
 
@@ -51,7 +50,7 @@ def main(args):
 
     time_step = 1. / 960  # low for small objects
 
-    if args.show_gui:
+    if args['show_gui']:
         pb = bc.BulletClient(connection_mode=p.GUI)
         pb.configureDebugVisualizer(pb.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
         pb.configureDebugVisualizer(pb.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
@@ -103,8 +102,8 @@ def main(args):
         't_s_core': 'no_core',
         't_s_name': 'tactip',
         't_s_dynamics': {},
-        'show_gui': args.show_gui,
-        'show_tactile': args.show_tactile,
+        'show_gui': args['show_gui'],
+        'show_tactile': args['show_tactile'],
         'nx': 50,
         'ny': 50
     }
@@ -115,17 +114,17 @@ def main(args):
     initial_obj_pos = [0.5, 0.0, 0]
 
     # Load object\
-    if args.dataset == 'ShapeNetCore':
+    if args['dataset'] == 'ShapeNetCore':
         dataset_module = os.path.dirname(ShapeNetCore.__file__)
-    elif args.dataset == 'ShapeNetCore_test':
+    elif args['dataset'] == 'ShapeNetCore_test':
         dataset_module = os.path.dirname(ShapeNetCore_test.__file__)
-    elif args.dataset == 'ABC_train':
+    elif args['dataset'] == 'ABC_train':
         dataset_module = os.path.dirname(ABC_train.__file__)
-    elif args.dataset == 'ABC_test':
+    elif args['dataset'] == 'ABC_test':
         dataset_module = os.path.dirname(ABC_test.__file__)
     else:
         raise ValueError('Dataset not recognised')
-    obj_dir = os.path.join(dataset_module, args.obj_folder)
+    obj_dir = os.path.join(dataset_module, args['obj_folder'])
     with utils_sample.suppress_stdout():          # to suppress b3Warning           
         obj_id = pb.loadURDF(
             os.path.join(obj_dir, "model.urdf"),
@@ -133,7 +132,7 @@ def main(args):
             initial_obj_orn,
             useFixedBase=True,
             flags=pb.URDF_INITIALIZE_SAT_FEATURES,
-            globalScaling=args.scale
+            globalScaling=args['scale']
         )
         print(f'PyBullet object ID: {obj_id}')
 
@@ -141,7 +140,7 @@ def main(args):
     obj_path = os.path.join(obj_dir, "model.obj")
     mesh_original = utils_mesh._as_mesh(trimesh.load(obj_path))
     # Process object vertices to match thee transformations on the urdf file
-    vertices_wrld = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy) * args.scale + initial_obj_pos
+    vertices_wrld = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy) * args['scale'] + initial_obj_pos
     mesh = trimesh.Trimesh(vertices=vertices_wrld, faces=mesh_original.faces)
 
     # Store processed mesh in deepsdf pose
@@ -170,8 +169,8 @@ def main(args):
         t_s_core = robot_config['t_s_core'],
         t_s_name = robot_config['t_s_name'],
         t_s_dynamics = robot_config['t_s_dynamics'],
-        show_gui = args.show_gui,
-        show_tactile = args.show_tactile
+        show_gui = args['show_gui'],
+        show_tactile = args['show_tactile']
     )
     
     # Set pointcloud grid
@@ -239,7 +238,7 @@ def main(args):
         predicted_pointcloud_wrld = utils_mesh.translate_rotate_mesh(pos_wrld, rot_M_wrld, predicted_pointcloud[None, :, :], initial_obj_pos)
 
         # Rescale from Sim scale to DeepSDF scale
-        pointcloud_deepsdf_np = (predicted_pointcloud_wrld / args.scale)[0]  # shape (n, 3)
+        pointcloud_deepsdf_np = (predicted_pointcloud_wrld / args['scale'])[0]  # shape (n, 3)
 
         # Concatenate predicted pointclouds of the touch charts from all samples
         pointcloud_deepsdf = torch.from_numpy(pointcloud_deepsdf_np).float().to(device)  # shape (n, 3)
@@ -249,14 +248,14 @@ def main(args):
         sdf_gt = torch.vstack((sdf_gt, torch.zeros(size=(pointcloud_deepsdf.shape[0], 1)).to(device)))
 
         # Add randomly sampled points from normals
-        if args.augment_points_num > 0:
+        if args['augment_points_num'] > 0:
             # The sensor direction is given by the vectors pointing from the pointcloud to the TCP position
             # We need to first convert the TCP position to DeepSDF scale
             rpy_wrld = np.array(robot.arm.get_current_TCP_pos_vel_worldframe()[1]) # TCP orientation
             normal_wrk = np.array([[0, 0, 1]])
             normal_wrld = utils_mesh.rotate_pointcloud(normal_wrk, rpy_wrld)[0]
             TCP_pos_deepsdf = (robot.arm.get_current_TCP_pos_vel_worldframe()[0] -  0.01 * normal_wrld)  # move it slightly away from the object
-            TCP_pos_deepsdf = (TCP_pos_deepsdf -  initial_obj_pos)/ args.scale # convert to DeepSDF scale
+            TCP_pos_deepsdf = (TCP_pos_deepsdf -  initial_obj_pos)/ args['scale'] # convert to DeepSDF scale
             sensor_dirs = TCP_pos_deepsdf - pointcloud_deepsdf_np
             
             # Estimate point cloud normals
@@ -264,8 +263,8 @@ def main(args):
 
             # Sample along normals and return points and distances
             pointcloud_along_norm_np, signed_distance_np = utils_sample.sample_along_normals(
-                std_dev=args.augment_points_std, pointcloud=pointcloud_deepsdf_np, normals=n, N=args.augment_points_num,
-                augment_multiplier_out=args.augment_multiplier_out)
+                std_dev=args['augment_points_std'], pointcloud=pointcloud_deepsdf_np, normals=n, N=args['augment_points_num'],
+                augment_multiplier_out=args['augment_multiplier_out'])
 
             pointcloud_along_norm = torch.from_numpy(pointcloud_along_norm_np).float().to(device)
             sdf_normal_gt = torch.from_numpy(signed_distance_np).float().to(device)
@@ -273,7 +272,7 @@ def main(args):
             pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_along_norm))
             sdf_gt = torch.vstack((sdf_gt, sdf_normal_gt))
 
-        if args.render_scene:
+        if args['render_scene']:
             # Camera settings
             fov = 50
             width = 512
@@ -319,56 +318,13 @@ def main(args):
 
         # pb.removeBody(robot.robot_id)
         num_sample += 1
-        if num_sample==args.num_samples:
+        if num_sample==args['num_samples']:
             return test_dir
 
 
 if __name__=='__main__':
-    parser = argparse.ArgumentParser()
+    train_cfg_path = os.path.join(os.path.dirname(config_files.__file__), 'pipeline_tactile.yaml')
+    with open(train_cfg_path, 'rb') as f:
+        train_cfg = yaml.load(f, Loader=yaml.FullLoader)
 
-    # Arguments for sampling
-    parser.add_argument(
-        "--show_gui", default=False, action='store_true', help="Show PyBullet GUI"
-    )
-    parser.add_argument(
-        "--show_tactile", default=False, action='store_true', help="Show tactile image"
-    )
-    parser.add_argument(
-        "--num_samples", type=int, default=10, help="Number of samplings on the objects"
-    )
-    parser.add_argument(
-        "--render_scene", default=False, action='store_true', help="Render scene at touch"
-    )
-    parser.add_argument(
-        "--scale", default=0.2, type=float, help="Scale of the object in simulation wrt the urdf object"
-    )
-    parser.add_argument(
-        "--folder_touch", default=0, type=str, help="Folder containing the touch model weights"
-    )
-    parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ShapeNetCore_test', or 'ABC'"
-    )
-    parser.add_argument(
-        "--augment_points_std", default=0.002, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
-    )
-    parser.add_argument(
-        "--augment_points_num", default=5, type=int, help="Number of points to sample along normals"
-    )
-    parser.add_argument(
-        "--augment_multiplier_out", default=1, type=int, help="multiplier to augment the positive distances"
-    )
-    parser.add_argument(
-        "--obj_folder", type=str, default='', help="Object to reconstruct as obj_class/obj_category, e.g. 02818832/1aa55867200ea789465e08d496c0420f"
-    )
-    args = parser.parse_args()
-
-    # args.show_gui = True
-    # args.num_samples = 20
-    # args.folder_touch = '30_05_1633' 
-    # # args.obj_folder = '02942699/6d036fd1c70e5a5849493d905c02fa86' 
-    # args.obj_folder = 'data/9' 
-    # args.augment_multiplier_out = 5
-    # args.augment_points_std = 0.005
-    # args.dataset = "ABC"
-
-    _ = main(args)
+    _ = main(train_cfg)
