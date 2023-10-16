@@ -119,78 +119,45 @@ class SDFModelMulti(torch.nn.Module):
         # Initialise latent code and optimiser
         #latent_code = self.initialise_latent_code(args.latent_size)
         
-        if args.optimiser == 'Adam':
-            optim = torch.optim.Adam([latent_code], lr=args.lr)
-        elif args.optimiser == 'LBFGS':
-            optim = torch.optim.LBFGS([latent_code], lr=args.lr, max_iter=args.LBFGS_maxiter)
-        else:
-            print('Please choose valid optimiser: [Adam, LBFGS]')
-            exit()
+        optim = torch.optim.Adam([latent_code], lr=args['lr'])
 
-        if args.lr_scheduler:
+
+        if args['lr_scheduler']:
             scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 
-                                                    factor=args.lr_multiplier, 
-                                                    patience=args.patience, 
+                                                    factor=args['lr_multiplier'], 
+                                                    patience=args['patience'], 
                                                     threshold=0.001, threshold_mode='rel')
 
         best_loss = 1000000
 
-        for epoch in tqdm(range(0, args.epochs)):
+        for epoch in tqdm(range(0, args['epochs'])):
 
             latent_code_tile = torch.tile(latent_code, (coords.shape[0], 1))
             x = torch.hstack((latent_code_tile, coords))
 
             # Adam 
-            if args.optimiser == 'Adam':
+            optim.zero_grad()
 
-                optim.zero_grad()
+            predictions = self(x)
 
-                predictions = self(x)
+            if args['clamp']:
+                predictions = torch.clamp(predictions, -args['clamp_value'], args['clamp_value'])
 
-                if args.clamp:
-                    predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+            loss_value, l1, l2 = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args['latent_size']], sigma=args['sigma_regulariser'])
+            loss_value.backward()
 
-                loss_value, l1, l2 = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
-                loss_value.backward()
+            if writer is not None:
+                writer.add_scalar('Reconstruction loss', l1.data.cpu().numpy(), epoch)
+                writer.add_scalar('Latent code loss', l2.data.cpu().numpy(), epoch)
 
-                if writer is not None:
-                    writer.add_scalar('Reconstruction loss', l1.data.cpu().numpy(), epoch)
-                    writer.add_scalar('Latent code loss', l2.data.cpu().numpy(), epoch)
-
-                
-                #  add langevin noise (optional)
-                if args.langevin_noise > 0:
-                    noise = torch.normal(0, args.langevin_noise, size = (1, args.latent_size), dtype=torch.float32, requires_grad=False, device=device)
-                    latent_code.grad = latent_code.grad + noise
-
-                optim.step()
-
-            # LBFGS
-            else:
-
-                def closure():
-                    optim.zero_grad()
-
-                    predictions = self(x)
-
-                    if args.clamp:
-                        predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
-
-                    loss_value, l1, l2 = utils_deepsdf.SDFLoss_multishape(sdf_gt, predictions, x[:, :args.latent_size], sigma=args.sigma_regulariser)
-                    loss_value.backward()
-
-                    return loss_value
-
-                optim.step(closure)
-
-                loss_value = closure()
+            optim.step()
 
             if l1.detach().cpu().item() < best_loss:
                 best_loss = l1.detach().cpu().item()
                 best_latent_code = latent_code.clone()
 
             # step scheduler and store on tensorboard (optional)
-            if args.lr_scheduler:
+            if args['lr_scheduler']:
                 scheduler_latent.step(loss_value.item())
                 if writer is not None:
                     writer.add_scalar('Learning rate', scheduler_latent._last_lr[0], epoch)
@@ -214,17 +181,17 @@ class SDFModelMulti(torch.nn.Module):
     def finetune(self, args, best_latent_code, pointclouds_deepsdf, sdf_gt, writer):
         """Infer latent code from coordinates, their sdf, and a trained model."""
         
-        optim = torch.optim.Adam(params=self.parameters(), lr=args.lr_finetuning)
+        optim = torch.optim.Adam(params=self.parameters(), lr=args['lr_finetuning'])
 
-        if args.lr_scheduler:
+        if args['lr_scheduler']:
             scheduler_latent = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min', 
-                                                    factor=args.lr_multiplier, 
-                                                    patience=args.patience, 
+                                                    factor=args['lr_multiplier'], 
+                                                    patience=args['patience'], 
                                                     threshold=0.001, threshold_mode='rel')
 
         best_loss = 1000000
 
-        for epoch in tqdm(range(0, args.epochs_finetuning)):
+        for epoch in tqdm(range(0, args['epochs_finetuning'])):
 
             latent_code_tile = torch.tile(best_latent_code, (pointclouds_deepsdf.shape[0], 1))
             x = torch.hstack((latent_code_tile, pointclouds_deepsdf))
@@ -234,8 +201,8 @@ class SDFModelMulti(torch.nn.Module):
 
             predictions = self(x)
 
-            if args.clamp:
-                predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+            if args['clamp']:
+                predictions = torch.clamp(predictions, -args['clamp_value'], args['clamp_value'])
 
             l1 = torch.mean(torch.abs(predictions - sdf_gt))
             l1.backward()
@@ -250,7 +217,7 @@ class SDFModelMulti(torch.nn.Module):
                 best_weights = self.state_dict().copy()
 
             # step scheduler and store on tensorboard (optional)
-            if args.lr_scheduler:
+            if args['lr_scheduler']:
                 scheduler_latent.step(l1.item())
                 if writer is not None:
                     writer.add_scalar('Learning rate finetuning', scheduler_latent._last_lr[0], epoch)

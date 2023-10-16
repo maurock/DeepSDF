@@ -1,0 +1,22 @@
+# Arguments for deepsdf
+folder_touch_sdf: ''    # Folder containing the collected point clouds
+folder_sdf: ''     # Folder containing the sdf model weights
+latent_size: 128    # Folder containing the touch model weights
+optimiser: 'Adam'    # Choose the optimiser out of [Adam, LBFGS]
+lr: 0.00001     # Learning rate to infer the latent code
+lr_scheduler: False    # Scheduler for the learning rate
+sigma_regulariser: 0.005    # Regulariser for the loss function
+lr_multiplier: 0.5     # Learning rate multiplier for the scheduler
+patience: 50      # Patience for latent code inference
+epochs: 100     # Number of epochs for latent code inference
+clamp: False    # Clip the network prediction
+clamp_value: 0.1     # Value of the clip
+resolution: 50     # Resolution of the extracted mesh
+mode_reconstruct: 'all'     # Choose between 'all' or 'fixed' to choose between reconstructing for all the collected samples, or only for the specified number of samples. E.g. if args.num_samples=10 and args.mode_reconstruct='fixed', then only the file with 10 samples will be used to reconstruct the object. Otherwise, all the files will be used, therefore the script reconstruct up to 10 samples.
+no_mesh_extraction: False    # When true, do not extract the resulting mesh as html and obj, as well as the touches point cloud.
+num_samples_extraction: [10]    # Number of samples on the objects, e.g. [10, 20]
+inner_dim: 512    # Inner dimensions of the network
+positional_encoding_embeddings: 0    # Number of embeddings to use for positional encoding. If 0, no positional encoding is used.
+epochs_finetuning: 100    # Number of epochs for latent code inference
+finetuning: False   # Finetune the network after latent code inference
+lr_finetuning: 0.0001   # Learning rate for finetuning

@@ -15,6 +15,8 @@ from utils import utils_deepsdf
 import results
 from torch.utils.tensorboard import SummaryWriter
 import json
+import yaml
+import config_files
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -35,36 +37,34 @@ class Trainer():
         
         # Logging
         self.writer = SummaryWriter(log_dir=self.run_dir)
-        self.log_path = os.path.join(self.run_dir, 'settings.txt')
-        args_dict = vars(self.args)  # convert args to dict to write them as json
-        with open(self.log_path, mode='a') as log:
-            log.write('Settings:\n')
-            log.write(json.dumps(args_dict).replace(', ', ',\n'))
-            log.write('\n\n')
+        self.log_path = os.path.join(self.run_dir, 'settings.yaml')
+        with open(self.log_path, 'w') as f:
+            yaml.dump(self.args, f)
+
 
         # calculate num objects in samples_dictionary, wich is the number of keys
-        samples_dict_path = os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy')
+        samples_dict_path = os.path.join(os.path.dirname(results.__file__), f'samples_dict_{self.args["dataset"]}.npy')
         samples_dict = np.load(samples_dict_path, allow_pickle=True).item()
 
         # instantiate model and optimisers
         self.model = sdf_model.SDFModelMulti(
-                self.args.num_layers, 
-                self.args.no_skip_connections, 
-                inner_dim=self.args.inner_dim,
-                positional_encoding_embeddings=self.args.positional_encoding_embeddings,
-                latent_size=self.args.latent_size
+                self.args['num_layers'], 
+                self.args['no_skip_connections'], 
+                inner_dim=self.args['inner_dim'],
+                positional_encoding_embeddings=self.args['positional_encoding_embeddings'],
+                latent_size=self.args['latent_size']
             ).float().to(device)
 
         # define optimisers
-        self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
+        self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args['lr_model'], weight_decay=0)
         
         # generate a unique random latent code for each shape
-        self.latent_codes = utils_deepsdf.generate_latent_codes(self.args.latent_size, samples_dict, self.args.limit_data)
-        self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
+        self.latent_codes = utils_deepsdf.generate_latent_codes(self.args['latent_size'], samples_dict, self.args['limit_data'])
+        self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args['lr_latent'], weight_decay=0)
         
         # Load pretrained weights and optimisers to continue training
-        if self.args.pretrained:
-            pretrained_folder = os.path.join(self.runs_dir, self.args.pretrained_folder)
+        if self.args['pretrained']:
+            pretrained_folder = os.path.join(self.runs_dir, self.args['pretrained_folder'])
 
             # load pretrained weights
             self.model.load_state_dict(torch.load(os.path.join(pretrained_folder, 'weights.pt'), map_location=device))
@@ -78,12 +78,12 @@ class Trainer():
             results_latent_codes = np.load(results_path, allow_pickle=True).item()
             self.latent_codes = torch.tensor(results_latent_codes['train']['best_latent_codes']).float().to(device)
             self.latent_codes.requires_grad_(True)
-            self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
+            self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args['lr_latent'], weight_decay=0)
             self.optimizer_latent.load_state_dict(torch.load(os.path.join(pretrained_folder, 'optimizer_latent_state.pt'), map_location=device))
 
-        if self.args.lr_scheduler:
-            self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.0001, threshold_mode='rel')
-            self.scheduler_latent =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_latent, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.0001, threshold_mode='rel')
+        if self.args['lr_scheduler']:
+            self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args['lr_multiplier'], patience=self.args['patience'], threshold=0.0001, threshold_mode='rel')
+            self.scheduler_latent =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_latent, mode='min', factor=self.args['lr_multiplier'], patience=self.args['patience'], threshold=0.0001, threshold_mode='rel')
             
         # get data
         train_loader, val_loader = self.get_loaders()
@@ -96,7 +96,7 @@ class Trainer():
         self.running_steps = 0   # counter for latent codes tensorboard
         best_loss = 10000000000
         start = time.time()
-        for epoch in range(self.args.epochs):
+        for epoch in range(self.args['epochs']):
             print(f'============================ Epoch {epoch} ============================')
             self.epoch = epoch
 
@@ -123,7 +123,7 @@ class Trainer():
                     torch.save(optimizer_latent_state, os.path.join(self.run_dir, 'optimizer_latent_state.pt'))
                     self.results['train']['best_latent_codes'] = best_latent_codes
 
-                if self.args.lr_scheduler:
+                if self.args['lr_scheduler']:
                     self.scheduler_model.step(avg_val_loss)
                     self.scheduler_latent.step(avg_val_loss)
 
@@ -139,10 +139,10 @@ class Trainer():
         print(f'Time elapsed: {end - start} s')
 
     def get_loaders(self):
-        data = dataset.SDFDataset(self.args.dataset, args.limit_data)
+        data = dataset.SDFDataset(self.args['dataset'], self.args['limit_data'])
 
-        if args.clamp:
-            data.data['sdf'] = torch.clamp(data.data['sdf'], -args.clamp_value, args.clamp_value)
+        if self.args['clamp']:
+            data.data['sdf'] = torch.clamp(data.data['sdf'], -self.args['clamp_value'], self.args['clamp_value'])
 
         train_size = int(0.85 * len(data))
         val_size = len(data) - train_size
@@ -150,13 +150,13 @@ class Trainer():
         train_data, val_data = random_split(data, [train_size, val_size])
         train_loader = DataLoader(
                 train_data,
-                batch_size=self.args.batch_size,
+                batch_size=self.args['batch_size'],
                 shuffle=True,
                 drop_last=True
             )
         val_loader = DataLoader(
             val_data,
-            batch_size=self.args.batch_size,
+            batch_size=self.args['batch_size'],
             shuffle=False,
             drop_last=True
             )
@@ -203,24 +203,24 @@ class Trainer():
             x, y, latent_codes_indices_batch, latent_codes_batch = self.generate_xy(batch)
 
             predictions = self.model(x)  # (batch_size, 1)
-            if args.clamp:
-                predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+            if self.args['clamp']:
+                predictions = torch.clamp(predictions, -self.args['clamp_value'], self.args['clamp_value'])
             
-            loss_value, l1, l2 = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, x[:, :self.args.latent_size], sigma=self.args.sigma_regulariser)
+            loss_value, l1, l2 = self.args['loss_multiplier'] * SDFLoss_multishape(y, predictions, x[:, :self.args['latent_size']], sigma=self.args['sigma_regulariser'])
             loss_value.backward()       
 
             self.optimizer_latent.step()
             self.optimizer_model.step()
             total_loss += loss_value.data.cpu().numpy()  
 
-            if self.args.latent_to_tensorboard:
+            if self.args['latent_to_tensorboard']:
                 utils_deepsdf.latent_to_tensorboard(self.writer, self.running_steps, self.latent_codes)
 
         avg_train_loss = total_loss/iterations
         print(f'Training: loss {avg_train_loss}')
         self.writer.add_scalar('Training loss', avg_train_loss, self.epoch)
 
-        if self.args.weights_to_tensorboard:
+        if self.args['weights_to_tensorboard']:
             utils_deepsdf.weight_to_tensorboard(self.writer, self.epoch, self.model)
 
         return avg_train_loss
@@ -240,10 +240,10 @@ class Trainer():
             x, y, _, latent_codes_batch = self.generate_xy(batch)
 
             predictions = self.model(x)  # (batch_size, 1)
-            if args.clamp:
-                predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
+            if self.args['clamp']:
+                predictions = torch.clamp(predictions, -self.args['clamp_value'], self.args['clamp_value'])
 
-            loss_value, loss_rec, loss_latent = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, latent_codes_batch, self.args.sigma_regulariser)          
+            loss_value, loss_rec, loss_latent = self.args['loss_multiplier'] * SDFLoss_multishape(y, predictions, latent_codes_batch, self.args['sigma_regulariser'])          
             total_loss += loss_value.data.cpu().numpy()   
             total_loss_rec += loss_rec.data.cpu().numpy() 
             total_loss_latent += loss_latent.data.cpu().numpy()
@@ -259,77 +259,77 @@ class Trainer():
         return avg_val_loss
 
 if __name__=='__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'ABC'"
-    )
-    parser.add_argument(
-        "--seed", type=int, default=42, help="Setting for the random seed"
-    )
-    parser.add_argument(
-        "--epochs", type=int, default=500, help="Number of epochs to use"
-    )
-    parser.add_argument(
-        "--lr_model", type=float, default=0.00001, help="Initial learning rate (model)"
-    )
-    parser.add_argument(
-        "--lr_latent", type=float, default=0.001, help="Initial learning rate (latent vector)"
-    )
-    parser.add_argument(
-        "--batch_size", type=int, default=500, help="Size of the batch"
-    )
-    parser.add_argument(
-        "--latent_size", type=int, default=128, help="Size of the latent size"
-    )
-    parser.add_argument(
-        "--sigma_regulariser", type=float, default=0.01, help="Sigma value for the regulariser in the loss function"
-    )
-    parser.add_argument(
-        "--loss_multiplier", type=float, default=1, help="Loss multiplier"
-    )
-    parser.add_argument(
-        "--weights_to_tensorboard", default=False, action='store_true', help="Store model parameters for visualisation on tensorboard"
-    )
-    parser.add_argument(
-        "--latent_to_tensorboard", default=False, action='store_true', help="Store latent codes for visualisation on tensorboard"
-    )
-    parser.add_argument(
-        "--lr_multiplier", type=float, default=0.5, help="Multiplier for the learning rate scheduling"
-    )  
-    parser.add_argument(
-        "--patience", type=int, default=20, help="Patience for the learning rate scheduling"
-    )  
-    parser.add_argument(
-        "--lr_scheduler", default=False, action='store_true', help="Turn on lr_scheduler"
-    )
-    parser.add_argument(
-        "--num_layers", type=int, default=8, help="Num network layers"
-    )    
-    parser.add_argument(
-        "--no_skip_connections", default=False, action='store_true', help="Do not skip connections"
-    )   
-    parser.add_argument(
-        "--clamp", default=False, action='store_true', help="Clip the network prediction"
-    )
-    parser.add_argument(
-        "--clamp_value", type=float, default=0.1, help="Value for clipping"
-    )
-    parser.add_argument(
-        "--pretrained", default=False, action='store_true', help="Use pretrain weights"
-    )
-    parser.add_argument(
-        "--pretrained_folder", type=str, default='', help="Name of the folder under runs_sdf containing weights and optimizer states, e.g. 09_08_125850"
-    )
-    parser.add_argument(
-        "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
-    )
-    parser.add_argument(
-        "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
-    )
-    parser.add_argument(
-        "--limit_data", default=1, type=float, help="Ratio of the original dataset used for training. If 1, the full dataset is used. Values can be between 0 and 1."
-    )    
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument(
+    #     "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'ABC'"
+    # )
+    # parser.add_argument(
+    #     "--seed", type=int, default=42, help="Setting for the random seed"
+    # )
+    # parser.add_argument(
+    #     "--epochs", type=int, default=500, help="Number of epochs to use"
+    # )
+    # parser.add_argument(
+    #     "--lr_model", type=float, default=0.00001, help="Initial learning rate (model)"
+    # )
+    # parser.add_argument(
+    #     "--lr_latent", type=float, default=0.001, help="Initial learning rate (latent vector)"
+    # )
+    # parser.add_argument(
+    #     "--batch_size", type=int, default=500, help="Size of the batch"
+    # )
+    # parser.add_argument(
+    #     "--latent_size", type=int, default=128, help="Size of the latent size"
+    # )
+    # parser.add_argument(
+    #     "--sigma_regulariser", type=float, default=0.01, help="Sigma value for the regulariser in the loss function"
+    # )
+    # parser.add_argument(
+    #     "--loss_multiplier", type=float, default=1, help="Loss multiplier"
+    # )
+    # parser.add_argument(
+    #     "--weights_to_tensorboard", default=False, action='store_true', help="Store model parameters for visualisation on tensorboard"
+    # )
+    # parser.add_argument(
+    #     "--latent_to_tensorboard", default=False, action='store_true', help="Store latent codes for visualisation on tensorboard"
+    # )
+    # parser.add_argument(
+    #     "--lr_multiplier", type=float, default=0.5, help="Multiplier for the learning rate scheduling"
+    # )  
+    # parser.add_argument(
+    #     "--patience", type=int, default=20, help="Patience for the learning rate scheduling"
+    # )  
+    # parser.add_argument(
+    #     "--lr_scheduler", default=False, action='store_true', help="Turn on lr_scheduler"
+    # )
+    # parser.add_argument(
+    #     "--num_layers", type=int, default=8, help="Num network layers"
+    # )    
+    # parser.add_argument(
+    #     "--no_skip_connections", default=False, action='store_true', help="Do not skip connections"
+    # )   
+    # parser.add_argument(
+    #     "--clamp", default=False, action='store_true', help="Clip the network prediction"
+    # )
+    # parser.add_argument(
+    #     "--clamp_value", type=float, default=0.1, help="Value for clipping"
+    # )
+    # parser.add_argument(
+    #     "--pretrained", default=False, action='store_true', help="Use pretrain weights"
+    # )
+    # parser.add_argument(
+    #     "--pretrained_folder", type=str, default='', help="Name of the folder under runs_sdf containing weights and optimizer states, e.g. 09_08_125850"
+    # )
+    # parser.add_argument(
+    #     "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
+    # )
+    # parser.add_argument(
+    #     "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
+    # )
+    # parser.add_argument(
+    #     "--limit_data", default=1, type=float, help="Ratio of the original dataset used for training. If 1, the full dataset is used. Values can be between 0 and 1."
+    # )    
+    # args = parser.parse_args()
 
     # args.pretrained = True
     # args.pretrained_folder = '09_08_125850'
@@ -344,5 +344,13 @@ if __name__=='__main__':
     # args.dataset = 'ABC'
     # args.limit_data = 0.25
     
-    trainer = Trainer(args)
+    # trainer = Trainer(args)
+    # trainer()
+
+
+    train_cfg_path = os.path.join(os.path.dirname(config_files.__file__), 'pipeline_tactile.yaml')
+    with open(train_cfg_path, 'rb') as f:
+        train_cfg = yaml.load(f, Loader=yaml.FullLoader)
+
+    trainer = Trainer(train_cfg)
     trainer()

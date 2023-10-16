@@ -1,0 +1,24 @@
+# Config file for training DeepSDF
+dataset: ShapeNetCore    # Dataset used: 'ShapeNetCore' or 'ABC'
+seed: 42       # Setting for the random seed
+epochs: 1000   # Number of epochs to use
+lr_model: 0.00001   # Initial learning rate (model)
+lr_latent: 0.001    # Initial learning rate (latent vector)
+batch_size: 500    # Size of the batch
+latent_size: 128   # Size of the latent size
+sigma_regulariser: 0.01    # Sigma value for the regulariser in the loss function
+loss_multiplier: 1.0      # Loss multiplier
+weights_to_tensorboard: False     # Store model parameters for visualisation on tensorboard
+latent_to_tensorboard: False      # Store latent codes for visualisation on tensorboard
+lr_multiplier: 0.5     # Multiplier for the learning rate scheduling
+patience: 20    # Patience for the learning rate scheduling
+lr_scheduler:  False    # Turn on lr_scheduler
+num_layers: 8   # Num network layers
+no_skip_connections: False    # Do not skip connections
+clamp: False     # Clip the network prediction
+clamp_value: 0.1   # Value for clipping
+pretrained: False    # Use pretrain weights"
+pretrained_folder: ''      # Name of the folder under runs_sdf containing weights and optimizer states, e.g. 09_08_125850"
+inner_dim: 512    # Inner dimensions of the network
+positional_encoding_embeddings: 0    # Number of embeddingsto use for positional encoding. If 0, no positional encoding is used.
+limit_data: 1.0    # Ratio of the original dataset used for training. If 1, the full dataset is used. Values can be between 0 and 1.
