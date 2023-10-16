@@ -1,0 +1,33 @@
+# Arguments for sampling
+show_gui: True       # Show PyBullet GUI
+show_tactile: False   # Show tactile image
+num_samples: 10       # Number of samplings on the objects
+render_scene: False   # Render scene at touch
+scale: 0.2            # Scale of the object in simulation wrt the urdf object
+folder_touch: '30_05_1633'       # Folder containing the touch model weights
+dataset: 'ShapeNetCore'   # Choose the dataset to use ['ShapeNetCore', 'ShapeNetCore_test', 'ABC']
+augment_points_std: 0.002   # Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)
+augment_points_num: 5   # Number of points to sample along normals
+augment_multiplier_out: 1    # Multiplier to augment the positive distances
+obj_folder: '02942699/6d036fd1c70e5a5849493d905c02fa86'    # Object to reconstruct as obj_class/obj_category, e.g. 02818832/1aa55867200ea789465e08d496c0420f
+
+# Arguments for deepsdf
+folder_sdf: ''     # Folder containing the sdf model weights
+latent_size: 128    # Folder containing the touch model weights
+optimiser: 'Adam'    # Choose the optimiser out of [Adam, LBFGS]
+lr: 0.00001     # Learning rate to infer the latent code
+lr_scheduler: False    # Scheduler for the learning rate
+sigma_regulariser: 0.005    # Regulariser for the loss function
+lr_multiplier: 0.5     # Learning rate multiplier for the scheduler
+patience: 50      # Patience for latent code inference
+epochs: 100     # Number of epochs for latent code inference
+clamp: False    # Clip the network prediction
+clamp_value: 0.1     # Value of the clip
+resolution: 50     # Resolution of the extracted mesh
+num_samples_extraction: [10]    # Number of samples on the objects, e.g. [10, 20]
+inner_dim: 512    # Inner dimensions of the network
+positional_encoding_embeddings: 0    # Number of embeddings to use for positional encoding. If 0, no positional encoding is used.
+epochs_finetuning: 100    # Number of epochs for latent code inference
+finetuning: False   # Finetune the network after latent code inference
+lr_finetuning: 0.0001   # Learning rate for finetuning
+save_reconstruction: False    # Store reconstructed mesh

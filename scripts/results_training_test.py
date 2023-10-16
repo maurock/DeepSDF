@@ -18,15 +18,14 @@ from results import runs_touch, runs_sdf, runs_touch_sdf
 import trimesh
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
-import json
 import point_cloud_utils as pcu
-import results
-import matplotlib.pyplot as plt
 from glob import glob
 from pytorch3d.loss import chamfer_distance
 import random
 from data_making.extract_touch_charts import load_environment
-from utils.utils_metrics import earth_mover_distance, calculate_error_area, hausdorff_distance, calculate_fscore_point2surface
+from utils.utils_metrics import earth_mover_distance, calculate_error_area, hausdorff_distance
+import yaml
+import config_files
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -35,18 +34,18 @@ Demo to reconstruct objects using tactile-gym.
 """
 def main(args):
     # All object paths in the dataset
-    if args.dataset == 'ShapeNetCore':
+    if args['dataset'] == 'ShapeNetCore':
         dataset_folder = os.path.dirname(ShapeNetCore.__file__)
         suffix = '_ShapeNetCore_train'
-    elif args.dataset == 'ShapeNetCore_test':
+    elif args['dataset'] == 'ShapeNetCore_test':
         dataset_folder = os.path.dirname(ShapeNetCore_test.__file__)
         suffix = '_ShapeNetCore_test'
-    elif args.dataset == 'ABC_test':
+    elif args['dataset'] == 'ABC_test':
         dataset_folder = os.path.dirname(ABC_test.__file__)
         suffix = '_ABC_test'
     else:
         raise ValueError('Dataset not recognised')
-    full_paths = glob(os.path.join(dataset_folder, args.category, '*/'))
+    full_paths = glob(os.path.join(dataset_folder, args['category'], '*/'))
     obj_folders = [os.sep.join(full_path.split(os.sep)[-3:-1]) for full_path in full_paths]
     # For consistency:
     obj_folders = sorted(obj_folders)
@@ -55,12 +54,9 @@ def main(args):
     test_dir = os.path.join(os.path.dirname(runs_touch_sdf.__file__), datetime.now().strftime('%d_%m_%H%M%S_') + str(random.randint(0, 10000)) + suffix)
     if not os.path.exists(test_dir):
         os.mkdir(test_dir)
-    log_path = os.path.join(test_dir, 'settings.txt')
-    args_dict = vars(args)  # convert args to dict to write them as json
-    with open(log_path, mode='a') as log:
-        log.write('Settings:\n')
-        log.write(json.dumps(args_dict).replace(', ', ',\n'))
-        log.write('\n\n')
+    log_path = os.path.join(test_dir, 'settings.yaml')
+    with open(log_path, 'w') as f:
+        yaml.dump(args, f)
 
     metrics_path = os.path.join(test_dir, 'metrics.txt')  # log metrics in human readable format
     results_path = os.path.join(test_dir, 'results.npy')  # log metrics in numpy format
@@ -68,7 +64,7 @@ def main(args):
     # Load touch model
     touch_model = model_touch.Encoder().to(device)
     # Load weights for sdf model
-    weights_path = os.path.join(os.path.dirname(runs_touch.__file__),  args.folder_touch, 'weights.pt')
+    weights_path = os.path.join(os.path.dirname(runs_touch.__file__),  args['folder_touch'], 'weights.pt')
     touch_model.load_state_dict(torch.load(weights_path, map_location=torch.device(device)))
     touch_model.eval()
 
@@ -76,12 +72,12 @@ def main(args):
     sdf_model = model_sdf.SDFModelMulti(
         num_layers=8, 
         no_skip_connections=False,
-        inner_dim=args.inner_dim,
-        latent_size=args.latent_size,
-        positional_encoding_embeddings=args.positional_encoding_embeddings).float().to(device)
+        inner_dim=args['inner_dim'],
+        latent_size=args['latent_size'],
+        positional_encoding_embeddings=args['positional_encoding_embeddings']).float().to(device)
     
     # Load weights for sdf model
-    weights_path = os.path.join(os.path.dirname(runs_sdf.__file__), args.folder_sdf, 'weights.pt')
+    weights_path = os.path.join(os.path.dirname(runs_sdf.__file__), args['folder_sdf'], 'weights.pt')
     sdf_model.load_state_dict(torch.load(weights_path, map_location=device))
 
     # Initial verts of the default touch chart
@@ -90,12 +86,12 @@ def main(args):
     initial_verts = torch.unsqueeze(initial_verts, 0)
 
     # Instantiate grid coordinates for mesh extraction
-    coords, grid_size_axis = utils_deepsdf.get_volume_coords(args.resolution)
+    coords, grid_size_axis = utils_deepsdf.get_volume_coords(args['resolution'])
     coords = coords.clone().to(device)
     coords_batches = torch.split(coords, 500000)
 
     # Get the average optimised latent code
-    results_sdf_path = os.path.join(os.path.dirname(runs_sdf.__file__), args.folder_sdf, 'results.npy')
+    results_sdf_path = os.path.join(os.path.dirname(runs_sdf.__file__), args['folder_sdf'], 'results.npy')
     results_sdf = np.load(results_sdf_path, allow_pickle=True).item()
     latent_code = results_sdf['train']['best_latent_codes']
     # Get average latent code (across dimensions)
@@ -104,7 +100,7 @@ def main(args):
 
     time_step = 1. / 960  # low for small objects
 
-    if args.show_gui:
+    if args['show_gui']:
         pb = bc.BulletClient(connection_mode=p.GUI)
         pb.configureDebugVisualizer(pb.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
         pb.configureDebugVisualizer(pb.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
@@ -151,24 +147,23 @@ def main(args):
         't_s_core': 'no_core',
         't_s_name': 'tactip',
         't_s_dynamics': {},
-        'show_gui': args.show_gui,
-        'show_tactile': args.show_tactile,
+        'show_gui': args['show_gui'],
+        'show_tactile': args['show_tactile'],
         'nx': 50,
         'ny': 50
     }
     
     # Set initial object pose
-    initial_obj_rpy = [np.pi/2 + args.change_orn[0], 0 + args.change_orn[1], -np.pi/2 + args.change_orn[2]]
+    initial_obj_rpy = [np.pi/2, 0, -np.pi/2]
     initial_obj_orn = p.getQuaternionFromEuler(initial_obj_rpy)
     initial_obj_pos = [0.5, 0.0, 0]
 
     results = dict()    
-    for i in args.num_samples_extraction:
+    for i in args['num_samples_extraction']:
         results[i-1] = dict()
         results[i-1]['CD'] = []
         results[i-1]['EMD'] = []
         results[i-1]['area'] = []
-        results[i-1]['F1'] = []
         results[i-1]['HD'] = []
 
     for idx, obj_folder in enumerate(obj_folders):
@@ -189,7 +184,7 @@ def main(args):
                 initial_obj_orn,
                 useFixedBase=True,
                 flags=pb.URDF_INITIALIZE_SAT_FEATURES,
-                globalScaling=args.scale
+                globalScaling=args['scale']
             )
             print(f'PyBullet object ID: {obj_id}')
 
@@ -197,7 +192,7 @@ def main(args):
         obj_path = os.path.join(obj_dir, "model.obj")
         mesh_original = utils_mesh._as_mesh(trimesh.load(obj_path))
         # Process object vertices to match thee transformations on the urdf file
-        vertices_wrld = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy) * args.scale + initial_obj_pos
+        vertices_wrld = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy) * args['scale'] + initial_obj_pos
         mesh = trimesh.Trimesh(vertices=vertices_wrld, faces=mesh_original.faces)
 
         verts_deepsdf = utils_mesh.rotate_pointcloud(mesh_original.vertices, initial_obj_rpy)
@@ -220,7 +215,7 @@ def main(args):
         # During the first stage, we collect tactile images, map them to point clouds, and store them.
         num_sample = 0
 
-        while num_sample!=args.num_samples:
+        while num_sample!=args['num_samples']:
 
             robot.arm.worldframe_to_workframe([0.65, 0.0, 1.2], [0, 0, 0])[0]
             
@@ -274,7 +269,7 @@ def main(args):
             predicted_pointcloud_wrld = utils_mesh.translate_rotate_mesh(pos_wrld, rot_M_wrld, predicted_pointcloud[None, :, :], initial_obj_pos)
 
             # Rescale from Sim scale to DeepSDF scale
-            pointcloud_deepsdf_np = (predicted_pointcloud_wrld / args.scale)[0]  # shape (n, 3)
+            pointcloud_deepsdf_np = (predicted_pointcloud_wrld / args['scale'])[0]  # shape (n, 3)
 
             # Concatenate predicted pointclouds of the touch charts from all samples
             pointcloud_deepsdf = torch.from_numpy(pointcloud_deepsdf_np).float().to(device)  # shape (n, 3)
@@ -284,14 +279,14 @@ def main(args):
             sdf_gt = torch.vstack((sdf_gt, torch.zeros(size=(pointcloud_deepsdf.shape[0], 1)).to(device)))
 
             # Add randomly sampled points from normals
-            if args.augment_points_num > 0:
+            if args['augment_points_num'] > 0:
                 # The sensor direction is given by the vectors pointing from the pointcloud to the TCP position
                 # We need to first convert the TCP position to DeepSDF scale
                 rpy_wrld = np.array(robot.arm.get_current_TCP_pos_vel_worldframe()[1]) # TCP orientation
                 normal_wrk = np.array([[0, 0, 1]])
                 normal_wrld = utils_mesh.rotate_pointcloud(normal_wrk, rpy_wrld)[0]
                 TCP_pos_deepsdf = (robot.arm.get_current_TCP_pos_vel_worldframe()[0] -  0.01 * normal_wrld)  # move it slightly away from the object
-                TCP_pos_deepsdf = (TCP_pos_deepsdf -  initial_obj_pos)/ args.scale # convert to DeepSDF scale
+                TCP_pos_deepsdf = (TCP_pos_deepsdf -  initial_obj_pos)/ args['scale'] # convert to DeepSDF scale
                 sensor_dirs = TCP_pos_deepsdf - pointcloud_deepsdf_np
                 
                 # Estimate point cloud normals
@@ -299,8 +294,8 @@ def main(args):
 
                 # Sample along normals and return points and distances
                 pointcloud_along_norm_np, signed_distance_np = utils_sample.sample_along_normals(
-                    std_dev=args.augment_points_std, pointcloud=pointcloud_deepsdf_np, normals=n, N=args.augment_points_num,
-                    augment_multiplier_out=args.augment_multiplier_out)
+                    std_dev=args['augment_points_std'], pointcloud=pointcloud_deepsdf_np, normals=n, N=args['augment_points_num'],
+                    augment_multiplier_out=args['augment_multiplier_out'])
 
                 pointcloud_along_norm = torch.from_numpy(pointcloud_along_norm_np).float().to(device)
                 sdf_normal_gt = torch.from_numpy(signed_distance_np).float().to(device)
@@ -308,12 +303,12 @@ def main(args):
                 pointclouds_deepsdf = torch.vstack((pointclouds_deepsdf, pointcloud_along_norm))
                 sdf_gt = torch.vstack((sdf_gt, sdf_normal_gt))
 
-            if num_sample in [num-1 for num in args.num_samples_extraction]:
+            if num_sample in [num-1 for num in args['num_samples_extraction']]:
                 # Infer latent code
                 sdf_model.train()
                 best_latent_code = sdf_model.infer_latent_code(args, pointclouds_deepsdf, sdf_gt,  None, latent_code)
 
-                if args.finetuning:
+                if args['finetuning']:
                     best_weights = sdf_model.finetune(args, best_latent_code, pointclouds_deepsdf, sdf_gt, None)
                     sdf_model.load_state_dict(best_weights)
                 
@@ -333,7 +328,7 @@ def main(args):
                 # Get reconstructed meshes                
                 reconstructed_mesh = trimesh.Trimesh(vertices_deepsdf, faces_deepsdf)
 
-                if args.save_reconstruction:
+                if args['save_reconstruction']:
                     # Create mesh folder if necessary
                     if not os.path.exists(os.path.join(test_dir, 'meshes')):
                         os.makedirs(os.path.join(test_dir, 'meshes'))
@@ -354,20 +349,16 @@ def main(args):
 
                 hd = hausdorff_distance(original_pointcloud, reconstructed_pointcloud)
 
-                # For F1, we increase the number of points to 20000 as this is a measure of surface coverage
-                f1, _, _ = calculate_fscore_point2surface(mesh_deepsdf, reconstructed_mesh, args.threshold_f1)
-
                 results[num_sample]['CD'].append(cd.item())
                 results[num_sample]['EMD'].append(emd.item())
                 results[num_sample]['area'].append(error_area)
                 results[num_sample]['HD'].append(hd)
-                results[num_sample]['F1'].append(f1)
                 results[num_sample]['id'].append(obj_folder)
 
                 
                 # Save results in a txt file
                 with open(metrics_path, 'a') as log:
-                    log.write(f'Obj id: {obj_folder}, Sample: {num_sample}, CD: {cd}, EMD: {emd}, Error area: {error_area}, HD: {hd}, F1: {f1}\n')
+                    log.write(f'Obj id: {obj_folder}, Sample: {num_sample}, CD: {cd}, EMD: {emd}, Error area: {error_area}, HD: {hd}\n')
 
                 # Save results
                 np.save(results_path, results)
@@ -378,111 +369,105 @@ def main(args):
 
 if __name__=='__main__':
 
-    parser = argparse.ArgumentParser()
+    # parser = argparse.ArgumentParser()
 
-    # Arguments for sampling
-    parser.add_argument(
-        "--show_gui", default=False, action='store_true', help="Show PyBullet GUI"
-    )
-    parser.add_argument(
-        "--show_tactile", default=False, action='store_true', help="Show tactile image"
-    )
-    parser.add_argument(
-        "--num_samples", type=int, default=10, help="Number of samplings on the objects"
-    )
-    parser.add_argument(
-        "--render_scene", default=False, action='store_true', help="Render scene at touch"
-    )
-    parser.add_argument(
-        "--scale", default=0.2, type=float, help="Scale of the object in simulation wrt the urdf object"
-    )
-    parser.add_argument(
-        "--folder_touch", default=0, type=str, help="Folder containing the touch model weights"
-    )
-    parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ShapeNetCore_test', or 'PartNetMobility'"
-    )
-    parser.add_argument(
-        "--augment_points_std", default=0.002, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
-    )
-    parser.add_argument(
-        "--augment_points_num", default=5, type=int, help="Number of points to sample along normals"
-    )
-    parser.add_argument(
-        "--augment_multiplier_out", default=1, type=int, help="multiplier to augment the positive distances"
-    )
+    # # Arguments for sampling
+    # parser.add_argument(
+    #     "--show_gui", default=False, action='store_true', help="Show PyBullet GUI"
+    # )
+    # parser.add_argument(
+    #     "--show_tactile", default=False, action='store_true', help="Show tactile image"
+    # )
+    # parser.add_argument(
+    #     "--num_samples", type=int, default=10, help="Number of samplings on the objects"
+    # )
+    # parser.add_argument(
+    #     "--render_scene", default=False, action='store_true', help="Render scene at touch"
+    # )
+    # parser.add_argument(
+    #     "--scale", default=0.2, type=float, help="Scale of the object in simulation wrt the urdf object"
+    # )
+    # parser.add_argument(
+    #     "--folder_touch", default=0, type=str, help="Folder containing the touch model weights"
+    # )
+    # parser.add_argument(
+    #     "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ShapeNetCore_test', or 'PartNetMobility'"
+    # )
+    # parser.add_argument(
+    #     "--augment_points_std", default=0.002, type=float, help="Standard deviation of the Gaussian used to sample points along normals (if augment_points is True)"
+    # )
+    # parser.add_argument(
+    #     "--augment_points_num", default=5, type=int, help="Number of points to sample along normals"
+    # )
+    # parser.add_argument(
+    #     "--augment_multiplier_out", default=1, type=int, help="multiplier to augment the positive distances"
+    # )
 
-    # Arguments for deepsdf
-    parser.add_argument(
-        "--folder_sdf", default=0, type=str, help="Folder containing the sdf model weights"
-    )
-    parser.add_argument(
-        "--latent_size", default=128, type=int, help="Folder containing the touch model weights"
-    )
-    parser.add_argument(
-        "--optimiser", default='Adam', type=str, help="Choose the optimiser out of [Adam, LBFGS]"
-    )
-    parser.add_argument(
-        "--lr", default=0.00001, type=float, help="Learning rate to infer the latent code"
-    )
-    parser.add_argument(
-        "--lr_scheduler", default=False, action='store_true', help="Learning rate to infer the latent code"
-    )
-    parser.add_argument(
-        "--sigma_regulariser", default=0.01, type=float, help="Regulariser for the loss function"
-    )
-    parser.add_argument(
-        "--lr_multiplier", default=0.5, type=float, help="Learning rate multiplier for the scheduler"
-    )
-    parser.add_argument(
-        "--patience", default=50, type=float, help="Patience for latent code inference"
-    )
-    parser.add_argument(
-        "--epochs", default=100, type=int, help="Number of epochs for latent code inference"
-    )
-    parser.add_argument(
-        "--clamp", default=False, action='store_true', help="Clip the network prediction"
-    )
-    parser.add_argument(
-        "--clamp_value", type=float, default=0.1, help="Value of the clip"
-    )
-    parser.add_argument(
-        "--langevin_noise", type=float, default=0, help="If this value is higher than 0, it adds noise to the latent space after every update."
-    )
-    parser.add_argument(
-        "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
-    )
-    parser.add_argument(
-        "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
-    )
-    parser.add_argument(
-        "--category", default='*/', type=str, help="If default, loops through all the categories. Otherwise, specify the category, e.g. '02958343'"
-    )
-    parser.add_argument(
-        "--resolution", type=int, default=15, help="Resolution of the extracted mesh"
-    )
-    parser.add_argument(
-        "--num_samples_extraction", type=int, default=10, nargs='+', help="Number of samples on the objects. It can be a single number or a list of numbers, e.g. 10 20 30."
-    )
-    parser.add_argument(
-        "--change_orn", type=float, default=[0, 0, 0], nargs='+', help="Change orientation of the object for ablation analysis."
-    )
-    parser.add_argument(
-        "--save_reconstruction", default=False, action='store_true', help="Store reconstructed mesh"
-    )
-    parser.add_argument(
-        "--epochs_finetuning", default=100, type=int, help="Number of epochs for latent code inference"
-    )
-    parser.add_argument(
-        "--finetuning", default=False, action='store_true', help="Finetune the network after latent code inference."
-    )
-    parser.add_argument(
-        "--lr_finetuning", type=float, default=0.0001, help="Learning rate for finetune"
-    )
-    parser.add_argument(
-        "--threshold_f1", type=float, default=0.01, help="Threshold for computation of F-1 score, e.g. 0.01 is 1\% of the maximum size of the object"
-    )
-    args = parser.parse_args()
+    # # Arguments for deepsdf
+    # parser.add_argument(
+    #     "--folder_sdf", default=0, type=str, help="Folder containing the sdf model weights"
+    # )
+    # parser.add_argument(
+    #     "--latent_size", default=128, type=int, help="Folder containing the touch model weights"
+    # )
+    # parser.add_argument(
+    #     "--optimiser", default='Adam', type=str, help="Choose the optimiser out of [Adam, LBFGS]"
+    # )
+    # parser.add_argument(
+    #     "--lr", default=0.00001, type=float, help="Learning rate to infer the latent code"
+    # )
+    # parser.add_argument(
+    #     "--lr_scheduler", default=False, action='store_true', help="Learning rate to infer the latent code"
+    # )
+    # parser.add_argument(
+    #     "--sigma_regulariser", default=0.01, type=float, help="Regulariser for the loss function"
+    # )
+    # parser.add_argument(
+    #     "--lr_multiplier", default=0.5, type=float, help="Learning rate multiplier for the scheduler"
+    # )
+    # parser.add_argument(
+    #     "--patience", default=50, type=float, help="Patience for latent code inference"
+    # )
+    # parser.add_argument(
+    #     "--epochs", default=100, type=int, help="Number of epochs for latent code inference"
+    # )
+    # parser.add_argument(
+    #     "--clamp", default=False, action='store_true', help="Clip the network prediction"
+    # )
+    # parser.add_argument(
+    #     "--clamp_value", type=float, default=0.1, help="Value of the clip"
+    # )
+    # parser.add_argument(
+    #     "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
+    # )
+    # parser.add_argument(
+    #     "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
+    # )
+    # parser.add_argument(
+    #     "--category", default='*/', type=str, help="If default, loops through all the categories. Otherwise, specify the category, e.g. '02958343'"
+    # )
+    # parser.add_argument(
+    #     "--resolution", type=int, default=15, help="Resolution of the extracted mesh"
+    # )
+    # parser.add_argument(
+    #     "--num_samples_extraction", type=int, default=10, nargs='+', help="Number of samples on the objects. It can be a single number or a list of numbers, e.g. 10 20 30."
+    # )
+    # parser.add_argument(
+    #     "--change_orn", type=float, default=[0, 0, 0], nargs='+', help="Change orientation of the object for ablation analysis."
+    # )
+    # parser.add_argument(
+    #     "--save_reconstruction", default=False, action='store_true', help="Store reconstructed mesh"
+    # )
+    # parser.add_argument(
+    #     "--epochs_finetuning", default=100, type=int, help="Number of epochs for latent code inference"
+    # )
+    # parser.add_argument(
+    #     "--finetuning", default=False, action='store_true', help="Finetune the network after latent code inference."
+    # )
+    # parser.add_argument(
+    #     "--lr_finetuning", type=float, default=0.0001, help="Learning rate for finetune"
+    # )
+    # args = parser.parse_args()
 
     # args.show_gui = True
     # args.folder_sdf ='10_08_181018'
@@ -503,4 +488,10 @@ if __name__=='__main__':
     # args.clamp = True
     # args.clamp_valur = 0.5
 
-    main(args)
+    # main(args)
+
+    train_cfg_path = os.path.join(os.path.dirname(config_files.__file__), 'pipeline_run_experiments.yaml')
+    with open(train_cfg_path, 'rb') as f:
+        train_cfg = yaml.load(f, Loader=yaml.FullLoader)
+
+    main(train_cfg)

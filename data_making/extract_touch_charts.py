@@ -32,8 +32,8 @@ def load_environment(args, robot_config, pb):
         t_s_core = robot_config['t_s_core'],
         t_s_name = robot_config['t_s_name'],
         t_s_dynamics = robot_config['t_s_dynamics'],
-        show_gui = args.show_gui,
-        show_tactile = args.show_tactile
+        show_gui = args['show_gui'],
+        show_tactile = args['show_tactile']
     )
     
     # Set pointcloud grid
