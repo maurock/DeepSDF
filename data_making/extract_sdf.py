@@ -10,6 +10,8 @@ import data.ABC_train as ABC_train
 from glob import glob
 import pybullet as pb
 from datetime import datetime
+import yaml
+import config_files
 
 """
 For each object, sample points and store their distance to the nearest triangle.
@@ -46,7 +48,7 @@ def main(args):
     timestamp_run = datetime.now().strftime('%d%m')   # timestamp to use for logging data
     
     # Full paths to all .obj
-    dataset_module = ShapeNetCoreV2 if args.dataset == 'ShapeNetCore' else ABC_train if args.dataset == 'ABC' else exit('Dataset not supported')
+    dataset_module = ShapeNetCoreV2 if args['dataset'] == 'ShapeNetCore' else ABC_train if args['dataset'] == 'ABC' else exit('Dataset not supported')
     print(f'Using dataset {dataset_module.__name__}')
 
     obj_paths = glob(os.path.join(os.path.dirname(dataset_module.__file__), '*', '*', '*.obj'))
@@ -79,14 +81,14 @@ def main(args):
 
         # Generate random points in the predefined volume that surrounds all the shapes.
         # NOTE: ShapeNet shapes are normalized within [-1, 1]^3
-        p_vol = np.random.rand(args.num_samples_in_volume, 3) * 2 - 1
+        p_vol = np.random.rand(args['num_samples_in_volume'], 3) * 2 - 1
 
         # Sample within the object's bounding box. This ensures a higher ratio between points inside and outside the surface.
         v_min, v_max = verts.min(0), verts.max(0)
-        p_bbox = np.random.uniform(low=[v_min[0], v_min[1], v_min[2]], high=[v_max[0], v_max[1], v_max[2]], size=(args.num_samples_in_bbox, 3))
+        p_bbox = np.random.uniform(low=[v_min[0], v_min[1], v_min[2]], high=[v_max[0], v_max[1], v_max[2]], size=(args['num_samples_in_bbox'], 3))
 
         # Sample points on the surface as face ids and barycentric coordinates
-        fid_surf, bc_surf = pcu.sample_mesh_random(verts, faces, args.num_samples_on_surface)
+        fid_surf, bc_surf = pcu.sample_mesh_random(verts, faces, args['num_samples_on_surface'])
 
         # Compute 3D coordinates and normals of surface samples
         p_surf = pcu.interpolate_barycentric_coords(faces, fid_surf, bc_surf, verts)
@@ -102,30 +104,18 @@ def main(args):
 
         # Save the samples and SDFs at regular intervals
         if obj_idx % 100 == 0:
-            np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}_{timestamp_run}.npy'), samples_dict)  
+            np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args["dataset"]}_{timestamp_run}.npy'), samples_dict)  
 
     #_debug_plot(samples_dict[obj_idx])  
-    np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}_{timestamp_run}.npy'), samples_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args["dataset"]}_{timestamp_run}.npy'), samples_dict)
 
-    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_str2int_dict_{args.dataset}_{timestamp_run}.npy'), idx_str2int_dict)
-    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_int2str_dict_{args.dataset}_{timestamp_run}.npy'), idx_int2str_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_str2int_dict_{args["dataset"]}_{timestamp_run}.npy'), idx_str2int_dict)
+    np.save(os.path.join(os.path.dirname(results.__file__), f'idx_int2str_dict_{args["dataset"]}_{timestamp_run}.npy'), idx_int2str_dict)
 
 
 if __name__=='__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore' or 'ABC'"
-    )
-    # Point-cloud-utils
-    parser.add_argument(
-        '--num_samples_on_surface', default=5000, type=int, help="Num samples on object surface"
-    )  
-    parser.add_argument(
-        '--num_samples_in_bbox', default=5000, type=int, help="Num samples within the object bounding box"
-    )  
-    parser.add_argument(
-        '--num_samples_in_volume', default=1000, type=int, help="Num samples within the predefined volume"
-    )  
-    args = parser.parse_args()
-    
-    main(args)
+    cfg_path = os.path.join(os.path.dirname(config_files.__file__), 'pipeline_deepsdf.yaml')
+    with open(cfg_path, 'rb') as f:
+        cfg = yaml.load(f, Loader=yaml.FullLoader)
+
+    main(cfg)

@@ -7,7 +7,6 @@ import os
 from cri_robot_arm import CRIRobotArm
 from tactile_gym.assets import add_assets_path
 from utils import utils_sample, utils_mesh, utils_raycasting
-import argparse
 from glob import glob
 import data.ShapeNetCoreV2urdf as ShapeNetCore
 import data.ShapeNetCoreV2urdf_test as ShapeNetCore_test
@@ -19,6 +18,8 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import sys
 from tqdm import tqdm
+import yaml
+import config_files
 
 # Reload the environment to avoid a silent bug where memory fills and visual rendering fails. 
 def load_environment(args, robot_config, pb):
@@ -174,15 +175,6 @@ def main(args):
         # Ray: sqrt( (x1 - xc)**2 + (y1 - yc)**2)
         ray_hemisphere = utils_sample.get_ray_hemisphere(mesh)
 
-        # Debug hemisphere ##################
-        # hemisphere_array = np.array([]).reshape(0, 3)
-        # for _ in range(1000):
-        #     hemisphere_random_pos, angles = utils_sample.sample_hemisphere(ray_hemisphere)
-        #     sphere_wrld = mesh.bounding_box.centroid + np.array(hemisphere_random_pos)
-        #     hemisphere_array = np.vstack((hemisphere_array, sphere_wrld))
-        # utils_mesh.debug_draw_vertices_on_pb(hemisphere_array, size=5)
-        # Debug hemisphere ##################
-
         # For debugging render scene
         time_str = datetime.now().strftime('%d_%m_%H%M%S')
         counter_render_scene = 0
@@ -212,15 +204,12 @@ def main(args):
             # Check that the object is correctly sampled by checking that robot.stop_at_touch is not true 
             if robot.stop_at_touch:
                 print("robot.stop_at_touch is true. Object not correctly sampled.")
-
-                #pb.removeBody(robot.robot_id)
                 continue
 
             # Check on camera and store tactile images
             camera = robot.get_tactile_observation()
             check_on_camera = utils_sample.check_on_camera(camera)
             if not check_on_camera:
-                #pb.removeBody(robot.robot_id)
                 continue
             
             # Filter points with information about contact, make sure there are at least {num_valid_points} valid ones
@@ -228,7 +217,6 @@ def main(args):
             check_on_contact_pointcloud = utils_sample.check_on_contact_pointcloud(contact_pointcloud, num_valid_points)
             if not check_on_contact_pointcloud:
                 print(f'Point cloud shape is too small: {contact_pointcloud.shape[0]} points')
-                #pb.removeBody(robot.robot_id)
                 continue
          
             # Conv2D requires [batch, channels, size1, size2] as input
@@ -319,28 +307,10 @@ def main(args):
 
 
 if __name__=='__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--show_gui", default=False, action='store_true', help="Show PyBullet GUI"
+    cfg_path = os.path.join(
+        os.path.dirname(config_files.__file__), "extract_touch_charts.yaml"
     )
-    parser.add_argument(
-        "--show_tactile", default=False, action='store_true', help="Show tactile image"
-    )
-    parser.add_argument(
-        "--num_samples", type=int, default=10, help="Number of samplings on the objects"
-    )
-    parser.add_argument(
-        "--render_scene", default=False, action='store_true', help="Render scene at touch"
-    )
-    parser.add_argument(
-        "--scale", default=0.2, type=float, help="Scale of the object in simulation wrt the urdf object"
-    )
-    parser.add_argument(
-        "--dataset", default='ShapeNetCore', type=str, help="Dataset used: 'ShapeNetCore', 'ABC_train', 'ABC_test"
-    )
-    parser.add_argument(
-        "--name_output", default='', type=str, help="The folder where the touch charts are stored, e.g. 'results/touch_charts_gt_<name_output>'"
-    )
-    args = parser.parse_args()
+    with open(cfg_path, "rb") as f:
+        cfg = yaml.load(f, Loader=yaml.FullLoader)
 
-    main(args)
+    main(cfg)

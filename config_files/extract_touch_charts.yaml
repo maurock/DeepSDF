@@ -1,0 +1,8 @@
+# Config file for extracting touch charts
+show_gui: False    # Show PyBullet GUI
+show_tactile: False    # Show tactile image
+num_samples: 10    # Number of samplings on the objects
+render_scene: False    # Render scene at touch. Useful for bus purposes.
+scale: 0.2     # Scale of the object in simulation wrt the urdf object
+dataset: 'ShapeNetCore'    # Dataset used: 'ShapeNetCore' or 'ABC_train'.
+name_output: ''    # The folder where the touch charts are stored, e.g. 'results/touch_charts_gt_<name_output>'
