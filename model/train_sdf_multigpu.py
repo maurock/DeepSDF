@@ -20,10 +20,6 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.multiprocessing as mp
 
-GPU = True if torch.cuda.device_count() >= 1 else False
-
-#device = torch.device("cuda:0" if (torch.cuda.is_available() and not MULTI_GPU) else "cpu")
-
 if torch.cuda.is_available():
     print(torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count()))
 
@@ -38,8 +34,6 @@ class Trainer():
         self.args = args
 
     def __call__(self):
-        torch.seed(self.args.seed)
-
         # directories
         self.timestamp_run = datetime.now().strftime('%d_%m_%H%M%S')   # timestamp to use for logging data
         self.runs_dir = os.path.dirname(runs.__file__)               # directory fo all runs
@@ -51,7 +45,6 @@ class Trainer():
         self.writer = SummaryWriter(log_dir=self.run_dir)
         self.log_path = os.path.join(self.run_dir, 'settings.txt')
         args_dict = vars(self.args)  # convert args to dict to write them as json
-        args_dict['gpus'] = torch.cuda.device_count() if torch.cuda.is_available() else 0
         with open(self.log_path, mode='a') as log:
             log.write('Settings:\n')
             log.write(json.dumps(args_dict).replace(', ', ',\n'))
@@ -61,100 +54,58 @@ class Trainer():
         samples_dict_path = os.path.join(os.path.dirname(results.__file__), f'samples_dict_{args.dataset}.npy')
         samples_dict = np.load(samples_dict_path, allow_pickle=True).item()
 
-        world_size = torch.cuda.device_count() if torch.cuda.is_available() else 0
+        self.args.world_size = torch.cuda.device_count() if torch.cuda.is_available() else 0
         
         mp.spawn(
             self.main,
-            args=(world_size, samples_dict),
-            nprocs=world_size
+            args=(self.args.world_size, samples_dict),
+            nprocs=self.args.world_size
         )
-
-
-        # # instantiate model and optimisers
-        # self.model = sdf_model.SDFModelMulti(self.args.num_layers, self.args.no_skip_connections, input_dim=self.args.latent_size + 3, inner_dim=self.args.inner_dim).float().to(device)
-        # if self.args.pretrained:
-        #     self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
-        # self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
-        # # generate a unique random latent code for each shape
-        # self.latent_codes, self.dict_latent_codes = utils_deepsdf.generate_latent_codes(self.args.latent_size, samples_dict)
-        # self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
-
-        # if self.args.lr_scheduler:
-        #     self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.0001, threshold_mode='rel')
-        #     self.scheduler_latent =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_latent, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.0001, threshold_mode='rel')
-            
-        # # get data
-        # train_loader, val_loader = self.get_loaders()
-        # self.results = {
-        #     'train':  {'loss': [], 'latent_codes': [], 'best_latent_codes' : []},
-        #     'val':    {'loss': []}
-        # }
-        # #utils.model_graph_to_tensorboard(train_loader, self.model, self.writer, self.generate_xy)
-
-        # self.running_steps = 0   # counter for latent codes tensorboard
-        # best_loss = 10000000000
-        # start = time.time()
-        # for epoch in range(self.args.epochs):
-        #     print(f'============================ Epoch {epoch} ============================')
-        #     self.epoch = epoch
-
-        #     avg_train_loss = self.train(train_loader)
-
-        #     self.results['train']['loss'].append(avg_train_loss)
-        #     self.results['train']['latent_codes'].append(self.latent_codes.detach().cpu().numpy())
-
-        #     with torch.no_grad():
-        #         avg_val_loss = self.validate(val_loader)
-
-        #         self.results['val']['loss'].append(avg_val_loss)
-
-        #         if avg_val_loss < best_loss:
-        #             best_loss = np.copy(avg_val_loss)
-        #             best_weights = self.model.state_dict()
-        #             best_latent_codes = self.latent_codes.detach().cpu().numpy()
-
-        #         if self.args.lr_scheduler:
-        #             self.scheduler_model.step(avg_val_loss)
-        #             self.scheduler_latent.step(avg_val_loss)
-
-        #             for param_group in self.optimizer_model.param_groups:
-        #                 print(f"Learning rate (model): {param_group['lr']}")
-        #             for param_group in self.optimizer_latent.param_groups:
-        #                 print(f"Learning rate (latent): {param_group['lr']}")
-
-        #             self.writer.add_scalar('Learning rate (model)', self.scheduler_model._last_lr[0], epoch)
-        #             self.writer.add_scalar('Learning rate (latent)', self.scheduler_latent._last_lr[0], epoch)
-            
-        #     np.save(os.path.join(self.run_dir, 'results.npy'), self.results)
-        #     torch.save(best_weights, os.path.join(self.run_dir, 'weights.pt'))
-        #     self.results['train']['best_latent_codes'] = best_latent_codes
-            
-        # end = time.time()
-        # print(f'Time elapsed: {end - start} s')
 
     def main(self, rank, world_size, samples_dict):
         self.rank = rank
         setup(rank, world_size)
 
         print(f'World size: {world_size}')
-        
+                
         device = torch.device(rank if torch.cuda.is_available() else 'cpu')
-
         print(f'Rank {rank}, device {device}')
 
-        # instantiate model and optimisers
-        self.model = sdf_model.SDFModelMulti(self.args.num_layers, self.args.no_skip_connections, input_dim=self.args.latent_size + 3, inner_dim=self.args.inner_dim).float().to(device)
+        torch.manual_seed(self.args.seed)
 
+        # instantiate model and optimisers
+        self.model = sdf_model.SDFModelMulti(
+                self.args.num_layers, 
+                self.args.no_skip_connections, 
+                inner_dim=self.args.inner_dim,
+                positional_encoding_embeddings=self.args.positional_encoding_embeddings,
+                latent_size=self.args.latent_size
+            ).float().to(device)
+        
         self.model = DDP(self.model, device_ids=[rank], output_device=rank, find_unused_parameters=True)
 
+        # define optimisers
+        self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
+        
+        # generate a unique random latent code for each shape
+        self.latent_codes = utils_deepsdf.generate_latent_codes(self.args.latent_size, samples_dict)
+        self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
+        
         if self.args.pretrained:
+            # load pretrained weights
             self.model.load_state_dict(torch.load(self.args.pretrain_weights, map_location=device))
 
-        self.optimizer_model = optim.Adam(self.model.parameters(), lr=self.args.lr_model, weight_decay=0)
-
-        # generate a unique random latent code for each shape
-        self.latent_codes, self.dict_latent_codes = utils_deepsdf.generate_latent_codes(self.args.latent_size, samples_dict)
-        self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
+            # load pretrained optimisers
+            self.optimizer_model.load_state_dict(torch.load(self.args.pretrain_optim_model, map_location=device))
+            # retrieve latent codes from results.npy file
+            results_path = self.args.pretrain_optim_model.split(os.sep)
+            results_path[-1] = 'results.npy'
+            results_path = os.sep.join(results_path)
+            # load latent codes from results.npy file
+            results_latent_codes = np.load(results_path, allow_pickle=True).item()
+            self.latent_codes = torch.tensor(results_latent_codes['train']['best_latent_codes']).float().to(device)
+            self.optimizer_latent = optim.Adam([self.latent_codes], lr=self.args.lr_latent, weight_decay=0)
+            self.optimizer_latent.load_state_dict(torch.load(self.args.pretrain_optim_latent, map_location=device))
 
         if self.args.lr_scheduler:
             self.scheduler_model =  torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_model, mode='min', factor=self.args.lr_multiplier, patience=self.args.patience, threshold=0.0001, threshold_mode='rel')
@@ -175,17 +126,13 @@ class Trainer():
             print(f'============================ Epoch {epoch} ============================')
             self.epoch = epoch
 
-            if GPU:
-                train_loader.sampler.set_epoch(epoch)
-                val_loader.set_epoch(epoch)
-
-            avg_train_loss = self.train(train_loader, device)
+            avg_train_loss = self.train(train_loader)
 
             self.results['train']['loss'].append(avg_train_loss)
             self.results['train']['latent_codes'].append(self.latent_codes.detach().cpu().numpy())
 
             with torch.no_grad():
-                avg_val_loss = self.validate(val_loader, device)
+                avg_val_loss = self.validate(val_loader)
 
                 self.results['val']['loss'].append(avg_val_loss)
 
@@ -193,6 +140,8 @@ class Trainer():
                     best_loss = np.copy(avg_val_loss)
                     best_weights = self.model.state_dict()
                     best_latent_codes = self.latent_codes.detach().cpu().numpy()
+                    optimizer_model_state = self.optimizer_model.state_dict()
+                    optimizer_latent_state = self.optimizer_latent.state_dict()
 
                 if self.args.lr_scheduler:
                     self.scheduler_model.step(avg_val_loss)
@@ -208,24 +157,26 @@ class Trainer():
             
             np.save(os.path.join(self.run_dir, 'results.npy'), self.results)
             torch.save(best_weights, os.path.join(self.run_dir, 'weights.pt'))
+            torch.save(optimizer_model_state, os.path.join(self.run_dir, 'optimizer_model_state.pt'))
+            torch.save(optimizer_latent_state, os.path.join(self.run_dir, 'optimizer_latent_state.pt'))
             self.results['train']['best_latent_codes'] = best_latent_codes
             
         end = time.time()
         print(f'Time elapsed: {end - start} s')
 
-        if GPU:
-            dist.destroy_process_group()
-
     def get_loaders(self, world_size, rank):
         data = dataset.SDFDataset(self.args.dataset)
+        
+        if args.clamp:
+            data.data['sdf'] = torch.clamp(data.data['sdf'], -args.clamp_value, args.clamp_value)
+
         train_size = int(0.8 * len(data))
         val_size = len(data) - train_size
         train_data, val_data = random_split(data, [train_size, val_size])
 
-        # Define samplers
         train_sampler = DistributedSampler(train_data, num_replicas=world_size, rank=rank)
         val_sampler = DistributedSampler(val_data, num_replicas=world_size, rank=rank)
-
+        
         # Define loaders
         train_loader = DataLoader(
             train_data,
@@ -257,7 +208,7 @@ class Trainer():
         unique_latent_indices_batch, counts = latent_codes_indices_batch.unique(return_counts=True)
         return unique_latent_indices_batch, counts 
 
-    def generate_xy(self, batch, device):
+    def generate_xy(self, batch):
         """
         Combine latent code and coordinates.
         Return:
@@ -268,20 +219,21 @@ class Trainer():
             - latent_batch_codes: all latent codes per sample, shape (batch_size, latent_size)
         Return ground truth as y, and the latent codes for this batch.
         """
-        latent_classes_batch = batch[0][:, 0].view(-1, 1)               # shape (batch_size, 1)
+        latent_classes_batch = batch[0][:, 0].view(-1, 1).to(torch.long)               # shape (batch_size, 1)
         coords = batch[0][:, 1:]                                  # shape (batch_size, 3)
-        latent_codes_indices_batch = torch.tensor(
-                [self.dict_latent_codes[int(latent_class)] for latent_class in latent_classes_batch],
-                dtype=torch.int64
-            ).to(device)
-        latent_codes_batch = self.latent_codes[latent_codes_indices_batch]    # shape (batch_size, 128)
+        # latent_codes_indices_batch = torch.tensor(
+        #         [self.dict_latent_codes[int(latent_class)] for latent_class in latent_classes_batch],
+        #         dtype=torch.int64
+        #     ).to(device)
+        latent_codes_batch = self.latent_codes[latent_classes_batch.view(-1)]    # shape (batch_size, 128)
+
         x = torch.hstack((latent_codes_batch, coords))                  # shape (batch_size, 131)
         y = batch[1]     # (batch_size, 1)
-        if args.clamp:
-            y = torch.clamp(y, -args.clamp_value, args.clamp_value)
-        return x, y, latent_codes_indices_batch, latent_codes_batch
+        #if args.clamp:
+        #    y = torch.clamp(y, -args.clamp_value, args.clamp_value)
+        return x, y, latent_classes_batch.view(-1), latent_codes_batch
     
-    def train(self, train_loader, device):
+    def train(self, train_loader):
         total_loss = 0.0
         iterations = 0.0
         self.model.train()
@@ -294,7 +246,7 @@ class Trainer():
             self.optimizer_model.zero_grad()
             self.optimizer_latent.zero_grad()
 
-            x, y, latent_codes_indices_batch, latent_codes_batch = self.generate_xy(batch, device)
+            x, y, latent_codes_indices_batch, latent_codes_batch = self.generate_xy(batch)
             #unique_latent_indices_batch, counts = self.get_latent_proportions(latent_codes_indices_batch)
 
             predictions = self.model(x)  # (batch_size, 1)
@@ -302,9 +254,19 @@ class Trainer():
                 predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
             
             loss_value, l1, l2 = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, x[:, :self.args.latent_size], sigma=self.args.sigma_regulariser)
-            loss_value.backward()       
+            loss_value.backward()     
 
             print(f'Rank {self.rank}, Loss value {loss_value.item()}')
+  
+
+            # set gradients of latent codes that were not in the batch to 0     
+            #unique_latent_indices_batch = torch.unique(latent_codes_indices_batch, dim=0).to(device)
+            # for i in range(0, self.latent_codes.shape[0]):
+            #     if i not in unique_latent_indices_batch:
+            #         self.latent_codes.grad[i, :].data.zero_()      
+            #     else:
+            #         count = counts[unique_latent_indices_batch == i]
+            #         self.latent_codes.grad[i, :] = self.latent_codes.grad[i, :] * (self.args.batch_size / count)
 
             self.optimizer_latent.step()
             self.optimizer_model.step()
@@ -322,8 +284,10 @@ class Trainer():
 
         return avg_train_loss
 
-    def validate(self, val_loader, device):
+    def validate(self, val_loader):
         total_loss = 0.0
+        total_loss_rec = 0.0
+        total_loss_latent = 0.0
         iterations = 0.0
         self.model.eval()
 
@@ -338,12 +302,18 @@ class Trainer():
             if args.clamp:
                 predictions = torch.clamp(predictions, -args.clamp_value, args.clamp_value)
 
-            loss_value, l1, l2 = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, latent_codes_batch, self.args.sigma_regulariser)          
+            loss_value, loss_rec, loss_latent = self.args.loss_multiplier * SDFLoss_multishape(y, predictions, latent_codes_batch, self.args.sigma_regulariser)          
             total_loss += loss_value.data.cpu().numpy()   
+            total_loss_rec += loss_rec.data.cpu().numpy() 
+            total_loss_latent += loss_latent.data.cpu().numpy()
 
         avg_val_loss = total_loss/iterations
+        avg_loss_rec = total_loss_rec/iterations
+        avg_loss_latent = total_loss_latent/iterations
         print(f'Validation: loss {avg_val_loss}')
         self.writer.add_scalar('Validation loss', avg_val_loss, self.epoch)
+        self.writer.add_scalar('Reconstruction loss', avg_loss_rec, self.epoch)
+        self.writer.add_scalar('Latent code loss', avg_loss_latent, self.epoch)
 
         return avg_val_loss
 
@@ -410,7 +380,16 @@ if __name__=='__main__':
         "--pretrain_weights", type=str, default='', help="Path to pretrain weights"
     )
     parser.add_argument(
+        "--pretrain_optim_model", type=str, default='', help="Path to pretrain weights"
+    )
+    parser.add_argument(
+        "--pretrain_optim_latent", type=str, default='', help="Path to pretrain weights"
+    )
+    parser.add_argument(
         "--inner_dim", type=int, default=512, help="Inner dimensions of the network"
+    )
+    parser.add_argument(
+        "--positional_encoding_embeddings", type=int, default=0, help="Number of embeddingsto use for positional encoding. If 0, no positional encoding is used."
     )
     args = parser.parse_args()
 

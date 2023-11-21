@@ -254,14 +254,4 @@ if __name__=='__main__':
 
     args = parser.parse_args()  
 
-    # args.folder_real_data = 'new_bottle'
-    # args.obj_folder = '02876657/3d758f0c11f01e3e3ddcd369aa279f39'
-    # args.folder_touch = '30_05_1633' 
-    # args.scale = 0.2
-    # args.discard_calibration_image = True
-    # args.augment_points_num = 5
-    # args.augment_points_std = 0.005
-    # args.augment_multiplier_out = 5
-    # args.change_orn = [0.0, 0.0, 0.2]
-
     main(args)

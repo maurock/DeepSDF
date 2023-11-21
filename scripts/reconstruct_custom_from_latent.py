@@ -116,8 +116,5 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    # args.dataset = 'ABC'
-    # args.obj_ids = ['data/9']
-    # args.folder_sdf = '06_08_134333'
 
     main(args)

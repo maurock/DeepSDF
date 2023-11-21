@@ -120,8 +120,4 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    # args.obj_folder = 'camera_3005'   # inside data/real_objects. e.g. camera_3005
-    # args.obj_category = 'camera' # e.g. camera, bowl, bottle, real_bottle
-    # args.discard_calibration_image = True
-
     main(args)

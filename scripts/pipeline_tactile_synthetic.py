@@ -193,8 +193,4 @@ if __name__=='__main__':
     )
     args = parser.parse_args()
 
-    # args.show_gui = True
-    # args.num_samples = 20
-    # args.obj_folder ='02942699/2c0b4e318766e01723cd81bf29b64a1' 
-
     _ = main(args)
